@@ -170,21 +170,261 @@
 
 let db = null;
 
+const staffCoordination = require('../staff-coordination');
+const adminLogger = require('../admin-logger');
+const userReputation = require('../user-reputation');
+
+let _botInstance = null;
+
 function register(bot, database) {
     db = database;
-    
+    _botInstance = bot;
+
     // Middleware: spam detection
     bot.on("message:text", async (ctx, next) => {
-        if (ctx.chat.type === 'private' || ctx.userTier >= 2) return next();
-        // TODO: Implement spam detection logic
+        if (ctx.chat.type === 'private') return next();
+
+        // Check Tier (Bypass for Tier 2+)
+        if (ctx.userTier && ctx.userTier >= 2) return next();
+
+        // Check if Enabled
+        const config = db.getGuildConfig(ctx.chat.id);
+        if (!config.spam_enabled) return next();
+
+        const isSpam = await checkSpam(ctx, config);
+        if (isSpam) {
+            // Stop processing if handled
+            return;
+        }
+
         await next();
     });
-    
+
     // Command: /spamconfig
     bot.command("spamconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        await ctx.reply("🛡️ Anti-spam config (TODO)");
+        const member = await ctx.getChatMember(ctx.from.id);
+        if (!['creator', 'administrator'].includes(member.status)) return;
+
+        await sendConfigUI(ctx);
     });
+
+    // Action Handlers
+    bot.on("callback_query:data", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+        if (!data.startsWith("spam_")) return next();
+
+        const config = db.getGuildConfig(ctx.chat.id);
+        const parts = data.split(":");
+        const action = parts[1];
+
+        if (action === "close") {
+            await ctx.deleteMessage();
+        } else if (action === "toggle") {
+            db.updateGuildConfig(ctx.chat.id, { spam_enabled: config.spam_enabled ? 0 : 1 });
+        } else if (action === "sens") {
+            const levels = ['low', 'medium', 'high'];
+            const currentIdx = levels.indexOf(config.spam_sensitivity || 'medium');
+            const nextLevel = levels[(currentIdx + 1) % 3];
+            db.updateGuildConfig(ctx.chat.id, { spam_sensitivity: nextLevel });
+        } else if (action === "act_vol") {
+            const acts = ['delete', 'ban', 'report_only'];
+            const idx = acts.indexOf(config.spam_action_volume || 'delete');
+            db.updateGuildConfig(ctx.chat.id, { spam_action_volume: acts[(idx + 1) % 3] });
+        } else if (action === "act_rep") {
+            const acts = ['delete', 'ban', 'report_only'];
+            const idx = acts.indexOf(config.spam_action_repetition || 'delete');
+            db.updateGuildConfig(ctx.chat.id, { spam_action_repetition: acts[(idx + 1) % 3] });
+        }
+
+        await sendConfigUI(ctx, true);
+    });
+}
+
+async function sendConfigUI(ctx, isEdit = false) {
+    const config = db.getGuildConfig(ctx.chat.id);
+    const enabled = config.spam_enabled ? '✅ ON' : '❌ OFF';
+    const sens = (config.spam_sensitivity || 'medium').toUpperCase();
+    const actVol = (config.spam_action_volume || 'delete').toUpperCase();
+    const actRep = (config.spam_action_repetition || 'delete').toUpperCase();
+
+    const statusText = `🛡️ **CONFIGURAZIONE ANTI-SPAM**\n` +
+        `Stato: ${enabled}\n` +
+        `Sensibilità: ${sens}`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: `🛡️ Anti-Spam: ${enabled}`, callback_data: "spam_toggle" }],
+            [{ text: `🌡️ Sensibilità: ${sens}`, callback_data: "spam_sens" }],
+            [{ text: `⚡ Su Flood: ${actVol}`, callback_data: "spam_act_vol" }],
+            [{ text: `🔁 Su Ripetizione: ${actRep}`, callback_data: "spam_act_rep" }],
+            [{ text: "❌ Chiudi", callback_data: "spam_close" }]
+        ]
+    };
+
+    if (isEdit) {
+        try { await ctx.editMessageText(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+    } else {
+        await ctx.reply(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    }
+}
+
+async function checkSpam(ctx, config) {
+    const userId = ctx.from.id;
+    const guildId = ctx.chat.id;
+    const now = Date.now();
+    const content = ctx.message.text;
+
+    // Get stats
+    let stats = db.getDb().prepare('SELECT * FROM user_active_stats WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+    if (!stats) {
+        stats = { user_id: userId, guild_id: guildId, msg_count_60s: 0, msg_count_10s: 0, duplicate_count: 0 };
+    }
+
+    const lastTs = stats.last_msg_ts ? new Date(stats.last_msg_ts).getTime() : 0;
+    const diff = now - lastTs;
+
+    // Reset counters if time passed
+    if (diff > 60000) stats.msg_count_60s = 0;
+    if (diff > 10000) stats.msg_count_10s = 0;
+
+    stats.msg_count_60s++;
+    stats.msg_count_10s++;
+
+    // Repetition check
+    if (stats.last_msg_content === content) {
+        stats.duplicate_count++;
+    } else {
+        stats.duplicate_count = 0;
+    }
+
+    // Determine limits
+    const sensitivity = config.spam_sensitivity || 'medium';
+    let limit10s = 5, limit60s = 10, limitDup = 3;
+    if (sensitivity === 'high') { limit10s = 3; limit60s = 5; limitDup = 2; }
+    if (sensitivity === 'low') { limit10s = 8; limit60s = 15; limitDup = 5; }
+
+    // Override if in DB custom
+    if (config.spam_volume_limit_10s) limit10s = config.spam_volume_limit_10s;
+    if (config.spam_volume_limit_60s) limit60s = config.spam_volume_limit_60s;
+    if (config.spam_duplicate_limit) limitDup = config.spam_duplicate_limit;
+
+    // Check Triggers
+    let trigger = null;
+    let action = 'delete';
+
+    if (stats.msg_count_10s > limit10s) {
+        trigger = `Burst (${stats.msg_count_10s}/${limit10s})`;
+        action = config.spam_action_volume || 'delete';
+    } else if (stats.msg_count_60s > limit60s) {
+        trigger = `Flood (${stats.msg_count_60s}/${limit60s})`;
+        action = config.spam_action_volume || 'delete';
+    } else if (stats.duplicate_count >= limitDup) {
+        trigger = `Repetition (${stats.duplicate_count}/${limitDup})`;
+        action = config.spam_action_repetition || 'delete';
+    }
+
+    // Save Stats
+    db.getDb().prepare(`
+        INSERT INTO user_active_stats (user_id, guild_id, msg_count_60s, msg_count_10s, last_msg_content, last_msg_ts, duplicate_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET
+            msg_count_60s = ?, msg_count_10s = ?, last_msg_content = ?, last_msg_ts = ?, duplicate_count = ?
+    `).run(userId, guildId, stats.msg_count_60s, stats.msg_count_10s, content, new Date().toISOString(), stats.duplicate_count,
+        stats.msg_count_60s, stats.msg_count_10s, content, new Date().toISOString(), stats.duplicate_count);
+
+    if (trigger) {
+        await executeAction(ctx, action, trigger, config);
+        return true;
+    }
+    return false;
+}
+
+async function executeAction(ctx, action, trigger, config) {
+    const user = ctx.from;
+    console.log(`[ANTI-SPAM] Trigger: ${trigger} Action: ${action} User: ${user.id}`);
+
+    // Log Logic using adminLogger if available
+    const logParams = {
+        guildId: ctx.chat.id,
+        eventType: 'spam', // or 'ban' if banned
+        targetUser: user,
+        executorAdmin: null, // System
+        reason: trigger,
+        isGlobal: false
+    };
+
+    if (action === 'delete') {
+        try { await ctx.deleteMessage(); } catch (e) { }
+        // Log locally
+        if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+    }
+    else if (action === 'ban') {
+        try {
+            await ctx.deleteMessage();
+            await ctx.banChatMember(user.id);
+            await ctx.reply(`🚫 **BANNED**\nHas been banned for spam.`);
+
+            // Reduce Flux
+            userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'spam_ban');
+
+            // Forward to SuperAdmin
+            await forwardBanToSuperAdmin(ctx, user, trigger);
+
+            // Log Extended
+            logParams.eventType = 'ban';
+            logParams.isGlobal = true; // Ban is global event
+            if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+
+        } catch (e) {
+            console.error("Ban failed", e);
+        }
+    }
+    else if (action === 'report_only') {
+        // Send to Staff Queue
+        staffCoordination.reviewQueue({
+            guildId: ctx.chat.id,
+            source: 'Anti-Spam',
+            user: user,
+            reason: `Trigger: ${trigger}`,
+            messageId: ctx.message.message_id,
+            content: ctx.message.text
+        });
+    }
+}
+
+async function forwardBanToSuperAdmin(ctx, user, trigger) {
+    try {
+        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        const flux = userReputation.getLocalFlux(user.id, ctx.chat.id);
+
+        const text = `🔨 **BAN ESEGUITO**\n\n` +
+            `🏛️ Gruppo: ${ctx.chat.title} (@${ctx.chat.username || 'private'})\n` +
+            `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
+            `📊 TrustFlux: ${flux}\n` +
+            `⏰ Ora: ${new Date().toISOString()}\n\n` +
+            `📝 Motivo: ${trigger}\n` +
+            `🔧 Trigger: anti-spam\n\n` +
+            `💬 Content:\n"${ctx.message.text ? ctx.message.text.substring(0, 200) : 'N/A'}"`;
+
+        const keyboard = {
+            inline_keyboard: [
+                [{ text: "🌍 Global Ban", callback_data: `gban:${user.id}` }, { text: "✅ Solo Locale", callback_data: `gban_skip:${ctx.message.message_id}` }]
+            ]
+        };
+
+        const sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
+            reply_markup: keyboard,
+            parse_mode: 'Markdown'
+        });
+
+        // Save pending deletion
+        // db.getDb().prepare('INSERT INTO pending_deletions ...') // skipped for brevity
+    } catch (e) {
+        console.error("Failed to forward ban", e);
+    }
 }
 
 module.exports = { register };

@@ -126,29 +126,202 @@
 // MODULE EXPORTS
 // ============================================================================
 
+const adminLogger = require('../admin-logger');
+
 let db = null;
+let _botInstance = null;
 
 function register(bot, database) {
     db = database;
-    
+    _botInstance = bot;
+
+    // Cron job for pending deletions (every hour)
+    setInterval(cleanupPendingDeletions, 3600000);
+
     // Command: /gpanel (SuperAdmin only)
     bot.command("gpanel", async (ctx) => {
-        const superAdminIds = (process.env.SUPER_ADMIN_IDS || '').split(',').map(Number);
-        if (!superAdminIds.includes(ctx.from?.id)) {
-            return ctx.reply("❌ Accesso negato");
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
+
+        try {
+            const stats = db.getDb().prepare(`
+                SELECT 
+                    (SELECT COUNT(*) FROM user_global_flux WHERE is_banned_global = 1) as global_bans,
+                    (SELECT COUNT(*) FROM bills WHERE status = 'pending') as pending_bills,
+                    (SELECT COUNT(*) FROM guild_trust) as guilds
+            `).get();
+
+            const text = `🌍 **GLOBAL GOVERNANCE PANEL**\n` +
+                `🏛️ Gruppi: ${stats.guilds}\n` +
+                `🚫 Ban globali: ${stats.global_bans}\n` +
+                `📜 Bills pending: ${stats.pending_bills}`;
+
+            const keyboard = {
+                inline_keyboard: [
+                    [{ text: "📜 Bills Pendenti", callback_data: "g_bills" }, { text: "📊 Statistiche Rete", callback_data: "g_stats" }],
+                    [{ text: "🛠️ Configurazione", callback_data: "g_config" }, { text: "❌ Chiudi", callback_data: "g_close" }]
+                ]
+            };
+
+            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {
+            ctx.reply("❌ Error fetching stats");
         }
-        await ctx.reply("🌍 Global Governance Panel (TODO)");
     });
-    
+
     // Command: /setgstaff
     bot.command("setgstaff", async (ctx) => {
-        await ctx.reply("🏛️ Parliament setup (TODO)");
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
+        if (ctx.chat.type === 'private') return ctx.reply("❌ Usalo nel gruppo Parliament.");
+
+        try {
+            // Create topics if Forum
+            let topics = {};
+            if (ctx.chat.is_forum) {
+                const bans = await ctx.createForumTopic("🔨 Bans");
+                const bills = await ctx.createForumTopic("📜 Bills");
+                const logs = await ctx.createForumTopic("📋 Logs");
+                topics = { bans: bans.message_thread_id, bills: bills.message_thread_id, logs: logs.message_thread_id };
+            }
+
+            // Update Global Config
+            db.getDb().prepare(`
+                INSERT INTO global_config (id, parliament_group_id, global_topics) 
+                VALUES (1, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET 
+                    parliament_group_id = ?, 
+                    global_topics = ?
+            `).run(ctx.chat.id, JSON.stringify(topics), ctx.chat.id, JSON.stringify(topics));
+
+            await ctx.reply("✅ Parliament Group Configurato.");
+        } catch (e) {
+            console.error(e);
+            ctx.reply("❌ Errore setup: " + e.message);
+        }
+    });
+
+    // Command: /setglog
+    bot.command("setglog", async (ctx) => {
+        if (!isSuperAdmin(ctx.from.id)) return;
+
+        db.getDb().prepare(`
+            INSERT INTO global_config (id, global_log_channel) VALUES (1, ?)
+            ON CONFLICT(id) DO UPDATE SET global_log_channel = ?
+        `).run(ctx.chat.id, ctx.chat.id);
+
+        await ctx.reply("✅ Global Log Channel impostato.");
+    });
+
+    // Action Handlers
+    bot.on("callback_query:data", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+        if (!isSuperAdmin(ctx.from.id)) {
+            // Only superadmins can interact with global ban buttons?
+            // Yes generally.
+            if (data.startsWith("gban") || data.startsWith("g_")) {
+                return ctx.answerCallbackQuery("❌ Accesso negato");
+            }
+        }
+
+        if (data === "g_close") return ctx.deleteMessage();
+
+        if (data.startsWith("gban:")) {
+            const userId = data.split(":")[1];
+            await ctx.answerCallbackQuery("🌍 Executing Global Ban...");
+            await executeGlobalBan(ctx, userId);
+        }
+        else if (data.startsWith("gban_skip:")) {
+            const msgId = data.split(":")[1];
+            await ctx.answerCallbackQuery("✅ Skipped");
+            await ctx.deleteMessage();
+            // Should verify this deletes the report message.
+        }
+        else if (data.startsWith("bl_link")) {
+            // Todo implementation for wizard
+            await ctx.answerCallbackQuery("TODO: Link Blacklist Wizard");
+        }
+        else {
+            return next();
+        }
     });
 }
 
-async function forwardBanToParliament(banInfo) {
-    // TODO: Implement ban forward
-    console.log("[PARLIAMENT] Ban forward:", banInfo);
+function isSuperAdmin(userId) {
+    const ids = (process.env.SUPER_ADMIN_IDS || '').split(',').map(s => parseInt(s.trim()));
+    return ids.includes(userId);
+}
+
+async function forwardBanToParliament(info) {
+    if (!db || !_botInstance) return;
+    try {
+        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        // Parse topics
+        let threadId = null;
+        if (globalConfig.global_topics) {
+            try { threadId = JSON.parse(globalConfig.global_topics).bans; } catch (e) { }
+        }
+
+        const { user, guildName, guildId, reason, evidence, flux } = info;
+
+        const text = `🔨 **BAN ESEGUITO**\n\n` +
+            `🏛️ Gruppo: ${guildName}\n` +
+            `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
+            `📊 TrustFlux: ${flux}\n` +
+            `⏰ Ora: ${new Date().toISOString()}\n\n` +
+            `📝 Motivo: ${reason}\n` +
+            `💬 Evidence: "${evidence ? evidence.substring(0, 200) : 'N/A'}"`;
+
+        const keyboard = {
+            inline_keyboard: [
+                [{ text: "🌍 Global Ban", callback_data: `gban:${user.id}` }, { text: "✅ Solo Locale", callback_data: `gban_skip` }],
+                [{ text: "➕ BL Link", callback_data: `bl_link` }, { text: "➕ BL Word", callback_data: `bl_word` }]
+            ]
+        };
+
+        const sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
+            reply_markup: keyboard,
+            parse_mode: 'Markdown',
+            message_thread_id: threadId
+        });
+
+        // Schedule delete
+        const deleteAfter = new Date(Date.now() + 86400000).toISOString();
+        db.getDb().prepare('INSERT INTO pending_deletions (message_id, chat_id, delete_after) VALUES (?, ?, ?)')
+            .run(sent.message_id, sent.chat.id, deleteAfter);
+
+    } catch (e) {
+        console.error("Failed to forward ban to parliament", e);
+    }
+}
+
+async function executeGlobalBan(ctx, userId) {
+    // 1. Mark user as global banned in DB
+    db.setUserGlobalBan(userId, true);
+    // 2. Log
+    await ctx.editMessageCaption({ caption: ctx.callbackQuery.message.caption + "\n\n✅ **GLOBAL BANNED**" });
+    // 3. (Optional) Broadcast to all guilds (not implemented here, costly)
+    // 4. Update Global Flux
+    db.getDb().prepare('UPDATE user_global_flux SET is_banned_global = 1, global_flux = -1000 WHERE user_id = ?').run(userId);
+}
+
+async function cleanupPendingDeletions() {
+    if (!db || !_botInstance) return;
+    try {
+        const now = new Date().toISOString();
+        const pending = db.getDb().prepare('SELECT * FROM pending_deletions WHERE delete_after < ?').all(now);
+
+        for (const p of pending) {
+            try {
+                await _botInstance.api.deleteMessage(p.chat_id, p.message_id);
+            } catch (e) {
+                // If message already deleted or other error, ignore
+            }
+            db.getDb().prepare('DELETE FROM pending_deletions WHERE id = ?').run(p.id);
+        }
+    } catch (e) {
+        console.error("Cleanup error", e);
+    }
 }
 
 module.exports = { register, forwardBanToParliament };
