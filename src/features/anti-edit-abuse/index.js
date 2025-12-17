@@ -1,8 +1,15 @@
-// TODO: Implement Anti-Edit Abuse ("Chameleon Trap")
-// 1. Listener: Listen for `edited_message` updates.
-// 2. Logic: Compare `old_message` (if cached) vs `new_message` OR just analyze `new_message`.
-// 3. Strict Check:
-//    - If the user has `message_count <= 10` (using Profiler data):
-//      - Did they add a link? -> Auto-Ban.
-//      - Did the content change drastically (Levenshtein distance)? -> Warn/Log.
-// 4. (Optional) Time Window: Only apply if edit happens > 30s after original post (common spammer tactic to bypass real-time filters).
+// TODO: IMPLEMENTATION PLAN - ANTI-EDIT ABUSE
+//
+// 1. LOGIC (On 'edited_message')
+//    - Detect Link Injection or >50% Text Change.
+//    - Apply `edit_abuse_action`.
+//
+// 2. CONFIGURABLE ACTION
+//    - 'delete': Delete msg.
+//    - 'warn': Delete + Warn.
+//    - 'ban': Ban (Aggressive).
+//    - 'report': Log to Staff Channel "Suspicious Edit" (Before/After).
+//
+// 3. CONFIGURATION (`/editconfig`)
+//    - [ 🔒 Lock Edits for Tier 0: ON/OFF ]
+//    - [ 👮 On Abuse: Report/Delete/Ban ].

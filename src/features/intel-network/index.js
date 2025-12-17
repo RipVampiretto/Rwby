@@ -1,26 +1,34 @@
-// TODO: Implement Intel Network (Federated Security - Parliament Model)
-// 1. Architecture Update:
-//    - Centralized "Parliament" (Super Admin Group) vs "Countries" (Local Groups).
+// TODO: IMPLEMENTATION PLAN - INTEL NETWORK (Federated Security)
 //
-// 2. Data Synchronization (Global Scopes):
-//    - Global Ban List / Blacklist / Whitelist / Image Hashes.
-//    - Managed centrally by Super Admins.
+// 1. DATA MODEL (SQLite Table: 'intel_data')
+//    - `type`: 'ban' | 'whitelist_domain' | 'blacklist_word' | 'image_hash'.
+//    - `value`: String (UserID, Domain, or Hash).
+//    - `added_by`: Integer (Group ID of the proposer).
+//    - `trust_level_required`: Integer (Level required to enforce this).
+//    - `timestamp`: Datetime.
 //
-// 3. Participation Levels (Updated):
-//    - Level 0 (Isolation): Local rules only.
-//    - Level 1 (Observer): Receives global updates, cannot propose.
-//    - Level 2 (Member State): Can submit "Proposals" (Reports).
-//      - Proposals go to the Parliament Group for review.
-//    - Level 3 (Council Member): Trusted groups. Proposals require fewer confirmations.
-//    - Level 5 (Super Admin / Parliament): Final authority. Enacts global laws.
+// 2. DATA MODEL (SQLite Table: 'guild_trust')
+//    - `guild_id`: Integer.
+//    - `tier`: Integer (0=Isolation, 1=Observer, 2=Member, 3=Partner, 4=Authority).
+//    - `trust_score`: Integer (0-100). Auto-updated based on report accuracy.
 //
-// 4. The "Proposal" Flow:
-//    - Local Admin detects spam -> `/greport <user_id> <proof/forward>`.
-//    - Bot forwards report to "Parliament" (Topics: Global Reports).
-//    - Super Admins review -> `/approve` or `/reject`.
-//    - If Approved -> User added to Global Ban List -> Propagated to all Subscriber groups.
-//    - If rejected -> Trust Score of reporting group decreases.
+// 3. SYNC MECHANISM (Real-Time)
+//    - `subscribeToUpdates(guildId)`: Called on bot startup.
+//    - When a global ban is Ratified (by Super Admin):
+//      - Event `GLOBAL_BAN_ADD` emitted.
+//      - All guilds with Tier >= 1 receive the update.
+//      - Action: Ban user in the guild immediately (if present).
 //
-// 5. Trust Score Algorithm:
-//    - High Trust = Proposals flagged as "High Priority" or auto-approved (if config allows).
-//    - Low Trust = Proposals ignored or require manual review.
+// 4. REPORTING FLOW (From Local to Global)
+//    - Trigger: Local Admin uses `/greport <user>` OR `AntiSpam` triggers "Level 3 Violation".
+//    - Check: Is Guild Tier >= 2?
+//      - No -> Reply "Upgrade your tier to report".
+//      - Yes -> Gather proofs (last 3 messages).
+//      - Action: Forward to `SuperAdmin.submitBill()`.
+//
+// 5. CONFIGURATION
+//    - Command: `/intel` (Admin Only).
+//    - UI: Inline Keyboard.
+//      - [ 📡 Status: Online ]
+//      - [ 🛡️ Tier: Level 2 (Member) ]
+//      - [ 🔄 Sync: Bans(ON) Filters(OFF) ] -> Per-feature toggles (SQLite `guild_config`).

@@ -1,7 +1,18 @@
-// TODO: Implement NSFW Monitor
-// 1. Integrate with an AI vision API (e.g., Google Cloud Vision, AWS Rekognition) or a dedicated NSFW detection library/API.
-// 2. Intercept photo/video messages.
-// 3. Send media to the detection service.
-// 4. If NSFW probability is high, delete the message.
-// 5. Warn or ban the user who sent it.
-// 6. (Optional) Blur NSFW images instead of deleting (if API supports).
+// TODO: IMPLEMENTATION PLAN - NSFW MONITOR
+//
+// 1. DATA MODEL (SQLite Table: 'guild_config')
+//    - `nsfw_enabled`: Boolean.
+//    - `nsfw_action`: 'delete' | 'ban' | 'report'.
+//
+// 2. LOGIC
+//    - Score > 0.85 -> Violation.
+//    - Apply `nsfw_action`.
+//
+// 3. ACTION HANDLER
+//    - 'report':
+//      -blur image (if possible) or just send "NSFW Detected" text to Staff Channel.
+//      - Buttons: [ 🔨 Ban ] [ 🗑️ Delete ] [ ✅ Safe ].
+//
+// 4. CONFIGURATION UI (`/nsfwconfig`)
+//    - [ 🔞 Filter: ON/OFF ]
+//    - [ 👮 Action: Report/Ban/Delete ].

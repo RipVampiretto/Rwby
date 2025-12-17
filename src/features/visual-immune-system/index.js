@@ -1,12 +1,19 @@
-// TODO: Implement Visual Immune System
-// 1. Install an image hashing library (e.g., 'imghash' or similar perceptual hashing lib).
-// 2. Monitoring:
-//    - Listen for photo/video messages.
-//    - Generate a perceptual hash of the media.
-// 3. Database:
-//    - Store hashes of BANNED media (hashes that triggered a ban).
-//    - Store hashes of WHITELISTED media (optional, to avoid false positives).
-// 4. Action:
-//    - When an admin bans a user for spamming an image, automatically add that image's hash to the blacklist.
-//    - When a new image arrives, compare its hash with the blacklist (using Hamming distance to catch slight variations).
-//    - If match found: Auto-ban the user and delete the message immediately.
+// TODO: IMPLEMENTATION PLAN - VISUAL IMMUNE SYSTEM
+//
+// 1. DATA MODEL (SQLite Table: 'visual_hashes')
+//    - `phash`: String.
+//    - `type`: 'ban' | 'safe'.
+//
+// 2. LOGIC
+//    - Match found in DB (Hamming < 5).
+//    - Fetch `immune_action` from Guild Config.
+//
+// 3. CONFIGURABLE ACTION
+//    - 'auto_ban': Ban User + Delete.
+//    - 'delete': Delete Message only.
+//    - 'report': Log to Staff Channel "Visual Match Detected".
+//      - Buttons: [ 🔨 Ban ] [ 🗑️ Delete ].
+//
+// 4. CONFIGURATION UI (`/visualconfig`)
+//    - [ 🧬 Global DB: ON/OFF ]
+//    - [ 👮 Action: Report/Delete/Auto-Ban ].

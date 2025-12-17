@@ -1,10 +1,19 @@
-// TODO: Implement Intelligent Profiler ("Benvenuto Armato" Extended)
-// 1. Database Requirement: Track `message_count` for every user.
-// 2. Middleware: Check if `user.message_count <= 10`.
-// 3. Strict Rules for "New" Users (count <= 10):
-//    - Ban if message contains a Link (unless whitelisted domain).
-//    - Ban if message is a Forward.
-//    - Ban if message contains > 5 mentions (@user).
-// 4. Logic: Use heuristics or Regex for these checks.
-// 5. If pass: Increment `message_count`.
-// 6. If fail: Ban/Kick and delete message.
+// TODO: IMPLEMENTATION PLAN - INTELLIGENT PROFILER
+// NOTE: Integrated with 'ANTI-SPAM' user tracking.
+//
+// 1. LOGIC (On Message)
+//    - If Tier 0 "Novizio" (< 100 Flux):
+//      - Content Check (Link/Forward/Scam).
+//      - If Violation -> Apply `new_user_action`.
+//
+// 2. CONFIGURABLE ACTION
+//    - 'delete': Delete msg.
+//    - 'warn': Delete + Warn.
+//    - 'kick': Kick user (soft ban).
+//    - 'ban': Ban user.
+//    - 'report': Send to Staff Queue for review.
+//
+// 3. CONFIGURATION (`/profilerconfig`)
+//    - [ 🛡️ Check Links: ON/OFF ]
+//    - [ 🛡️ Check Forwards: ON/OFF ]
+//    - [ 👮 Violation Action: Report/Delete/Kick/Ban ].
