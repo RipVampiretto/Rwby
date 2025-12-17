@@ -71,6 +71,7 @@ function createTables() {
             ai_confidence_threshold REAL DEFAULT 0.75,
             ai_context_aware INTEGER DEFAULT 1,
             ai_sensitivity TEXT DEFAULT 'medium',
+            ai_context_messages INTEGER DEFAULT 3,
             
             -- Anti-Edit Abuse
             edit_monitor_enabled INTEGER DEFAULT 1,
@@ -109,6 +110,7 @@ function createTables() {
             nsfw_check_photos INTEGER DEFAULT 1,
             nsfw_check_videos INTEGER DEFAULT 1,
             nsfw_check_gifs INTEGER DEFAULT 1,
+            nsfw_check_stickers INTEGER DEFAULT 0,
             nsfw_frame_interval_percent INTEGER DEFAULT 5,
             nsfw_tier_bypass INTEGER DEFAULT 3,
             
