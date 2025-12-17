@@ -1,155 +1,241 @@
 // ============================================================================
 // TODO: IMPLEMENTATION PLAN - NSFW MONITOR
 // ============================================================================
-// SCOPO: Rilevamento contenuti NSFW (immagini/GIF/sticker) tramite analisi.
-// Supporta score-based detection con soglia configurabile.
+// SCOPO: Rilevamento contenuti NSFW (immagini/video/GIF) tramite Vision LLM.
+// Usa modello Vision via LM Studio (es: LLaVA, MiniCPM-V).
+// Per video: estrae frame ogni 5% della durata (proporzionale).
+// Azioni semplificate: solo DELETE o BAN (con forward a SuperAdmin).
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// 1. DATA MODEL
+// 1. DATA MODEL - Struttura Database SQLite
 // ----------------------------------------------------------------------------
 //
 // TABELLA: guild_config (campi nsfw)
 // ├── nsfw_enabled: INTEGER (0/1, DEFAULT 1)
 // ├── nsfw_action: TEXT (DEFAULT 'delete')
-// │   └── Valori: 'delete', 'warn', 'mute', 'kick', 'ban', 'report'
-// ├── nsfw_threshold: REAL (DEFAULT 0.85)
-// │   └── Score minimo (0.0 - 1.0) per considerare NSFW
+// │   └── Valori SOLO: 'delete', 'ban', 'report_only'
+// ├── nsfw_threshold: REAL (DEFAULT 0.7)
 // ├── nsfw_check_photos: INTEGER (0/1, DEFAULT 1)
-// ├── nsfw_check_stickers: INTEGER (0/1, DEFAULT 0)
-// │   └── Sticker raramente NSFW, disabilitato default
+// ├── nsfw_check_videos: INTEGER (0/1, DEFAULT 1)
 // ├── nsfw_check_gifs: INTEGER (0/1, DEFAULT 1)
-// ├── nsfw_tier_bypass: INTEGER (DEFAULT 3)
-// │   └── Solo Tier 3+ bypass (molto restrittivo)
-// └── nsfw_blur_in_report: INTEGER (0/1, DEFAULT 1)
-//     └── Se 1, immagine blurrata nei report staff
+// ├── nsfw_check_stickers: INTEGER (0/1, DEFAULT 0)
+// ├── nsfw_frame_interval_percent: INTEGER (DEFAULT 5)
+// │   └── Estrai 1 frame ogni N% del video
+// └── nsfw_tier_bypass: INTEGER (DEFAULT 3)
 
 // ----------------------------------------------------------------------------
-// 2. DETECTION INFRASTRUCTURE
+// 2. INFRASTRUCTURE - Vision LLM via LM Studio
 // ----------------------------------------------------------------------------
 //
-// OPZIONE A - API ESTERNA (Consigliata):
-// ├── Sightengine, Google Cloud Vision, AWS Rekognition
-// ├── Pro: Alta accuratezza, no risorse locali
-// └── Contro: Costi API, latenza, privacy concerns
+// PROVIDER: LM Studio (localhost)
+// ENDPOINT: process.env.LM_STUDIO_URL || 'http://localhost:1234'
+// PATH: /v1/chat/completions
+// TIMEOUT: 8000ms per frame
 //
-// OPZIONE B - MODELLO LOCALE:
-// ├── nsfw.js (TensorFlow.js), nsfwjs
-// ├── Pro: Gratuito, nessun dato esce dal server
-// └── Contro: Richiede RAM/CPU, meno accurato
+// MODELLI VISION CONSIGLIATI (piccoli, ~4B):
+// ├── MiniCPM-V-2.6 (4B) - Eccellente per classificazione
+// ├── LLaVA-v1.6-Mistral-7B - Buon bilanciamento
+// ├── moondream2 (1.8B) - Ultraleggero
+// └── Qwen2-VL-2B-Instruct - Molto veloce
 //
-// ENDPOINT (se API esterna):
-// ├── Base URL: process.env.NSFW_API_URL
-// ├── API Key: process.env.NSFW_API_KEY
-// └── Timeout: 10s (immagini possono essere pesanti)
-//
-// CATEGORIE RILEVATE:
-// ├── 'drawing': Contenuto hentai/cartoon
-// ├── 'porn': Contenuto pornografico
-// ├── 'sexy': Contenuto suggestivo
-// ├── 'hentai': Anime NSFW
-// └── 'neutral': Contenuto sicuro
+// DIPENDENZA VIDEO: ffmpeg (deve essere installato)
 
 // ----------------------------------------------------------------------------
-// 3. DETECTION LOGIC
+// 3. VIDEO HANDLING - Estrazione Frame Proporzionale
 // ----------------------------------------------------------------------------
 //
-// TRIGGER: Messaggi con photo, animation (GIF), sticker
+// FORMATI SUPPORTATI:
+// ├── .mp4 (video/mp4)
+// ├── .webm (video/webm)
+// ├── .webp animato (image/webp con animazione)
+// ├── .gif (animation in Telegram)
+// └── video_note (cerchietti)
 //
-// STEP 1 - MEDIA EXTRACTION:
-// ├── IF message.photo: Get largest photo version
-// ├── IF message.animation: Get thumbnail o primo frame
-// └── IF message.sticker: Get sticker file
+// STRATEGIA: Frame ogni 5% della durata (proporzionale)
 //
-// STEP 2 - DOWNLOAD:
-// └── ctx.telegram.getFile(file_id) → Download buffer
+// FORMULA:
+// frame_count = Math.floor(100 / nsfw_frame_interval_percent)
+// timestamps = [5%, 10%, 15%, 20%, ..., 95%]
 //
-// STEP 3 - ANALYSIS:
-// ├── IF using API: POST image to endpoint
-// ├── IF using local: Pass to nsfw.js model
-// └── Response: { porn: 0.95, sexy: 0.03, neutral: 0.02 }
+// (Salta 0% e 100% per evitare frame nero/credits)
 //
-// STEP 4 - SCORING:
-// └── nsfw_score = max(porn, sexy, hentai, drawing)
+// ESEMPI CON interval = 5%:
+// ├── Video 1 minuto (60s) → 19 frame (ogni 3 secondi)
+// ├── Video 5 minuti (300s) → 19 frame (ogni 15 secondi)
+// ├── Video 10 minuti (600s) → 19 frame (ogni 30 secondi)
+// ├── Video 1 ora (3600s) → 19 frame (ogni 3 minuti)
+// └── Sempre 19 frame indipendentemente dalla durata!
 //
-// STEP 5 - DECISION:
-// ├── IF nsfw_score >= nsfw_threshold: VIOLATION
-// └── ELSE: PASS
+// PSEUDOCODICE:
+// function getFrameTimestamps(durationSeconds, intervalPercent = 5) {
+//   const timestamps = [];
+//   for (let pct = intervalPercent; pct < 100; pct += intervalPercent) {
+//     timestamps.push((pct / 100) * durationSeconds);
+//   }
+//   return timestamps; // es: [3, 6, 9, 12, ...] per video 60s
+// }
+//
+// ESTRAZIONE CON FFMPEG:
+// Per ogni timestamp T:
+// ffmpeg -ss T -i input.mp4 -vframes 1 -q:v 2 frame_T.jpg
+//
+// NOTA: -ss PRIMA di -i è più veloce (seek approssimativo)
 
 // ----------------------------------------------------------------------------
-// 4. ACTION HANDLER
+// 4. WEBP ANIMATO - Caso Speciale
+// ----------------------------------------------------------------------------
+//
+// .webp può essere statico o animato
+// Per webp animati: estrarre frame come per video
+//
+// DETECTION animazione:
+// └── Usare 'sharp' per verificare se ha più pagine/frame
+
+// ----------------------------------------------------------------------------
+// 5. SYSTEM PROMPT - Classificazione NSFW
+// ----------------------------------------------------------------------------
+//
+// PROMPT:
+// """
+// You are an image content classifier for a Telegram group moderation bot.
+// 
+// Analyze this image and respond ONLY with a JSON object:
+// {"nsfw": true/false, "category": "...", "confidence": 0.0-1.0, "reason": "..."}
+//
+// Categories:
+// - "safe": Normal, appropriate content
+// - "suggestive": Revealing clothing, provocative poses (borderline)
+// - "nsfw_partial": Partial nudity, underwear visible
+// - "nsfw_explicit": Full nudity, sexual content
+// - "gore": Violence, blood, disturbing imagery
+//
+// Rules:
+// - Be conservative: if unsure, mark as "safe"
+// - Artwork/memes: generally "safe" unless explicitly sexual
+// - Swimwear in normal context: "safe"
+// - Focus on the PRIMARY content of the image
+//
+// Respond with JSON only, no explanation.
+// """
+
+// ----------------------------------------------------------------------------
+// 6. WORKFLOW COMPLETO
+// ----------------------------------------------------------------------------
+//
+// TRIGGER: Messaggio con photo, video, animation, document (webp/gif)
+//
+// STEP 1 - DETECT MEDIA TYPE:
+// ├── message.photo → Immagine statica
+// ├── message.video → Video MP4/WebM
+// ├── message.animation → GIF animato
+// ├── message.video_note → Cerchietto video
+// └── message.document (webp) → Check se animato
+//
+// STEP 2 - TIER CHECK:
+// └── IF user.tier >= nsfw_tier_bypass: SKIP
+//
+// STEP 3 - SIZE CHECK:
+// └── IF file.size > 50MB: SKIP (troppo grande)
+//
+// STEP 4 - DOWNLOAD:
+// ├── ctx.telegram.getFile(file_id)
+// └── Download to /tmp/nsfw_check_UUID.ext
+//
+// STEP 5 - GET DURATION (per video):
+// ├── ffprobe -v quiet -print_format json -show_format input.mp4
+// └── duration = parseFloat(json.format.duration)
+//
+// STEP 6 - CALCULATE TIMESTAMPS:
+// └── timestamps = getFrameTimestamps(duration, 5)
+//
+// STEP 7 - EXTRACT FRAMES:
+// FOR EACH timestamp:
+//   └── ffmpeg -ss {timestamp} -i input -vframes 1 frame_{i}.jpg
+//
+// STEP 8 - ANALYZE EACH FRAME:
+// FOR EACH frame:
+//   ├── Convert to base64
+//   ├── Call Vision LLM
+//   ├── Parse response
+//   └── IF nsfw === true && confidence >= threshold:
+//       └── STOP EARLY, VIOLATION FOUND (no need to check remaining)
+//
+// STEP 9 - DECISION:
+// ├── Se almeno 1 frame NSFW → esegui nsfw_action
+// └── Se tutti safe → PASS
+//
+// STEP 10 - CLEANUP:
+// └── Elimina tutti i file temporanei
+
+// ----------------------------------------------------------------------------
+// 7. ACTION HANDLER - Solo Delete/Ban/Report
 // ----------------------------------------------------------------------------
 //
 // action === 'delete':
 // └── ctx.deleteMessage() silenzioso
 //
-// action === 'warn':
-// ├── ctx.deleteMessage()
-// └── ctx.reply("⚠️ Contenuto inappropriato rimosso")
-//
-// action === 'mute':
-// ├── ctx.deleteMessage()
-// └── ctx.restrictChatMember() 24h
-//
-// action === 'kick':
-// ├── ctx.deleteMessage()
-// └── ctx.banChatMember() + unban
-//
 // action === 'ban':
 // ├── ctx.deleteMessage()
-// └── ctx.banChatMember() permanente
+// ├── ctx.banChatMember(userId)
+// ├── **FORWARD A SUPERADMIN**:
+// │   ┌────────────────────────────────────────────┐
+// │   │ 🔨 **BAN ESEGUITO (NSFW Vision)**          │
+// │   │                                            │
+// │   │ 🏛️ Gruppo: Nome Gruppo                    │
+// │   │ 👤 Utente: @username (ID: 123456)         │
+// │   │ 📹 Media: VIDEO (19 frame analizzati)     │
+// │   │ 🤖 AI: nsfw_explicit (92%) @ frame 7      │
+// │   │ ⏱️ Timestamp violazione: 01:45            │
+// │   │ 📝 Reason: "explicit content detected"    │
+// │   └────────────────────────────────────────────┘
+// │   [ 🌍 Global Ban ] [ ✅ Solo Locale ]
+// └── Auto-delete forward dopo 24h
 //
-// action === 'report':
-// ├── NON eliminare
-// └── Invia a staff:
-//     ┌────────────────────────────────────────────┐
-//     │ 🔞 **CONTENUTO NSFW RILEVATO**             │
-//     │                                            │
-//     │ 👤 Utente: @username (Tier 1)             │
-//     │ 📊 Score NSFW: 92%                         │
-//     │ 📁 Categoria: PORN                         │
-//     │                                            │
-//     │ 🖼️ [Anteprima blurrata se abilitato]      │
-//     └────────────────────────────────────────────┘
-//     [ 🔨 Ban ] [ 🗑️ Delete ] [ ✅ Safe ]
-//
-// NOTA "SAFE" BUTTON:
-// └── Staff può marcare false positive
-// └── Incrementa contatore FP per tuning soglia
+// action === 'report_only':
+// └── Staff locale decide
 
 // ----------------------------------------------------------------------------
-// 5. CONFIGURATION UI - /nsfwconfig
+// 8. CONFIGURATION UI - /nsfwconfig
 // ----------------------------------------------------------------------------
 //
 // MESSAGGIO:
 // ┌────────────────────────────────────────────┐
-// │ 🔞 **CONFIGURAZIONE NSFW MONITOR**         │
+// │ 🔞 **NSFW VISION MONITOR**                 │
 // │                                            │
 // │ Stato: ✅ Attivo                           │
-// │ Contenuti bloccati oggi: 5                │
-// │ False positive segnalati: 1               │
+// │ Server: localhost:1234 (🟢)               │
+// │ ffmpeg: ✅                                 │
+// │ Analisi oggi: 234 img, 45 video           │
 // └────────────────────────────────────────────┘
 //
 // KEYBOARD:
-// [ 🔞 Monitor: ON ] [ 👮 Azione: Delete ▼ ]
-// [ 📊 Soglia: 85% ◀▶ ]
-// [ 🖼️ Foto: ✅ ] [ 🎬 GIF: ✅ ] [ 🌟 Sticker: ❌ ]
-// [ 🔓 Tier Bypass: 3 ] [ 🔲 Blur Report: ON ]
+// [ 🔞 Monitor: ON ] [ 🔗 Test ]
+// [ 👮 Azione: Delete ▼ ]
+// [ 📊 Soglia: 70% ◀▶ ]
+// [ 🖼️ Foto: ✅ ] [ 📹 Video: ✅ ] [ 🎬 GIF: ✅ ]
+// [ 🎞️ Intervallo frame: 5% ◀▶ ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
 
 // ----------------------------------------------------------------------------
-// 6. PRIVACY & PERFORMANCE
+// 9. DEPENDENCIES
 // ----------------------------------------------------------------------------
 //
-// PRIVACY:
-// ├── NON salvare immagini permanentemente
-// ├── Processare in memoria, scartare dopo
-// ├── Log solo metadata (score, category), non contenuto
-// └── Se API esterna, verificare policy data retention
+// NPM:
+// ├── fluent-ffmpeg
+// ├── @ffmpeg-installer/ffmpeg
+// └── sharp
 //
-// PERFORMANCE:
-// ├── Queue per evitare overload
-// ├── Timeout generoso per immagini grandi
-// ├── Cache hash per evitare re-analisi repost
-// └── Skip se API non disponibile (fail-open o report)
+// INSTALL:
+// npm install fluent-ffmpeg @ffmpeg-installer/ffmpeg sharp
 
+// ----------------------------------------------------------------------------
+// 10. LIMITS
+// ----------------------------------------------------------------------------
+//
+// ├── Max file size: 50MB
+// ├── Max video duration: ILLIMITATA
+// ├── Frame interval: 5% (= 19 frame per video)
+// ├── Timeout per frame: 8 secondi
+// ├── Max concurrent: 2 video alla volta
+// └── Early stop: appena trova NSFW, non analizza altri frame

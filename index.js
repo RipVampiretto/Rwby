@@ -14,11 +14,6 @@ bot.use(async (ctx, next) => {
     await next();
 });
 
-// Placeholder for future modules (Anti-spam, Captcha, AI)
-// TODO: Import and use middleware for spam protection
-// TODO: Implement captcha logic
-// TODO: Integrate AI for moderation
-
 bot.command("start", (ctx) => ctx.reply("Ciao! Sono il tuo bot di moderazione."));
 
 bot.on("message", async (ctx) => {

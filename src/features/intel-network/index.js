@@ -1,166 +1,115 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - INTEL NETWORK (Federated Security)
+// TODO: IMPLEMENTATION PLAN - INTEL NETWORK
 // ============================================================================
-// SCOPO: Rete federata di intelligence tra gruppi. Sincronizza ban, note,
-// domini pericolosi e hash immagini tra tutti i gruppi della rete.
-// Implementa sistema trust per pesare affidabilità dei dati condivisi.
+// SCOPO: Rete federata per condivisione intelligence tra gruppi.
+// Sincronizza ban globali, blacklist link/parole, e hash immagini.
+// Ogni gruppo ha un Trust Score che determina la sua influenza.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// 1. DATA MODEL - Tabella intel_data
+// 1. DATA MODEL - Struttura Database SQLite
 // ----------------------------------------------------------------------------
 //
-// TABELLA: intel_data (dati condivisi nella rete)
+// TABELLA: intel_data (dati condivisi)
 // ├── id: INTEGER PRIMARY KEY AUTOINCREMENT
-// ├── type: TEXT (tipo di intel)
-// │   └── 'ban' = Utente bannato globalmente
-// │   └── 'whitelist_domain' = Dominio sicuro
-// │   └── 'blacklist_domain' = Dominio pericoloso
-// │   └── 'blacklist_word' = Parola/pattern blacklist
-// │   └── 'image_hash' = Hash pHash immagine pericolosa
-// │   └── 'global_note' = Nota su utente condivisa
-// ├── value: TEXT (valore associato)
-// │   └── Per 'ban': user_id
-// │   └── Per domini: dominio senza protocollo
-// │   └── Per word: pattern regex o stringa
-// │   └── Per image: hash pHash
-// │   └── Per note: JSON {userId, text, severity}
+// ├── type: TEXT
+// │   └── 'ban' | 'whitelist_domain' | 'blacklist_domain' | 
+// │   └── 'blacklist_word' | 'image_hash' | 'global_note'
+// ├── value: TEXT (user_id per ban, dominio, parola, hash)
 // ├── metadata: TEXT (JSON con dettagli aggiuntivi)
-// │   └── reason, evidence_type, categories, etc.
-// ├── added_by_guild: INTEGER (ID gruppo che ha aggiunto)
-// ├── added_by_user: INTEGER (ID admin che ha aggiunto)
-// ├── trust_weight: REAL (peso basato su source trust)
+// ├── added_by_guild: INTEGER (gruppo che ha aggiunto)
+// ├── added_by_user: INTEGER (staff che ha aggiunto)
+// ├── trust_weight: INTEGER (peso basato su trust gruppo)
 // ├── confirmations: INTEGER (quanti gruppi hanno confermato)
-// ├── reports: INTEGER (quanti gruppi hanno segnalato false positive)
-// ├── status: TEXT ('active', 'pending', 'revoked')
+// ├── reports: INTEGER (quanti gruppi hanno contestato)
+// ├── status: TEXT ('pending', 'active', 'revoked')
 // └── created_at: TEXT (ISO timestamp)
-
-// ----------------------------------------------------------------------------
-// 2. DATA MODEL - Tabella guild_trust
-// ----------------------------------------------------------------------------
 //
-// TABELLA: guild_trust (reputazione gruppi nella rete)
+// TABELLA: guild_trust (trust score per gruppo)
 // ├── guild_id: INTEGER PRIMARY KEY
-// ├── guild_name: TEXT (cache nome gruppo)
+// ├── guild_name: TEXT
 // ├── tier: INTEGER (0-3)
-// │   └── 0 = Nuovo, non verificato
-// │   └── 1 = Basic, qualche contributo
-// │   └── 2 = Trusted, contributi affidabili
-// │   └── 3 = Verified, gruppo ufficiale/premium
+// │   └── 0: Nuovo, dati pendenti review
+// │   └── 1: Verificato, dati auto-applicati localmente
+// │   └── 2: Trusted, può proporre dati globali
+// │   └── 3: Authority, dati applicati auto rete
 // ├── trust_score: INTEGER (0-100)
-// │   └── Calcolato da: contributi validi, FP rate, anzianità
-// ├── contributions_valid: INTEGER (intel confermate)
-// ├── contributions_invalid: INTEGER (intel revocate)
-// ├── joined_at: TEXT (quando si è unito alla rete)
-// └── last_sync: TEXT (ultimo sync completato)
+// ├── contributions_valid: INTEGER (proposte accettate)
+// ├── contributions_invalid: INTEGER (proposte rifiutate)
+// ├── joined_at: TEXT (timestamp ingresso rete)
+// └── last_sync: TEXT (ultimo sync dati)
 
 // ----------------------------------------------------------------------------
-// 3. SYNC MECHANISM - Sincronizzazione Real-Time
+// 2. SYNC MECHANISM - Sincronizzazione Real-Time
 // ----------------------------------------------------------------------------
 //
-// ARCHITETTURA: Event-driven con propagazione
+// EVENTI ASCOLTATI:
+// ├── GLOBAL_BAN_ADD → Nuovo ban globale confermato
+// ├── GLOBAL_BAN_REVOKE → Ban globale rimosso
+// ├── BLACKLIST_ADD → Nuova parola/link/hash bannato
+// ├── BLACKLIST_REMOVE → Rimozione da blacklist
+// └── FLUX_UPDATE → Cambio significativo TrustFlux utente
 //
-// EVENTI IN ASCOLTO:
-// ├── 'GLOBAL_BAN_ADD' → Nuovo ban da propagare
-// │   └── Source: SuperAdmin ratifica, o gruppo Tier 2+ ban
-// │   └── Action: Inserire in intel_data, broadcast a tutti i gruppi
-// │
-// ├── 'GLOBAL_BAN_REVOKE' → Revoca ban precedente
-// │   └── Source: SuperAdmin o appeal approvato
-// │   └── Action: Aggiornare status = 'revoked', broadcast
-// │
-// ├── 'FLUX_UPDATE' → Cambiamento TrustFlux significativo
-// │   └── Source: user-reputation quando delta > 50 punti
-// │   └── Action: Aggiornare cache globale, notificare gruppi interessati
-// │
-// ├── 'NOTE_ADD' → Nuova nota globale su utente
-// │   └── Source: staff-coordination /gnote command
-// │   └── Action: Inserire in intel_data type='global_note'
-// │
-// └── 'DOMAIN_FLAG' → Nuovo dominio segnalato
-//     └── Source: link-monitor pattern detection
-//     └── Action: Aggiungere a pending, richiedere conferma
+// ON GLOBAL_BAN_ADD:
+// ├── Ricevi userId e metadata
+// ├── Verifica trust_weight >= threshold
+// └── Se gruppo Tier 1+: applica immediatamente
+//     Altrimenti: salva come pending per review
 
 // ----------------------------------------------------------------------------
-// 4. TRUST-WEIGHTED PROPAGATION
+// 3. DATA PROPAGATION - Trust-Weighted
 // ----------------------------------------------------------------------------
 //
-// Non tutti i dati hanno stesso peso. Sistema trust determina:
-//
-// TRUST SCORE CALCULATION:
-// trust_score = (valid / (valid + invalid * 2)) * 100
-// └── Min: 0, Max: 100
-// └── Penalizza falsi positivi il doppio
-//
-// PROPAGATION RULES:
-// ├── Tier 0 (trust < 20):
-// │   └── Dati vanno in 'pending', richiedono conferma SuperAdmin
-// │   └── NON propagati automaticamente
-// │
-// ├── Tier 1 (trust 20-49):
-// │   └── Dati propagati con flag 'unverified'
-// │   └── Altri gruppi vedono warning prima di applicare
-// │
-// ├── Tier 2 (trust 50-79):
-// │   └── Dati propagati normalmente
-// │   └── Applicati automaticamente da gruppi Tier 1+
-// │
-// └── Tier 3 (trust 80-100):
-//     └── Dati propagati con priorità
-//     └── Applicati immediatamente ovunque
+// Chi può aggiungere cosa:
+// ├── Tier 0: Nulla (solo ricezione)
+// ├── Tier 1: Proporre blacklist (pending review)
+// ├── Tier 2: Blacklist auto-applicate, proporre ban globali
+// └── Tier 3: Tutto auto-applicato immediatamente
 
 // ----------------------------------------------------------------------------
-// 5. REPORTING FLOW - Da Locale a Globale
+// 4. BAN FORWARD INTEGRATION
 // ----------------------------------------------------------------------------
 //
-// COMANDO: /greport @user <reason>
+// Quando un gruppo esegue un BAN:
+// 1. Forward a SuperAdmin (vedi super-admin)
+// 2. SuperAdmin può click [ 🌍 Global Ban ]
+// 3. Questo triggera GLOBAL_BAN_ADD
+// 4. Tutti i gruppi Tier 1+ applicano automaticamente
+// 5. Gruppi Tier 0 ricevono come pending
+
+// ----------------------------------------------------------------------------
+// 5. LOCAL ADMIN REPORTING - /greport
+// ----------------------------------------------------------------------------
+//
+// COMANDO: /greport (reply a messaggio sospetto)
 // PERMESSI: Admin del gruppo
+// REQUISITO: Gruppo deve essere Tier 1+
 //
 // FLUSSO:
-// 1. Admin locale esegue /greport
-// 2. Bot verifica Tier del gruppo
-// 3. IF Tier < 2:
-//    └── "⚠️ Serve Tier 2+ per report globali. Contatta SuperAdmin."
-// 4. IF Tier >= 2:
-//    └── Crea "Bill" (proposta) per SuperAdmin
-//    └── Invia a Parliament topic 'proposals'
-//
-// FORMATO BILL:
-// ┌────────────────────────────────────────────┐
-// │ 📜 **GLOBAL REPORT #1234**                 │
-// │                                            │
-// │ 🏛️ Source: Nome Gruppo (Trust: 78%)       │
-// │ 👤 Target: @username (ID: 123456)         │
-// │ 📝 Reason: Spam organizzato               │
-// │                                            │
-// │ 📎 Evidence: [Forward allegato]           │
-// │ 📊 Local Flux: -150                       │
-// │ 🌍 Global Flux: 45                        │
-// └────────────────────────────────────────────┘
-// [ ✅ Ratify (Global Ban) ] [ ❌ Reject ] [ ⚠️ Flag Source ]
+// 1. Admin risponde a messaggio con /greport
+// 2. Bot crea "Bill" (proposta) per SuperAdmin
+// 3. Allega evidenza (messaggio originale)
+// 4. SuperAdmin riceve nel topic Bills
+// 5. SuperAdmin può:
+//    └── Ratificare → GLOBAL_BAN_ADD
+//    └── Rifiutare → Notifica gruppo, nessuna azione
 
 // ----------------------------------------------------------------------------
-// 6. CONFIGURATION UI - /intel (Admin Only)
+// 6. CONFIGURATION UI - /intel
 // ----------------------------------------------------------------------------
 //
 // MESSAGGIO:
 // ┌────────────────────────────────────────────┐
 // │ 🌐 **INTEL NETWORK STATUS**                │
 // │                                            │
-// │ Gruppo Tier: 2 (Trusted)                  │
-// │ Trust Score: 78/100                       │
-// │ Contributi: 23 validi, 2 invalidi         │
-// │                                            │
-// │ 🔄 Ultimo Sync: 2 minuti fa               │
-// │ 📊 Intel attive: 1,234                    │
+// │ 🏷️ Tier Gruppo: 1 (Verificato)            │
+// │ 📊 Trust Score: 78/100                    │
+// │ ✅ Contributi validi: 23                  │
+// │ ❌ Contributi invalidi: 2                 │
 // └────────────────────────────────────────────┘
 //
 // KEYBOARD:
-// [ 🔄 Sync: ✅ Bans ] [ 📝 Sync: ✅ Notes ]
-// [ 🔗 Sync: ❌ Domains ] [ 🖼️ Sync: ❌ Images ]
+// [ 🔄 Sync Ban: ON ] [ 🔄 Sync Link: ON ]
+// [ 🔄 Sync Parole: ON ] [ 🔄 Sync Immagini: ON ]
 // [ 📊 Statistiche Rete ]
-// [ 💾 Salva ] [ ❌ Chiudi ]
-//
-// SYNC OPTIONS:
-// └── Ogni tipo può essere abilitato/disabilitato per gruppo
-// └── Utile per gruppi che vogliono solo ban sync, non notes
+// [ ❌ Chiudi ]

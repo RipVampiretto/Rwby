@@ -1,205 +1,123 @@
 // ============================================================================
 // TODO: IMPLEMENTATION PLAN - SUPER ADMIN (Parliament System)
 // ============================================================================
-// SCOPO: Governance centrale della rete federata. SuperAdmin = "Parliament".
-// Gestisce ban globali, proposte (Bills), appelli, e monitoraggio rete.
+// SCOPO: Governance centrale della rete federata.
+// RICEVE: Forward di TUTTI i ban dalla rete (auto-delete dopo 24h).
+// CONTROLLA: Ban globali, blacklist link/parole, trust gruppi.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// 1. DATA MODEL
+// 1. DATA MODEL - Struttura Database SQLite
 // ----------------------------------------------------------------------------
 //
-// TABELLA: global_config (configurazione rete)
-// ├── super_admin_ids: TEXT (JSON Array o env var)
-// │   └── User IDs con permessi SuperAdmin
-// │   └── NOTA: Mai salvare in DB per sicurezza, usare env
+// TABELLA: global_config
+// ├── super_admin_ids: TEXT (JSON Array, meglio da ENV)
 // ├── parliament_group_id: INTEGER
-// │   └── ID del gruppo SuperAdmin (il "Parliament")
-// ├── global_topics: TEXT (JSON Object)
-// │   └── { reports: TID, bills: TID, logs: TID, appeals: TID, status: TID }
+// ├── global_topics: TEXT (JSON)
+// │   └── { bans: TID, bills: TID, logs: TID, appeals: TID }
 // ├── global_log_channel: INTEGER
-// │   └── Canale pubblico per record azioni globali
-// └── network_mode: TEXT (DEFAULT 'normal')
-//     └── 'normal' = Operazioni standard
-//     └── 'maintenance' = Solo SuperAdmin può agire
-//     └── 'lockdown' = Emergenza, blocco totale
+// └── network_mode: TEXT ('normal', 'maintenance')
 //
-// TABELLA: bills (proposte legislative)
+// TABELLA: pending_deletions (forward da eliminare)
+// ├── message_id: INTEGER
+// ├── chat_id: INTEGER
+// ├── created_at: TEXT
+// └── delete_after: TEXT (created_at + 24h)
+//
+// TABELLA: bills (proposte globali)
 // ├── id: INTEGER PRIMARY KEY
-// ├── type: TEXT ('global_ban', 'global_unban', 'trust_change', 'config')
-// ├── target: TEXT (user_id o configurazione)
-// ├── source_guild: INTEGER (gruppo che ha proposto)
-// ├── source_trust: INTEGER (trust score al momento)
-// ├── reason: TEXT
-// ├── evidence: TEXT (JSON con riferimenti)
-// ├── status: TEXT ('pending', 'ratified', 'vetoed', 'expired')
-// ├── voted_by: TEXT (JSON Array di SuperAdmin che hanno votato)
-// ├── created_at: TEXT (ISO timestamp)
-// └── resolved_at: TEXT (nullable)
+// ├── type: TEXT ('global_ban', 'blacklist_add')
+// ├── target: TEXT
+// ├── source_guild: INTEGER
+// ├── metadata: TEXT (JSON)
+// ├── status: TEXT ('pending', 'ratified', 'vetoed')
+// └── created_at: TEXT
 
 // ----------------------------------------------------------------------------
-// 2. SETUP COMMANDS - Inizializzazione Parliament
+// 2. BAN FORWARD RECEIVER - Endpoint Centrale
 // ----------------------------------------------------------------------------
 //
-// COMANDO: /setgstaff
-// PERMESSI: Solo SuperAdmin (in SUPER_ADMIN_IDS env)
-// SCOPE: Eseguito nel gruppo che diventerà Parliament
+// OGNI volta che un gruppo esegue un ban (automatico o manuale):
+// → Il modulo che ha eseguito il ban chiama forwardToParliament()
 //
-// FLUSSO:
-// 1. Verifica ctx.from.id in SUPER_ADMIN_IDS
-// 2. Verifica gruppo è supergroup con Forum abilitato
-// 3. Crea topic se non esistono:
-//    ├── "📜 Bills" → Per proposte pendenti
-//    ├── "📥 Reports" → Per segnalazioni dalla rete
-//    ├── "📋 Logs" → Per record azioni
-//    ├── "🗣️ Appeals" → Per appelli utenti bannati
-//    └── "📊 Status" → Per monitoraggio rete
-// 4. Salva IDs in global_config.global_topics
-// 5. Salva chat.id in global_config.parliament_group_id
-// 6. Conferma: "✅ Parliament inizializzato!"
+// FORMATO RICEVUTO:
+// ┌────────────────────────────────────────────┐
+// │ 🔨 **BAN ESEGUITO**                        │
+// │                                            │
+// │ 🏛️ Gruppo: Nome Gruppo (@handle)          │
+// │ 👤 Utente: @user (ID: 123456)             │
+// │ 📊 TrustFlux: -45                         │
+// │ ⏰ Ora: 2024-12-17 14:30                  │
+// │                                            │
+// │ 📝 Motivo: Anti-Spam - Volume flood       │
+// │ 💬 Evidence: "messaggio spam..."          │
+// └────────────────────────────────────────────┘
+// [ ➕ Blacklist Link ] [ ➕ Blacklist Parola ]
+// [ 🌍 Global Ban ] [ ✅ Solo Locale ]
 //
-// COMANDO: /setglog
-// PERMESSI: Solo SuperAdmin
-// SCOPE: Eseguito in canale che riceverà log pubblici
+// AZIONI SUPERADMIN:
 //
-// FLUSSO:
-// 1. Verifica è un canale
-// 2. Verifica bot ha permessi scrittura
-// 3. Salva in global_config.global_log_channel
+// [ ➕ Blacklist Link ]:
+// ├── Estrae automaticamente link dal messaggio
+// ├── Wizard: "Confermi blacklist di scam-site.com?"
+// └── Salva in intel_data type='blacklist_domain'
+//
+// [ ➕ Blacklist Parola ]:
+// ├── Wizard: "Quale pattern vuoi bloccare?"
+// ├── Input: regex o stringa
+// └── Salva in intel_data type='blacklist_word'
+//
+// [ 🌍 Global Ban ]:
+// ├── Propaga ban a tutta la rete
+// ├── Emette evento GLOBAL_BAN_ADD
+// └── Tutti i gruppi Tier 1+ applicano
 
 // ----------------------------------------------------------------------------
-// 3. GOVERNANCE DASHBOARD - /gpanel
+// 3. AUTO-DELETE SYSTEM - Cleanup 24h
 // ----------------------------------------------------------------------------
 //
-// COMANDO: /gpanel
-// PERMESSI: Solo SuperAdmin
+// ON BAN FORWARD RECEIVED:
+// ├── Invia messaggio a parliament topic 'bans'
+// ├── Salva message_id in pending_deletions
+// └── delete_after = NOW + 24h
 //
-// MESSAGGIO:
+// CRONJOB (ogni ora):
+// SELECT * FROM pending_deletions WHERE delete_after < NOW()
+// FOR EACH:
+// ├── ctx.api.deleteMessage(chat_id, message_id)
+// └── DELETE FROM pending_deletions
+
+// ----------------------------------------------------------------------------
+// 4. SETUP COMMANDS
+// ----------------------------------------------------------------------------
+//
+// /setgstaff (nel gruppo Parliament):
+// ├── Verifica SuperAdmin
+// ├── Crea topic: "🔨 Ban", "📜 Bills", "📋 Logs"
+// └── Salva IDs
+//
+// /setglog (nel canale log):
+// └── Salva global_log_channel
+
+// ----------------------------------------------------------------------------
+// 5. GOVERNANCE DASHBOARD - /gpanel
+// ----------------------------------------------------------------------------
+//
 // ┌────────────────────────────────────────────┐
 // │ 🌍 **GLOBAL GOVERNANCE PANEL**             │
-// │                                            │
-// │ 📊 Network Status: 🟢 NORMAL              │
-// │ 🏛️ Gruppi attivi: 47                      │
-// │ 📜 Bills pendenti: 3                       │
-// │ 🚫 Ban globali: 1,234                     │
-// │ 👥 Utenti tracciati: 45,678               │
+// │ 🏛️ Gruppi: 47 | 🚫 Ban globali: 1,234     │
+// │ 📜 Bills pending: 3                        │
 // └────────────────────────────────────────────┘
 //
 // KEYBOARD:
-// [ 📜 Bills Pendenti (3) ] [ 🗣️ Appelli (1) ]
-// [ 🌍 Status Rete ] [ 📊 Statistiche ]
-// [ 🛠️ Configurazione Sistema ]
-// [ ❌ Chiudi ]
-//
-// SUBMENU "BILLS PENDENTI":
-// Lista dei bill in attesa di ratifica
-// ┌────────────────────────────────────────────┐
-// │ 📜 **BILL #123** - Global Ban             │
-// │ Target: @username (ID: 123456)            │
-// │ Source: Gruppo XYZ (Trust: 85%)           │
-// │ Reason: Spam organizzato                  │
-// │ ⏱️ Scade tra: 48h                         │
-// └────────────────────────────────────────────┘
-// [ ✅ Ratify ] [ ❌ Veto ] [ ⚠️ Flag Source ]
-
-// ----------------------------------------------------------------------------
-// 4. LEGISLATIVE PROCESS - Gestione Bills
-// ----------------------------------------------------------------------------
-//
-// TRIGGER BILL:
-// ├── IntelNetwork.proposeGlobalBan(user, reason, evidence)
-// ├── Gruppo Tier 2+ esegue /greport
-// └── Sistema automatico rileva pattern critico
-//
-// CREAZIONE BILL:
-// 1. Ricevi proposta da source
-// 2. Valida trust score source
-// 3. Crea record in tabella bills
-// 4. Posta nel topic 'bills':
-//
-// FORMATO BILL:
-// ┌────────────────────────────────────────────┐
-// │ 📜 **PROPOSAL #1234**                      │
-// │                                            │
-// │ 📁 Type: GLOBAL BAN                        │
-// │ 🏛️ Source: Gruppo ABC (Trust: 92%)        │
-// │ 👤 Suspect: @username (ID: 123456)        │
-// │                                            │
-// │ 📝 Reason: Scam ripetuto in 5 gruppi       │
-// │                                            │
-// │ 📊 User Stats:                             │
-// │ - Global Flux: -245                        │
-// │ - Gruppi bannato: 5                        │
-// │ - Reports totali: 12                       │
-// │                                            │
-// │ 📎 Evidence: [Forward allegato]           │
-// └────────────────────────────────────────────┘
-// [ ✅ Ratify ] [ ❌ Veto ] [ ⚠️ Flag Source ]
-//
-// CALLBACK HANDLERS:
-// ├── ratify_bill_X:
-// │   └── Verifica SuperAdmin
-// │   └── Aggiorna status = 'ratified'
-// │   └── Chiama IntelNetwork.broadcastBan(userId)
-// │   └── Log a global_log_channel
-// │   └── Notifica source group: "Bill ratificato"
-// │
-// ├── veto_bill_X:
-// │   └── Verifica SuperAdmin
-// │   └── Aggiorna status = 'vetoed'
-// │   └── Notifica source group: "Bill respinto"
-// │   └── Opzionale: decrementa trust source se abuso
-// │
-// └── flag_source_X:
-//     └── Decrementa trust score del gruppo source
-//     └── Se trust < 20: revoca Tier 2
-//     └── Notifica source group: "Trust penalizzato"
-
-// ----------------------------------------------------------------------------
-// 5. APPEALS SYSTEM - Gestione Appelli
-// ----------------------------------------------------------------------------
-//
-// TRIGGER: Utente bannato contatta bot in PM
-//
-// FLUSSO:
-// 1. Utente invia /appeal a bot
-// 2. Bot verifica utente è in global_bans
-// 3. Bot chiede motivazione appello
-// 4. Appello postato nel topic 'appeals':
-//
-// FORMATO APPELLO:
-// ┌────────────────────────────────────────────┐
-// │ 🗣️ **APPEAL #567**                        │
-// │                                            │
-// │ 👤 Utente: @username (ID: 123456)         │
-// │ 📅 Bannato il: 2024-12-01                 │
-// │ 🏛️ Source ban: Gruppo XYZ                │
-// │ 📝 Motivo ban: "Spam"                     │
-// │                                            │
-// │ ✉️ Messaggio appello:                     │
-// │ "Sono stato bannato per errore, stavo..." │
-// └────────────────────────────────────────────┘
-// [ ✅ Accetta (Unban) ] [ ❌ Rifiuta ] [ 🔇 Ignora ]
+// [ 📜 Bills Pendenti ] [ 📊 Statistiche Rete ]
+// [ 🛠️ Configurazione ] [ ❌ Chiudi ]
 
 // ----------------------------------------------------------------------------
 // 6. SECURITY
 // ----------------------------------------------------------------------------
 //
 // VERIFICA PERMESSI:
-// Prima di OGNI comando in questo modulo:
-// 1. Leggi SUPER_ADMIN_IDS da process.env
-// 2. Verifica ctx.from.id è nella lista
-// 3. Se NO → "❌ Accesso negato"
-//
-// LOGGING:
-// Tutte le azioni SuperAdmin vengono loggate con:
-// ├── Timestamp
-// ├── SuperAdmin che ha agito
-// ├── Azione eseguita
-// └── Target dell'azione
-//
-// ANTI-ABUSE:
-// ├── Rate limit su azioni critiche
-// ├── Require 2+ SuperAdmin per certe azioni
-// └── Audit trail immutabile
-
+// ├── Tutti i comandi verificano SUPER_ADMIN_IDS da env
+// ├── Logging di tutte le azioni
+// └── Rate limit su azioni critiche
