@@ -177,10 +177,28 @@ function register(bot, database) {
             // Create topics if Forum
             let topics = {};
             if (ctx.chat.is_forum) {
-                const bans = await ctx.createForumTopic("🔨 Bans");
-                const bills = await ctx.createForumTopic("📜 Bills");
-                const logs = await ctx.createForumTopic("📋 Logs");
-                topics = { bans: bans.message_thread_id, bills: bills.message_thread_id, logs: logs.message_thread_id };
+                // Core Topics
+                const bans = await ctx.createForumTopic("🔨 Bans"); // Ban globali e ratifiche
+                const bills = await ctx.createForumTopic("📜 Bills"); // Proposte di governance
+                const logs = await ctx.createForumTopic("📋 Logs"); // Log generali
+
+                // New Requested Topics
+                const joinLogs = await ctx.createForumTopic("📥 Join Logs"); // Log ingressi utenti
+                const addGroup = await ctx.createForumTopic("🆕 Add Group"); // Log nuovi gruppi
+                const imageSpam = await ctx.createForumTopic("🖼️ Image Spam"); // Log analisi AI immagini
+                const linkChecks = await ctx.createForumTopic("🔗 Link Checks"); // Log link check
+
+                topics = {
+                    bans: bans.message_thread_id,
+                    bills: bills.message_thread_id,
+                    logs: logs.message_thread_id,
+                    join_logs: joinLogs.message_thread_id,
+                    add_group: addGroup.message_thread_id,
+                    image_spam: imageSpam.message_thread_id,
+                    link_checks: linkChecks.message_thread_id
+                };
+            } else {
+                return ctx.reply("⚠️ Ottimizzato per Forum (Topic). Creazione topic saltata.");
             }
 
             // Update Global Config
@@ -192,7 +210,17 @@ function register(bot, database) {
                     global_topics = ?
             `).run(ctx.chat.id, JSON.stringify(topics), ctx.chat.id, JSON.stringify(topics));
 
-            await ctx.reply("✅ Parliament Group Configurato.");
+            await ctx.reply(
+                "✅ **Parliament Group Configurato**\n\n" +
+                "Creati i topic per:\n" +
+                "- Bans (Ban globali)\n" +
+                "- Bills (Proposte)\n" +
+                "- Logs (Sistema)\n" +
+                "- Join Logs (Ingressi)\n" +
+                "- Add Group (Nuovi gruppi)\n" +
+                "- Image Spam (Analisi AI)\n" +
+                "- Link Checks (Link checks)"
+            );
         } catch (e) {
             console.error(e);
             ctx.reply("❌ Errore setup: " + e.message);
@@ -248,6 +276,40 @@ function register(bot, database) {
 function isSuperAdmin(userId) {
     const ids = (process.env.SUPER_ADMIN_IDS || '').split(',').map(s => parseInt(s.trim()));
     return ids.includes(userId);
+}
+
+/**
+ * Generic helper to send log to Parliament topic and schedule auto-delete
+ * @param {string} topicKey - Key in global_topics
+ * @param {string} text - Message content
+ */
+async function sendGlobalLog(topicKey, text) {
+    if (!db || !_botInstance) return;
+    try {
+        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        let threadId = null;
+        if (globalConfig.global_topics) {
+            try {
+                const topics = JSON.parse(globalConfig.global_topics);
+                threadId = topics[topicKey];
+            } catch (e) { }
+        }
+
+        const sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
+            message_thread_id: threadId,
+            parse_mode: 'Markdown'
+        });
+
+        // Schedule auto-delete 24h
+        const deleteAfter = new Date(Date.now() + 86400000).toISOString();
+        db.getDb().prepare('INSERT INTO pending_deletions (message_id, chat_id, delete_after) VALUES (?, ?, ?)')
+            .run(sent.message_id, sent.chat.id, deleteAfter);
+
+    } catch (e) {
+        console.error(`Failed to send global log (${topicKey})`, e.message);
+    }
 }
 
 async function forwardBanToParliament(info) {
@@ -324,4 +386,4 @@ async function cleanupPendingDeletions() {
     }
 }
 
-module.exports = { register, forwardBanToParliament };
+module.exports = { register, forwardBanToParliament, sendGlobalLog };
