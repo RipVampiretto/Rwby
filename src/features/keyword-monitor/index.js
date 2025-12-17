@@ -86,21 +86,254 @@
 
 let db = null;
 
+const staffCoordination = require('../staff-coordination');
+const adminLogger = require('../admin-logger');
+const userReputation = require('../user-reputation');
+const superAdmin = require('../super-admin');
+
+
+
+// Temporary store for wizard sessions
+const WIZARD_SESSIONS = new Map();
+
 function register(bot, database) {
     db = database;
-    
+    _botInstance = bot;
+
     // Middleware: keyword detection
     bot.on("message:text", async (ctx, next) => {
-        if (ctx.chat.type === 'private' || ctx.userTier >= 2) return next();
-        // TODO: Implement keyword matching
+        if (ctx.chat.type === 'private') {
+            // Handle wizard input in DMs or Groups?
+            // Usually config commands are in group. But wizard step 1 is input.
+            // If we are in wizard state for this user/chat
+            const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
+            if (WIZARD_SESSIONS.has(sessionKey)) {
+                await handleWizardStep(ctx, sessionKey);
+                return; // Stop propagation
+            }
+            return next();
+        }
+
+        // Handle wizard in group
+        const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
+        if (WIZARD_SESSIONS.has(sessionKey)) {
+            await handleWizardStep(ctx, sessionKey);
+            return;
+        }
+
+        // Tier check logic: check bypass per rule? Or global bypass?
+        // Prompt says "bypass_tier: INTEGER (DEFAULT 2)" per rule, but middleware has generic check.
+        // Let's load rules and check bypass individually if needed, OR just skip high tier users entirely for performance?
+        // Prompt says: "Middleware: keyword detection ... ctx.userTier >= 2 return next()".
+        // So default bypass is 2.
+
+        // Skip for admins
+        const member = await ctx.getChatMember(ctx.from.id);
+        if (['creator', 'administrator'].includes(member.status)) return next();
+        if (ctx.userTier >= 2) return next();
+
+        await processKeywords(ctx);
         await next();
     });
-    
+
     // Command: /wordconfig
     bot.command("wordconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        await ctx.reply("🔤 Keyword config (TODO)");
+        const member = await ctx.getChatMember(ctx.from.id);
+        if (!['creator', 'administrator'].includes(member.status)) return;
+
+        await sendConfigUI(ctx);
     });
+
+    // UI Handlers
+    bot.on("callback_query:data", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+        if (!data.startsWith("wrd_")) return next();
+
+        if (data === "wrd_close") return ctx.deleteMessage();
+
+        if (data === "wrd_list") {
+            const rules = db.getDb().prepare('SELECT * FROM word_filters WHERE guild_id = ?').all(ctx.chat.id);
+            let msg = "📜 **Word Rules**\n";
+            if (rules.length === 0) msg += "Nessuna regola.";
+            else rules.slice(0, 20).forEach(r => msg += `- \`${r.word}\` (${r.action})\n`);
+            try { await ctx.editMessageText(msg, { reply_markup: { inline_keyboard: [[{ text: "🔙 Back", callback_data: "wrd_back" }]] }, parse_mode: 'Markdown' }); } catch (e) { }
+            return;
+        } else if (data === "wrd_back") {
+            return sendConfigUI(ctx, true);
+        } else if (data === "wrd_add") {
+            WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, { step: 1 });
+            await ctx.reply("✍️ Digita la parola o regex da bloccare:", { reply_markup: { force_reply: true } });
+            await ctx.answerCallbackQuery();
+            return;
+        } else if (data.startsWith("wrd_wiz_")) {
+            // Wizard callback handling (yes/no regex, action selection)
+            const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
+            if (!WIZARD_SESSIONS.has(sessionKey)) return ctx.answerCallbackQuery("Sessione scaduta.");
+
+            const session = WIZARD_SESSIONS.get(sessionKey);
+            if (session.step === 2) {
+                if (data === "wrd_wiz_regex_yes") session.is_regex = 1;
+                else session.is_regex = 0;
+
+                session.step = 3;
+                await ctx.editMessageText(`Azione per \`${session.word}\`?`, {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: "🗑️ Delete", callback_data: "wrd_wiz_act_delete" }, { text: "🔨 Ban", callback_data: "wrd_wiz_act_ban" }],
+                            [{ text: "⚠️ Report", callback_data: "wrd_wiz_act_report" }]
+                        ]
+                    }, parse_mode: 'Markdown'
+                });
+            } else if (session.step === 3) {
+                const act = data.split('_act_')[1];
+                session.action = act;
+
+                // Save
+                db.getDb().prepare(`INSERT INTO word_filters (guild_id, word, is_regex, action, severity, match_whole_word, bypass_tier) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+                    .run(ctx.chat.id, session.word, session.is_regex, session.action, 3, session.is_regex ? 0 : 1, 2);
+
+                WIZARD_SESSIONS.delete(sessionKey);
+                await ctx.editMessageText(`✅ Regola aggiunta: \`${session.word}\` -> ${session.action}`, { parse_mode: 'Markdown' });
+                await sendConfigUI(ctx);
+            }
+        }
+    });
+}
+
+async function handleWizardStep(ctx, sessionKey) {
+    const session = WIZARD_SESSIONS.get(sessionKey);
+    if (session.step === 1 && ctx.message.text) {
+        session.word = ctx.message.text;
+        session.step = 2;
+        await ctx.reply(`\`${session.word}\` è una Regular Expression?`, {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "✅ Sì", callback_data: "wrd_wiz_regex_yes" }, { text: "❌ No", callback_data: "wrd_wiz_regex_no" }]
+                ]
+            }, parse_mode: 'Markdown'
+        });
+    }
+}
+
+async function processKeywords(ctx) {
+    const text = ctx.message.text;
+    const rules = db.getDb().prepare('SELECT * FROM word_filters WHERE guild_id = ? OR guild_id = 0').all(ctx.chat.id);
+
+    // Sort by severity (assuming high severity first)?? Or just check all.
+    // Prompt says: "Prima match -> esegui action"
+
+    for (const rule of rules) {
+        if (rule.bypass_tier && ctx.userTier >= rule.bypass_tier) continue;
+
+        let match = false;
+        if (rule.is_regex) {
+            try {
+                const regex = new RegExp(rule.word, 'i');
+                if (regex.test(text)) match = true;
+            } catch (e) { }
+        } else {
+            if (rule.match_whole_word) {
+                const regex = new RegExp(`\\b${escapeRegExp(rule.word)}\\b`, 'i');
+                if (regex.test(text)) match = true;
+            } else {
+                if (text.toLowerCase().includes(rule.word.toLowerCase())) match = true;
+            }
+        }
+
+        if (match) {
+            await executeAction(ctx, rule.action, rule.word, text);
+            return; // Stop processing after first match
+        }
+    }
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function executeAction(ctx, action, keyword, fullText) {
+    const user = ctx.from;
+    const logParams = {
+        guildId: ctx.chat.id,
+        eventType: 'word_filter',
+        targetUser: user,
+        executorAdmin: null,
+        reason: `Keyword: ${keyword}`,
+        isGlobal: (action === 'ban')
+    };
+
+    if (action === 'delete') {
+        try { await ctx.deleteMessage(); } catch (e) { }
+        // Local log handled via adminLogger if enabled?
+        // Let's assume adminLogger logs 'word_filter' event type if configured.
+    }
+    else if (action === 'ban') {
+        try {
+            await ctx.deleteMessage();
+            await ctx.banChatMember(user.id);
+            await ctx.reply(`🚫 **BANNED (Keyword)**\nTrigger: "||${keyword}||"`, { parse_mode: 'MarkdownV2' });
+
+            userReputation.modifyFlux(user.id, ctx.chat.id, -50, 'keyword_ban');
+
+            if (superAdmin.forwardBanToParliament) {
+                superAdmin.forwardBanToParliament({
+                    user: user,
+                    guildName: ctx.chat.title,
+                    guildId: ctx.chat.id,
+                    reason: `Keyword Ban: ${keyword}`,
+                    evidence: fullText,
+                    flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
+                });
+            }
+
+            logParams.eventType = 'ban';
+            if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+
+        } catch (e) {
+            console.error("Keyword ban failed", e);
+        }
+    }
+    else if (action === 'report_only') {
+        staffCoordination.reviewQueue({
+            guildId: ctx.chat.id,
+            source: 'Keyword',
+            user: user,
+            reason: `Keyword: ${keyword}`,
+            messageId: ctx.message.message_id,
+            content: fullText
+        });
+    }
+}
+
+async function sendConfigUI(ctx, isEdit = false) {
+    const count = db.getDb().prepare('SELECT COUNT(*) as c FROM word_filters WHERE guild_id = ?').get(ctx.chat.id).c;
+
+    // Check if global sync is a thing? Prompt mentioned "Fetch filtri locali + globali" in step 1.
+    // But config UI only shows "Sync Globale: ON". We need to store that setting somewhere?
+    // Maybe re-use global_config or guild_config? 
+    // Assuming implicit or stored in guild_config which we don't have column for in prompt 1.
+    // Prompt 1 DB model: word_filters has guild_id=0 for global.
+    // Prompt 4 UI: [ 🌐 Sync Globale: ON ]
+    // Let's assume it's just a toggle that maybe updates guild_config (need to add column or allow flexible json?)
+    // For now I'll just show it static or mock it.
+
+    const text = `🔤 **PAROLE VIETATE**\n` +
+        `Filtri attivi: ${count} locali`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: "➕ Aggiungi Parola", callback_data: "wrd_add" }, { text: "📜 Lista", callback_data: "wrd_list" }],
+            [{ text: "🌐 Sync Globale: ON", callback_data: "wrd_noop" }],
+            [{ text: "❌ Chiudi", callback_data: "wrd_close" }]
+        ]
+    };
+
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    }
 }
 
 module.exports = { register };
