@@ -35,9 +35,15 @@ const voteBan = require("./src/features/vote-ban");
 const db = require("./src/database");
 
 // ============================================================================
-// GLOBAL MIDDLEWARE - Logging
+// GLOBAL MIDDLEWARE - Logging & User Cache
 // ============================================================================
 bot.use(async (ctx, next) => {
+    // Cache user info
+    if (ctx.from) {
+        db.upsertUser(ctx.from);
+    }
+
+    // Log message
     const user = ctx.from?.first_name || 'System';
     const text = ctx.message?.text?.substring(0, 50) || 'Non-text update';
     logger.info(`[${user}] ${text}`);

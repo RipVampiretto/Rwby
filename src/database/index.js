@@ -36,6 +36,23 @@ async function init() {
  */
 function createTables() {
     // ========================================================================
+    // USERS CACHE - User info cache
+    // ========================================================================
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            first_name TEXT,
+            last_name TEXT,
+            is_bot INTEGER DEFAULT 0,
+            language_code TEXT,
+            first_seen TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_seen TEXT DEFAULT CURRENT_TIMESTAMP,
+            is_banned_global INTEGER DEFAULT 0
+        )
+    `);
+
+    // ========================================================================
     // GUILD CONFIG - Per-group settings
     // ========================================================================
     db.exec(`
@@ -392,9 +409,44 @@ function updateGuildConfig(guildId, updates) {
     db.prepare(`UPDATE guild_config SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE guild_id = ?`).run(...values);
 }
 
+/**
+ * Get or create user in cache
+ */
+function getUser(userId) {
+    return db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
+}
+
+/**
+ * Update or insert user info (called on every message to keep cache fresh)
+ */
+function upsertUser(userInfo) {
+    const { id, username, first_name, last_name, is_bot, language_code } = userInfo;
+    db.prepare(`
+        INSERT INTO users (user_id, username, first_name, last_name, is_bot, language_code, last_seen)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            username = ?,
+            first_name = ?,
+            last_name = ?,
+            language_code = ?,
+            last_seen = CURRENT_TIMESTAMP
+    `).run(id, username, first_name, last_name, is_bot ? 1 : 0, language_code,
+        username, first_name, last_name, language_code);
+}
+
+/**
+ * Mark user as globally banned
+ */
+function setUserGlobalBan(userId, isBanned) {
+    db.prepare('UPDATE users SET is_banned_global = ? WHERE user_id = ?').run(isBanned ? 1 : 0, userId);
+}
+
 module.exports = {
     init,
     getDb,
     getGuildConfig,
-    updateGuildConfig
+    updateGuildConfig,
+    getUser,
+    upsertUser,
+    setUserGlobalBan
 };
