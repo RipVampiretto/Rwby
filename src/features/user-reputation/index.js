@@ -72,3 +72,100 @@
 // getLocalFlux(userId, guildId) → Number
 // getGlobalFlux(userId) → Number
 // modifyFlux(userId, guildId, delta, reason) → void
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+const TIER_THRESHOLDS = {
+    TIER_0: 0,    // Novizio
+    TIER_1: 100,  // Membro
+    TIER_2: 300,  // Residente
+    TIER_3: 500   // Veterano
+};
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+
+    // Middleware: attach user tier to context
+    bot.use(async (ctx, next) => {
+        if (ctx.from && ctx.chat && ctx.chat.type !== 'private') {
+            ctx.userTier = getUserTier(ctx.from.id, ctx.chat.id);
+            ctx.userFlux = getLocalFlux(ctx.from.id, ctx.chat.id);
+        }
+        await next();
+    });
+
+    // Command: /myflux
+    bot.command("myflux", async (ctx) => {
+        if (!ctx.from || ctx.chat.type === 'private') return;
+
+        const userId = ctx.from.id;
+        const guildId = ctx.chat.id;
+        const localFlux = getLocalFlux(userId, guildId);
+        const globalFlux = getGlobalFlux(userId);
+        const tier = getUserTier(userId, guildId);
+        const tierName = getTierName(tier);
+
+        const nextTierFlux = tier < 3 ? TIER_THRESHOLDS[`TIER_${tier + 1}`] : null;
+        const progress = nextTierFlux ? Math.min(10, Math.floor((localFlux / nextTierFlux) * 10)) : 10;
+        const progressBar = '█'.repeat(progress) + '░'.repeat(10 - progress);
+
+        let text = `📊 **IL TUO TRUSTFLUX**\n\n`;
+        text += `🏠 Locale: ${localFlux} | 🌍 Globale: ${globalFlux}\n`;
+        text += `🏷️ Tier: ${tier} - ${tierName}\n\n`;
+        text += `${progressBar} ${localFlux}/${nextTierFlux || '∞'}`;
+
+        await ctx.reply(text, { parse_mode: "Markdown" });
+    });
+}
+
+function getUserTier(userId, guildId) {
+    const flux = getLocalFlux(userId, guildId);
+    if (flux >= TIER_THRESHOLDS.TIER_3) return 3;
+    if (flux >= TIER_THRESHOLDS.TIER_2) return 2;
+    if (flux >= TIER_THRESHOLDS.TIER_1) return 1;
+    return 0;
+}
+
+function getLocalFlux(userId, guildId) {
+    const row = db.getDb().prepare(
+        'SELECT local_flux FROM user_trust_flux WHERE user_id = ? AND guild_id = ?'
+    ).get(userId, guildId);
+    return row?.local_flux || 0;
+}
+
+function getGlobalFlux(userId) {
+    const row = db.getDb().prepare(
+        'SELECT global_flux FROM user_global_flux WHERE user_id = ?'
+    ).get(userId);
+    return row?.global_flux || 0;
+}
+
+function modifyFlux(userId, guildId, delta, reason) {
+    const current = getLocalFlux(userId, guildId);
+    const newFlux = Math.max(-1000, Math.min(1000, current + delta));
+
+    db.getDb().prepare(`
+        INSERT INTO user_trust_flux (user_id, guild_id, local_flux, last_activity)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET
+            local_flux = ?,
+            last_activity = CURRENT_TIMESTAMP
+    `).run(userId, guildId, newFlux, newFlux);
+}
+
+function getTierName(tier) {
+    const names = ['Novizio', 'Membro', 'Residente', 'Veterano'];
+    return names[tier] || 'Veterano';
+}
+
+module.exports = {
+    register,
+    getUserTier,
+    getLocalFlux,
+    getGlobalFlux,
+    modifyFlux
+};

@@ -81,3 +81,33 @@
 // [ 👮 Azione: Delete ▼ ] → [ Delete | Ban | Report ]
 // [ 🎯 Soglia: 5 ◀▶ ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Handler: photos
+    bot.on("message:photo", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 3) return next();
+        // TODO: Implement pHash matching
+        await next();
+    });
+    
+    // Command: /visualconfig
+    bot.command("visualconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🧬 Visual immune config (TODO)");
+    });
+    
+    // Command: /visualban (reply to image)
+    bot.command("visualban", async (ctx) => {
+        await ctx.reply("🧬 Visual ban (TODO)");
+    });
+}
+
+module.exports = { register };

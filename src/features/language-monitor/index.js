@@ -63,3 +63,28 @@
 // [ 🏳️ Lingue: IT, EN ] → multi-select
 // [ 👮 Azione: Delete ▼ ] → [ Delete | Ban | Report ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Middleware: language detection
+    bot.on("message:text", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 1) return next();
+        // TODO: Implement franc language detection
+        await next();
+    });
+    
+    // Command: /langconfig
+    bot.command("langconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🌐 Language config (TODO)");
+    });
+}
+
+module.exports = { register };

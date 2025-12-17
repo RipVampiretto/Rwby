@@ -163,3 +163,28 @@
 // ├── staff-coordination → Per report_only locale
 // ├── super-admin → Per forward ban a Parliament
 // └── intel-network → Per propagazione global ban
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Middleware: spam detection
+    bot.on("message:text", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 2) return next();
+        // TODO: Implement spam detection logic
+        await next();
+    });
+    
+    // Command: /spamconfig
+    bot.command("spamconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🛡️ Anti-spam config (TODO)");
+    });
+}
+
+module.exports = { register };

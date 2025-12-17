@@ -87,3 +87,28 @@
 // [ 📊 Soglia: 5 voti ] [ ⏱️ Durata: 30 min ]
 // [ 🏷️ Tier Iniziatore: 1 ] [ 🏷️ Tier Votante: 0 ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Command: /voteban (reply to message)
+    bot.command("voteban", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        // TODO: Implement vote ban
+        await ctx.reply("⚖️ Vote ban (TODO)");
+    });
+    
+    // Command: /voteconfig
+    bot.command("voteconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("⚖️ Vote config (TODO)");
+    });
+}
+
+module.exports = { register };

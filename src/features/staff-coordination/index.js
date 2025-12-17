@@ -78,3 +78,33 @@
 // ├── admin-logger → Per logging
 // ├── super-admin → Per forward ban
 // └── intel-network → Per note globali
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Command: /setstaff
+    bot.command("setstaff", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        // TODO: Implement staff setup
+        await ctx.reply("🔧 Staff setup (TODO)");
+    });
+    
+    // Command: /gnote
+    bot.command("gnote", async (ctx) => {
+        // TODO: Implement global notes
+        await ctx.reply("📝 Global note (TODO)");
+    });
+}
+
+async function reviewQueue(params) {
+    // TODO: Implement review queue
+    console.log("[REVIEW]", params);
+}
+
+module.exports = { register, reviewQueue };

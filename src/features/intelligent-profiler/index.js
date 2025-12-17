@@ -84,3 +84,28 @@
 // [ 📤 Forward: Delete ▼ ] → [ Delete | Ban | Report ]
 // [ 📝 Pattern: Report ▼ ] → [ Delete | Ban | Report ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Middleware: profile Tier 0 users
+    bot.on("message", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 1) return next();
+        // TODO: Implement profiler for Tier 0 users
+        await next();
+    });
+    
+    // Command: /profilerconfig
+    bot.command("profilerconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🔍 Profiler config (TODO)");
+    });
+}
+
+module.exports = { register };

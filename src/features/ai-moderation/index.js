@@ -146,3 +146,28 @@
 // [ 🔞 NSFW: Delete ▼ ] → [ Delete | Ban | Report ]
 // [ ⚔️ THREAT: Report ▼ ] → [ Delete | Ban | Report ]
 // [ 📢 SPAM: Delete ▼ ] → [ Delete | Ban | Report ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Middleware: AI moderation
+    bot.on("message:text", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 2) return next();
+        // TODO: Implement AI analysis via LM Studio
+        await next();
+    });
+    
+    // Command: /aiconfig
+    bot.command("aiconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🤖 AI Moderation config (TODO)");
+    });
+}
+
+module.exports = { register };

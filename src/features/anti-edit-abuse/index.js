@@ -110,3 +110,28 @@
 // [ 🔗 Link Injection: Ban ▼ ] → [ Delete | Ban | Report ]
 // [ 👮 Altro Abuso: Delete ▼ ] → [ Delete | Ban | Report ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Handler: edited messages
+    bot.on("edited_message", async (ctx, next) => {
+        if (ctx.chat.type === 'private') return next();
+        // TODO: Implement edit abuse detection
+        await next();
+    });
+    
+    // Command: /editconfig
+    bot.command("editconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("✏️ Anti-edit abuse config (TODO)");
+    });
+}
+
+module.exports = { register };

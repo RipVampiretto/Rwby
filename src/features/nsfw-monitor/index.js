@@ -239,3 +239,28 @@
 // ├── Timeout per frame: 8 secondi
 // ├── Max concurrent: 2 video alla volta
 // └── Early stop: appena trova NSFW, non analizza altri frame
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Handler: photos and videos
+    bot.on(["message:photo", "message:video", "message:animation"], async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 3) return next();
+        // TODO: Implement Vision LLM NSFW detection
+        await next();
+    });
+    
+    // Command: /nsfwconfig
+    bot.command("nsfwconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🔞 NSFW config (TODO)");
+    });
+}
+
+module.exports = { register };

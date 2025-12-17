@@ -121,3 +121,34 @@
 // ├── Tutti i comandi verificano SUPER_ADMIN_IDS da env
 // ├── Logging di tutte le azioni
 // └── Rate limit su azioni critiche
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Command: /gpanel (SuperAdmin only)
+    bot.command("gpanel", async (ctx) => {
+        const superAdminIds = (process.env.SUPER_ADMIN_IDS || '').split(',').map(Number);
+        if (!superAdminIds.includes(ctx.from?.id)) {
+            return ctx.reply("❌ Accesso negato");
+        }
+        await ctx.reply("🌍 Global Governance Panel (TODO)");
+    });
+    
+    // Command: /setgstaff
+    bot.command("setgstaff", async (ctx) => {
+        await ctx.reply("🏛️ Parliament setup (TODO)");
+    });
+}
+
+async function forwardBanToParliament(banInfo) {
+    // TODO: Implement ban forward
+    console.log("[PARLIAMENT] Ban forward:", banInfo);
+}
+
+module.exports = { register, forwardBanToParliament };

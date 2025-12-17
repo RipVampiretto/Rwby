@@ -113,3 +113,25 @@
 // [ 🔄 Sync Parole: ON ] [ 🔄 Sync Immagini: ON ]
 // [ 📊 Statistiche Rete ]
 // [ ❌ Chiudi ]
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Command: /intel
+    bot.command("intel", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🌐 Intel Network Status (TODO)");
+    });
+    
+    // Command: /greport
+    bot.command("greport", async (ctx) => {
+        await ctx.reply("📤 Global report (TODO)");
+    });
+}
+
+module.exports = { register };

@@ -92,3 +92,30 @@
 //
 // FUNZIONE ESPOSTA:
 // └── logEvent(params) → void
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+let logEvent = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Create logEvent function
+    logEvent = async function(params) {
+        // TODO: Implement full logging logic
+        const { guildId, eventType, targetUser, executorAdmin, reason, isGlobal } = params;
+        console.log(`[LOG] ${eventType}: ${targetUser?.id} by ${executorAdmin?.id || 'SYSTEM'} - ${reason}`);
+    };
+    
+    // Command: /logconfig
+    bot.command("logconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        // TODO: Implement config UI
+        await ctx.reply("📋 Log configuration (TODO)");
+    });
+}
+
+module.exports = { register, getLogEvent: () => logEvent };

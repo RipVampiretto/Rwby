@@ -79,3 +79,28 @@
 // 1. "Digita parola:" → input
 // 2. "Regex?" [ Sì | No ]
 // 3. "Azione:" [ Delete | Ban | Report ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Middleware: keyword detection
+    bot.on("message:text", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 2) return next();
+        // TODO: Implement keyword matching
+        await next();
+    });
+    
+    // Command: /wordconfig
+    bot.command("wordconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🔤 Keyword config (TODO)");
+    });
+}
+
+module.exports = { register };

@@ -73,3 +73,28 @@
 // [ ❓ Unknown: Report ▼ ] → [ Delete | Ban | Report ]
 // [ ➕ Aggiungi ] [ 📜 Lista ]
 // [ 💾 Salva ] [ ❌ Chiudi ]
+
+// ============================================================================
+// MODULE EXPORTS
+// ============================================================================
+
+let db = null;
+
+function register(bot, database) {
+    db = database;
+    
+    // Middleware: link detection
+    bot.on("message:text", async (ctx, next) => {
+        if (ctx.chat.type === 'private' || ctx.userTier >= 1) return next();
+        // TODO: Implement link whitelist/blacklist
+        await next();
+    });
+    
+    // Command: /linkconfig
+    bot.command("linkconfig", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        await ctx.reply("🔗 Link config (TODO)");
+    });
+}
+
+module.exports = { register };
