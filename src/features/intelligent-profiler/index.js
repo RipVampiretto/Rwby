@@ -91,21 +91,207 @@
 
 let db = null;
 
+const staffCoordination = require('../staff-coordination');
+const adminLogger = require('../admin-logger');
+const userReputation = require('../user-reputation');
+const superAdmin = require('../super-admin');
+
+
+
+// Heuristic scam patterns
+const SCAM_PATTERNS = [
+    /guadagna/i, /gratis/i, /crypto/i, /airdrop/i, /investi/i,
+    /bitcoin/i, /usdt/i, /wallet/i, /passiva/i, /rendita/i,
+    /click here/i, /limited time/i, /free money/i, /giveaway/i
+];
+
 function register(bot, database) {
     db = database;
-    
+    _botInstance = bot;
+
     // Middleware: profile Tier 0 users
     bot.on("message", async (ctx, next) => {
-        if (ctx.chat.type === 'private' || ctx.userTier >= 1) return next();
-        // TODO: Implement profiler for Tier 0 users
+        if (ctx.chat.type === 'private') return next();
+
+        // Skip check for admins
+        const member = await ctx.getChatMember(ctx.from.id);
+        if (['creator', 'administrator'].includes(member.status)) return next();
+
+        // Config check
+        const config = db.getGuildConfig(ctx.chat.id);
+        if (!config.profiler_enabled) return next();
+
+        // Require Tier 0 (Novice)
+        if (ctx.userTier === undefined || ctx.userTier >= 1) return next();
+
+        await processNewUser(ctx, config);
         await next();
     });
-    
+
     // Command: /profilerconfig
     bot.command("profilerconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        await ctx.reply("🔍 Profiler config (TODO)");
+        const member = await ctx.getChatMember(ctx.from.id);
+        if (!['creator', 'administrator'].includes(member.status)) return;
+
+        await sendConfigUI(ctx);
     });
+
+    // UI Handlers
+    bot.on("callback_query:data", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+        if (!data.startsWith("prf_")) return next();
+
+        const config = db.getGuildConfig(ctx.chat.id);
+        if (data === "prf_close") return ctx.deleteMessage();
+
+        if (data === "prf_toggle") {
+            db.updateGuildConfig(ctx.chat.id, { profiler_enabled: config.profiler_enabled ? 0 : 1 });
+        } else if (data === "prf_act_link") {
+            const acts = ['delete', 'ban', 'report_only'];
+            let cur = config.profiler_action_link || 'delete';
+            if (!acts.includes(cur)) cur = 'delete';
+            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
+            db.updateGuildConfig(ctx.chat.id, { profiler_action_link: nextAct });
+        } else if (data === "prf_act_fwd") {
+            const acts = ['delete', 'ban', 'report_only'];
+            let cur = config.profiler_action_forward || 'delete';
+            if (!acts.includes(cur)) cur = 'delete';
+            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
+            db.updateGuildConfig(ctx.chat.id, { profiler_action_forward: nextAct });
+        } else if (data === "prf_act_pat") {
+            const acts = ['delete', 'ban', 'report_only'];
+            let cur = config.profiler_action_pattern || 'report_only';
+            if (!acts.includes(cur)) cur = 'report_only';
+            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
+            db.updateGuildConfig(ctx.chat.id, { profiler_action_pattern: nextAct });
+        }
+
+        await sendConfigUI(ctx, true);
+    });
+}
+
+async function processNewUser(ctx, config) {
+    const text = ctx.message.text || ctx.message.caption || "";
+
+    // 1. Link Check
+    const links = extractLinks(text);
+    if (links.length > 0) {
+        // Unknown links from Tier 0 are suspicious
+        // Logic: if not whitelisted locally or globally -> SUSPICIOUS
+        // We rely on link-monitor for detailed checks, but here we can be stricter for Tier 0.
+        // Let's assume ANY link from Tier 0 is suspect if configured action is strict.
+        // Or check standard whitelist (google, telegram, etc.)
+        const whitelist = ['telegram.org', 't.me', 'youtube.com', 'google.com']; // Hardcoded base
+        const isSafe = links.every(l => {
+            try { return whitelist.some(w => new URL(l).hostname.endsWith(w)); } catch (e) { return false; }
+        });
+
+        if (!isSafe) {
+            await executeAction(ctx, config.profiler_action_link || 'delete', 'Tier 0 Link', text);
+            return; // Stop
+        }
+    }
+
+    // 2. Forward Check
+    if (ctx.message.forward_from || ctx.message.forward_from_chat) {
+        await executeAction(ctx, config.profiler_action_forward || 'delete', 'Tier 0 Forward', "[Forwarded Message]");
+        return; // Stop
+    }
+
+    // 3. Pattern Check
+    let patternScore = 0;
+    for (const p of SCAM_PATTERNS) {
+        if (p.test(text)) patternScore++;
+    }
+
+    if (patternScore >= 2) {
+        await executeAction(ctx, config.profiler_action_pattern || 'report_only', `Scam Pattern (Score ${patternScore})`, text);
+        return;
+    }
+}
+
+function extractLinks(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+}
+
+async function executeAction(ctx, action, reason, content) {
+    const user = ctx.from;
+    const logParams = {
+        guildId: ctx.chat.id,
+        eventType: 'profiler_detect',
+        targetUser: user,
+        executorAdmin: null,
+        reason: `Profiler: ${reason}`,
+        isGlobal: (action === 'ban')
+    };
+
+    if (action === 'delete') {
+        try { await ctx.deleteMessage(); } catch (e) { }
+    }
+    else if (action === 'ban') {
+        try {
+            await ctx.deleteMessage();
+            await ctx.banChatMember(user.id);
+            userReputation.modifyFlux(user.id, ctx.chat.id, -50, 'profiler_ban');
+
+            if (superAdmin.forwardBanToParliament) {
+                superAdmin.forwardBanToParliament({
+                    user: user,
+                    guildName: ctx.chat.title,
+                    guildId: ctx.chat.id,
+                    reason: `Profiler Ban: ${reason}`,
+                    evidence: content,
+                    flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
+                });
+            }
+
+            logParams.eventType = 'ban';
+            if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+
+        } catch (e) { console.error(e); }
+    }
+    else if (action === 'report_only') {
+        staffCoordination.reviewQueue({
+            guildId: ctx.chat.id,
+            source: 'Profiler',
+            user: user,
+            reason: `${reason}`,
+            messageId: ctx.message.message_id,
+            content: content
+        });
+    }
+}
+
+async function sendConfigUI(ctx, isEdit = false) {
+    const config = db.getGuildConfig(ctx.chat.id);
+    const enabled = config.profiler_enabled ? '✅ ON' : '❌ OFF';
+    const actLink = (config.profiler_action_link || 'delete').toUpperCase();
+    const actFwd = (config.profiler_action_forward || 'delete').toUpperCase();
+    const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase();
+
+    const text = `🔍 **PROFILER TIER 0**\n` +
+        `Stato: ${enabled}\n` +
+        `Link: ${actLink}\n` +
+        `Fwd: ${actFwd}\n` +
+        `Pat: ${actPat}`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: `🔍 Profiler: ${enabled}`, callback_data: "prf_toggle" }],
+            [{ text: `🔗 Link: ${actLink}`, callback_data: "prf_act_link" }],
+            [{ text: `📤 Forward: ${actFwd}`, callback_data: "prf_act_fwd" }],
+            [{ text: `📝 Pattern: ${actPat}`, callback_data: "prf_act_pat" }],
+            [{ text: "❌ Chiudi", callback_data: "prf_close" }]
+        ]
+    };
+
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    }
 }
 
 module.exports = { register };
