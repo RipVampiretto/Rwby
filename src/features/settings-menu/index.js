@@ -11,7 +11,7 @@ const voteBan = require('../vote-ban');
 const adminLogger = require('../admin-logger');
 const staffCoordination = require('../staff-coordination');
 const intelNetwork = require('../intel-network');
-const { safeEdit } = require('../../utils/error-handlers');
+const { safeEdit, isAdmin } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 let db = null;
@@ -25,11 +25,7 @@ function register(bot, database) {
     bot.command("settings", async (ctx) => {
         logger.debug(`[settings-menu] /settings command triggered by ${ctx.from.id}`);
         if (ctx.chat.type === 'private') return; // Or handle differently
-        // Check admin
-        try {
-            const member = await ctx.getChatMember(ctx.from.id);
-            if (!['creator', 'administrator'].includes(member.status)) return;
-        } catch (e) { return; }
+        if (!await isAdmin(ctx, 'settings-menu')) return;
 
         await sendMainMenu(ctx);
     });

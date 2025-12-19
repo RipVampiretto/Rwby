@@ -85,7 +85,7 @@
 
 let db = null;
 let _botInstance = null;
-const { safeEdit, safeDelete, handleCriticalError, handleTelegramError } = require('../../utils/error-handlers');
+const { safeEdit, safeDelete, handleCriticalError, handleTelegramError, isAdmin } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 function register(bot, database) {
@@ -98,9 +98,7 @@ function register(bot, database) {
             return ctx.reply("⚠️ Questo comando deve essere usato in un gruppo.");
         }
 
-        const member = await ctx.getChatMember(ctx.from.id);
-        const isAdmin = ['creator', 'administrator'].includes(member.status);
-        if (!isAdmin) {
+        if (!await isAdmin(ctx, 'staff-coordination')) {
             return ctx.reply("⚠️ Non hai i permessi necessari.");
         }
 

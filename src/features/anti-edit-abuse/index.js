@@ -159,8 +159,7 @@ function register(bot, database) {
     // Command: /editconfig
     bot.command("editconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'anti-edit-abuse')) return;
 
         await sendConfigUI(ctx);
     });
