@@ -144,6 +144,12 @@ function createTables() {
             voteban_initiator_tier INTEGER DEFAULT 1,
             voteban_voter_tier INTEGER DEFAULT 0,
             
+            -- Modal Pattern System
+            modal_enabled INTEGER DEFAULT 1,
+            modal_action TEXT DEFAULT 'report_only',
+            modal_sync_global INTEGER DEFAULT 1,
+            modal_tier_bypass INTEGER DEFAULT 2,
+            
             -- Metadata
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -377,6 +383,57 @@ function createTables() {
         )
     `);
 
+    // ========================================================================
+    // SPAM MODALS - Language/Category based spam patterns
+    // ========================================================================
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS spam_modals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            language TEXT NOT NULL,
+            category TEXT NOT NULL,
+            patterns TEXT NOT NULL DEFAULT '[]',
+            action TEXT DEFAULT 'report_only',
+            similarity_threshold REAL DEFAULT 0.6,
+            enabled INTEGER DEFAULT 1,
+            created_by INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(language, category)
+        )
+    `);
+
+    // ========================================================================
+    // GUILD MODAL OVERRIDES - Per-group modal enable/disable
+    // ========================================================================
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS guild_modal_overrides (
+            guild_id INTEGER NOT NULL,
+            modal_id INTEGER NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            PRIMARY KEY (guild_id, modal_id)
+        )
+    `);
+
+    // ========================================================================
+    // MIGRATIONS - Add new columns to existing tables
+    // ========================================================================
+    // Modal Pattern System columns (added later)
+    const modalColumns = [
+        { name: 'modal_enabled', def: 'INTEGER DEFAULT 1' },
+        { name: 'modal_action', def: "TEXT DEFAULT 'report_only'" },
+        { name: 'modal_sync_global', def: 'INTEGER DEFAULT 1' },
+        { name: 'modal_tier_bypass', def: 'INTEGER DEFAULT 2' }
+    ];
+
+    for (const col of modalColumns) {
+        try {
+            db.exec(`ALTER TABLE guild_config ADD COLUMN ${col.name} ${col.def}`);
+            logger.info(`[database] Added column ${col.name} to guild_config`);
+        } catch (e) {
+            // Column already exists, ignore
+        }
+    }
+
     logger.info("Database tables created/verified");
 }
 
@@ -433,7 +490,9 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'visual_enabled', 'visual_action', 'visual_sync_global', 'visual_hamming_threshold',
     // Vote Ban
     'voteban_enabled', 'voteban_threshold', 'voteban_duration_minutes',
-    'voteban_initiator_tier', 'voteban_voter_tier'
+    'voteban_initiator_tier', 'voteban_voter_tier',
+    // Modal Pattern System
+    'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass'
 ]);
 
 /**

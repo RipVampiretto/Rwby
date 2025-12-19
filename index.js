@@ -24,6 +24,7 @@ const antiEditAbuse = require("./src/features/anti-edit-abuse");
 const intelligentProfiler = require("./src/features/intelligent-profiler");
 const keywordMonitor = require("./src/features/keyword-monitor");
 const languageMonitor = require("./src/features/language-monitor");
+const modalPatterns = require("./src/features/modal-patterns");
 const linkMonitor = require("./src/features/link-monitor");
 const nsfwMonitor = require("./src/features/nsfw-monitor");
 const visualImmuneSystem = require("./src/features/visual-immune-system");
@@ -72,6 +73,7 @@ intelNetwork.register(bot, db);
 antiSpam.register(bot, db);
 keywordMonitor.register(bot, db);
 languageMonitor.register(bot, db);
+modalPatterns.register(bot, db);
 linkMonitor.register(bot, db);
 aiModeration.register(bot, db);
 

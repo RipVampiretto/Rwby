@@ -11,6 +11,7 @@ const voteBan = require('../vote-ban');
 const adminLogger = require('../admin-logger');
 const staffCoordination = require('../staff-coordination');
 const intelNetwork = require('../intel-network');
+const modalPatterns = require('../modal-patterns');
 const { safeEdit, isAdmin } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
@@ -80,6 +81,9 @@ async function sendMainMenu(ctx, isEdit = false) {
             ],
             [
                 { text: "🧠 Intel Net", callback_data: "set_goto:intel" },
+                { text: "📋 Modals", callback_data: "set_goto:modals" }
+            ],
+            [
                 { text: "❌ Chiudi", callback_data: "settings_close" }
             ]
         ]
@@ -141,6 +145,9 @@ async function routeToFeature(ctx, feature) {
         case 'intel':
             if (intelNetwork.sendConfigUI) await intelNetwork.sendConfigUI(ctx, true, true);
             else await ctx.answerCallbackQuery("Status Intel via /intel");
+            break;
+        case 'modals':
+            if (modalPatterns.sendConfigUI) await modalPatterns.sendConfigUI(ctx, true, true);
             break;
     }
 }

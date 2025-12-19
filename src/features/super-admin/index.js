@@ -559,6 +559,161 @@ function register(bot, database) {
 
         return ctx.reply("❓ Uso: /gblacklist [list|add|remove] [dominio]");
     });
+
+    // ========================================================================
+    // GLOBAL MODAL PATTERNS - /gmodal
+    // ========================================================================
+    bot.command("gmodal", async (ctx) => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
+
+        // Lazy load modal-patterns to avoid circular dependency
+        const modalPatterns = require('../modal-patterns');
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const action = args[0]; // list, add, addpattern, remove, toggle, setaction
+        const lang = args[1];
+        const category = args[2];
+
+        // /gmodal list [lang]
+        if (!action || action === 'list') {
+            const modals = modalPatterns.listModals(lang || null);
+
+            if (modals.length === 0) {
+                return ctx.reply("📋 MODAL PATTERNS\n\nNessun modal configurato.\n\nUsa /gmodal add [lang] [category] per crearne uno.");
+            }
+
+            // Group by language
+            const grouped = {};
+            modals.forEach(m => {
+                if (!grouped[m.language]) grouped[m.language] = [];
+                const patterns = safeJsonParse(m.patterns, []);
+                const status = m.enabled ? '✅' : '❌';
+                grouped[m.language].push(`${status} ${m.category} (${patterns.length} patterns) → ${m.action.toUpperCase()}`);
+            });
+
+            let msg = "📋 **MODAL PATTERNS**\n\n";
+            for (const [langKey, cats] of Object.entries(grouped)) {
+                msg += `🌐 **${langKey.toUpperCase()}**\n`;
+                cats.forEach(c => msg += `  • ${c}\n`);
+                msg += "\n";
+            }
+            msg += "Comandi: /gmodal add, addpattern, remove, toggle, setaction";
+            return ctx.reply(msg);
+        }
+
+        // /gmodal add <lang> <category> [action]
+        if (action === 'add') {
+            if (!lang || !category) {
+                return ctx.reply("❓ Uso: /gmodal add [lang] [category] [action]\n\nEsempio: /gmodal add it scam delete");
+            }
+
+            const modalAction = args[3] || 'report_only';
+            if (!['delete', 'ban', 'report_only'].includes(modalAction)) {
+                return ctx.reply("❌ Action non valida. Usa: delete, ban, report_only");
+            }
+
+            modalPatterns.upsertModal(lang.toLowerCase(), category.toLowerCase(), [], modalAction, 0.6, ctx.from.id);
+            return ctx.reply(`✅ Modal ${lang}/${category} creato con action: ${modalAction}\n\nUsa /gmodal addpattern ${lang} ${category} [pattern] per aggiungere patterns.`);
+        }
+
+        // /gmodal addpattern <lang> <category> <pattern...>
+        if (action === 'addpattern') {
+            if (!lang || !category || args.length < 4) {
+                return ctx.reply("❓ Uso: /gmodal addpattern [lang] [category] [pattern]\n\nEsempio: /gmodal addpattern it scam guadagna soldi facili");
+            }
+
+            const pattern = args.slice(3).join(' ');
+            const modal = modalPatterns.getModal(lang.toLowerCase(), category.toLowerCase());
+
+            if (!modal) {
+                return ctx.reply(`❌ Modal ${lang}/${category} non esiste. Crealo prima con /gmodal add`);
+            }
+
+            modalPatterns.addPatternsToModal(lang.toLowerCase(), category.toLowerCase(), [pattern]);
+            return ctx.reply(`✅ Pattern aggiunto a ${lang}/${category}:\n"${pattern}"`);
+        }
+
+        // /gmodal remove <lang> <category>
+        if (action === 'remove') {
+            if (!lang || !category) {
+                return ctx.reply("❓ Uso: /gmodal remove [lang] [category]");
+            }
+
+            const deleted = modalPatterns.deleteModal(lang.toLowerCase(), category.toLowerCase());
+            if (deleted) {
+                return ctx.reply(`🗑️ Modal ${lang}/${category} eliminato.`);
+            }
+            return ctx.reply(`⚠️ Modal ${lang}/${category} non trovato.`);
+        }
+
+        // /gmodal toggle <lang> <category>
+        if (action === 'toggle') {
+            if (!lang || !category) {
+                return ctx.reply("❓ Uso: /gmodal toggle [lang] [category]");
+            }
+
+            const newState = modalPatterns.toggleModal(lang.toLowerCase(), category.toLowerCase());
+            if (newState !== null) {
+                const stateText = newState ? '✅ Attivato' : '❌ Disattivato';
+                return ctx.reply(`${stateText} modal ${lang}/${category}`);
+            }
+            return ctx.reply(`⚠️ Modal ${lang}/${category} non trovato.`);
+        }
+
+        // /gmodal setaction <lang> <category> <action>
+        if (action === 'setaction') {
+            if (!lang || !category || !args[3]) {
+                return ctx.reply("❓ Uso: /gmodal setaction [lang] [category] [action]");
+            }
+
+            const newAction = args[3];
+            if (!['delete', 'ban', 'report_only'].includes(newAction)) {
+                return ctx.reply("❌ Action non valida. Usa: delete, ban, report_only");
+            }
+
+            const modal = modalPatterns.getModal(lang.toLowerCase(), category.toLowerCase());
+            if (!modal) {
+                return ctx.reply(`⚠️ Modal ${lang}/${category} non trovato.`);
+            }
+
+            modalPatterns.updateModalAction(lang.toLowerCase(), category.toLowerCase(), newAction);
+            return ctx.reply(`✅ Action per ${lang}/${category} impostata a: ${newAction}`);
+        }
+
+        // /gmodal view <lang> <category>
+        if (action === 'view') {
+            if (!lang || !category) {
+                return ctx.reply("❓ Uso: /gmodal view [lang] [category]");
+            }
+
+            const modal = modalPatterns.getModal(lang.toLowerCase(), category.toLowerCase());
+            if (!modal) {
+                return ctx.reply(`⚠️ Modal ${lang}/${category} non trovato.`);
+            }
+
+            const patterns = safeJsonParse(modal.patterns, []);
+            let msg = `📋 MODAL: ${lang.toUpperCase()}/${category.toUpperCase()}\n\n`;
+            msg += `Status: ${modal.enabled ? '✅ Attivo' : '❌ Disattivo'}\n`;
+            msg += `Action: ${modal.action}\n`;
+            msg += `Threshold: ${modal.similarity_threshold}\n\n`;
+            msg += `Patterns (${patterns.length}):\n`;
+
+            if (patterns.length === 0) {
+                msg += "Nessun pattern";
+            } else {
+                patterns.slice(0, 15).forEach((p, i) => {
+                    msg += `${i + 1}. "${p}"\n`;
+                });
+                if (patterns.length > 15) {
+                    msg += `... e altri ${patterns.length - 15}`;
+                }
+            }
+
+            return ctx.reply(msg);
+        }
+
+        return ctx.reply("❓ Uso: /gmodal [list|add|addpattern|remove|toggle|setaction|view] [lang] [category]");
+    });
 }
 
 function isSuperAdmin(userId) {
