@@ -29,5 +29,79 @@
             "changed": "✅ Lingua cambiata in {lang}",
             "back": "⬅️ Indietro"
         }
+    },
+    "tier_system": {
+        "menu": {
+            "title": "🏛️ **SISTEMA TIER**",
+            "your_rank": "Il tuo rango: {emoji} **{name}**",
+            "select_tier": "Seleziona un Tier per i dettagli:",
+            "buttons": {
+                "view_details": "📖 Vedi Dettagli",
+                "flux_works": "📊 Come Funziona Flux",
+                "close": "❌ Chiudi",
+                "back": "⬅️ Indietro"
+            }
+        },
+        "tiers": {
+            "0": {
+                "name": "Tier 0"
+            },
+            "1": {
+                "name": "Tier 1"
+            },
+            "2": {
+                "name": "Tier 2"
+            },
+            "3": {
+                "name": "Tier 3"
+            }
+        },
+        "details": {
+            "flux_required": "Flux Richiesto: **{range}**",
+            "restrictions_title": "🚫 **RESTRIZIONI:**",
+            "bypasses_title": "✅ **BYPASS:**",
+            "bypasses_none": "Nessuno",
+            "how_to_advance": "💡 **CONSIGLIO:** Partecipa attivamente per guadagnare Flux.",
+            "items": {
+                "all_security": "Tutti i moduli di sicurezza attivi",
+                "links_deleted": "Link eliminati automaticamente",
+                "forwards_deleted": "Forward eliminati automaticamente",
+                "no_edit": "Impossibile modificare messaggi",
+                "scam_checked": "Controllo pattern scam",
+                "max_ai": "Massimo scrutinio AI",
+                "strict_rate": "Rate limit più severo",
+                "links_flagged": "Link sconosciuti segnalati",
+                "ai_active": "AI Moderation attiva",
+                "modals_active": "Modal patterns attivi",
+                "nsfw_active": "NSFW monitor attivo",
+                "vote_ban": "Può avviare vote-ban",
+                "ai_severe": "AI Moderation (solo gravi)",
+                "ai_critical": "Solo AI per minacce critiche",
+                "profiler_bypass": "Profiler bypassato",
+                "edit_allowed": "Può modificare messaggi",
+                "lang_bypass": "Language monitor bypassato",
+                "forwards_allowed": "Forward permessi",
+                "spam_bypass": "Anti-Spam bypassato",
+                "keyword_bypass": "Keyword Monitor bypassato",
+                "link_bypass": "Link Monitor bypassato",
+                "modal_bypass": "Modal Patterns bypassato",
+                "antiedit_bypass": "Anti-Edit Abuse bypassato",
+                "profiler_disabled": "Profiler completamente disattivato",
+                "all_bypass": "Quasi tutti i filtri bypassati",
+                "nsfw_bypass": "NSFW Monitor bypassato",
+                "visual_bypass": "Visual Immune System bypassato"
+            }
+        },
+        "flux_calc": {
+            "title": "📊 **COME FUNZIONA FLUX**",
+            "earning": "**Guadagnare Flux:**\n• +1 per messaggio (max 1/6min)\n• +1 al giorno passivo",
+            "losing": "**Perdere Flux:**\n• -50 per ban spam\n• -50 per violazione link\n• -100 per ban NSFW/edit",
+            "thresholds": "**Soglie Tier:**\n• Tier 0: 0 - 99\n• Tier 1: 100 - 299\n• Tier 2: 300 - 499\n• Tier 3: 500+",
+            "cap": "Flux è limitato a ±1000."
+        },
+        "my_flux": {
+            "title": "📊 **IL TUO FLUX**",
+            "local_global": "🏠 Locale: {local} | 🌍 Globale: {global}"
+        }
     }
 }

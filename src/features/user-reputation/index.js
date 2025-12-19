@@ -1,8 +1,8 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - USER REPUTATION ("TrustFlux")
+// TODO: IMPLEMENTATION PLAN - USER REPUTATION ("Flux")
 // ============================================================================
 // SCOPO: Sistema reputazione organico basato su attività.
-// TrustFlux = punteggio dinamico con scope locale e globale.
+// Flux = punteggio dinamico con scope locale e globale.
 // Determina Tier utente che influenza bypass moduli moderazione.
 // ============================================================================
 
@@ -58,7 +58,7 @@
 //
 // /myflux:
 // ┌────────────────────────────────────────────┐
-// │ 📊 **IL TUO TRUSTFLUX**                    │
+// │ 📊 **IL TUO FLUX**                    │
 // │ 🏠 Locale: 245 | 🌍 Globale: 180          │
 // │ 🏷️ Tier: 1 - Membro                      │
 // │ ████████░░ 245/300 per Tier 2             │
@@ -77,11 +77,61 @@
 // MODULE EXPORTS
 // ============================================================================
 
+// ============================================================================
+// TIER SYSTEM - Fantasy Names & Thresholds
+// ============================================================================
 const TIER_THRESHOLDS = {
-    TIER_0: 0,    // Novizio
-    TIER_1: 100,  // Membro
-    TIER_2: 300,  // Residente
-    TIER_3: 500   // Veterano
+    TIER_0: 0,    // Ombra (Shadow)
+    TIER_1: 100,  // Scudiero (Squire)
+    TIER_2: 300,  // Guardiano (Guardian)
+    TIER_3: 500   // Sentinella (Sentinel)
+};
+
+const TIER_INFO = {
+    0: {
+        id: "0",
+        emoji: "🌑",
+        fluxRange: "0 - 99",
+        restrictions: [
+            "all_security", "links_deleted", "forwards_deleted", "no_edit",
+            "scam_checked", "max_ai", "strict_rate"
+        ],
+        bypasses: []
+    },
+    1: {
+        id: "1",
+        emoji: "⚔️",
+        fluxRange: "100 - 299",
+        restrictions: [
+            "links_flagged", "ai_active", "modals_active", "nsfw_active", "vote_ban"
+        ],
+        bypasses: [
+            "profiler_bypass", "edit_allowed", "lang_bypass", "forwards_allowed"
+        ]
+    },
+    2: {
+        id: "2",
+        emoji: "🛡️",
+        fluxRange: "300 - 499",
+        restrictions: [
+            "ai_severe", "nsfw_active"
+        ],
+        bypasses: [
+            "spam_bypass", "keyword_bypass", "lang_bypass", "link_bypass",
+            "modal_bypass", "antiedit_bypass", "profiler_disabled"
+        ]
+    },
+    3: {
+        id: "3",
+        emoji: "👁️",
+        fluxRange: "500+",
+        restrictions: [
+            "ai_critical"
+        ],
+        bypasses: [
+            "all_bypass", "nsfw_bypass", "visual_bypass"
+        ]
+    }
 };
 
 let db = null;
@@ -95,21 +145,13 @@ function register(bot, database) {
             const userId = ctx.from.id;
             const guildId = ctx.chat.id;
 
-            // Calc & Attach Tier (this also triggers lazy passive update)
+            // Calc & Attach Tier
             ctx.userTier = getUserTier(userId, guildId);
             ctx.userFlux = getLocalFlux(userId, guildId);
 
-            // Active Reward: Message (Max 1 per 5 mins approx 10/hr?)
-            // Let's use 6 mins = 10 pts/hr.
+            // Active Reward: Message (Max 1 per 6 mins)
             if (ctx.message) {
                 const now = Date.now();
-                // Check last activity from cache or DB? 
-                // We use DB 'last_activity'.
-                // To avoid DB spam, we can cache locally or just do it.
-                // We'll read from DB in modifyFlux check.
-                // We only award if enough time passed.
-
-                // Get row to check time
                 const row = db.getDb().prepare('SELECT last_activity FROM user_trust_flux WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
                 const lastTime = row ? new Date(row.last_activity).getTime() : 0;
 
@@ -130,19 +172,154 @@ function register(bot, database) {
         const localFlux = getLocalFlux(userId, guildId);
         const globalFlux = getGlobalFlux(userId);
         const tier = getUserTier(userId, guildId);
-        const tierName = getTierName(tier);
+        const tierInfo = TIER_INFO[tier];
 
         const nextTierFlux = tier < 3 ? TIER_THRESHOLDS[`TIER_${tier + 1}`] : null;
         const progress = nextTierFlux ? Math.min(10, Math.max(0, Math.floor((localFlux / nextTierFlux) * 10))) : 10;
         const progressBar = '█'.repeat(progress) + '░'.repeat(10 - progress);
 
-        let text = `📊 **IL TUO TRUSTFLUX**\n\n`;
-        text += `🏠 Locale: ${localFlux} | 🌍 Globale: ${globalFlux}\n`;
-        text += `🏷️ Tier: ${tier} - ${tierName}\n\n`;
-        text += `${progressBar} ${localFlux}/${nextTierFlux || '∞'}`;
+        // Translations
+        const title = ctx.t('tier_system.my_flux.title');
+        const rankText = ctx.t('tier_system.menu.your_rank', { emoji: tierInfo.emoji, name: ctx.t(`tier_system.tiers.${tier}.name`) });
+        const locGlob = ctx.t('tier_system.my_flux.local_global', { local: localFlux, global: globalFlux });
 
-        await ctx.reply(text, { parse_mode: "Markdown" });
+        let text = `${title}\n\n`;
+        text += `${rankText}\n`;
+        text += `${locGlob}\n\n`;
+        text += `${progressBar} ${localFlux}/${nextTierFlux || 'MAX'}`;
+
+        const keyboard = {
+            inline_keyboard: [
+                [{ text: ctx.t('tier_system.menu.buttons.view_details'), callback_data: `tier_detail:${tier}` }]
+            ]
+        };
+
+        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
     });
+
+    // Command: /tier - Show tier system menu
+    bot.command("tier", async (ctx) => {
+        await sendTierMenu(ctx);
+    });
+
+    // Callback handlers for tier menu
+    bot.on("callback_query:data", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+
+        if (data === "tier_close") {
+            await ctx.deleteMessage();
+            return;
+        }
+
+        if (data === "tier_menu") {
+            await sendTierMenu(ctx, true);
+            return;
+        }
+
+        if (data.startsWith("tier_detail:")) {
+            const tierNum = parseInt(data.split(":")[1]);
+            await sendTierDetail(ctx, tierNum);
+            return;
+        }
+
+        if (data === "tier_flux_calc") {
+            await sendFluxCalculation(ctx);
+            return;
+        }
+
+        await next();
+    });
+}
+
+async function sendTierMenu(ctx, isEdit = false) {
+    const userTier = ctx.userTier ?? 0;
+    const userInfo = TIER_INFO[userTier];
+    const tierName = ctx.t(`tier_system.tiers.${userTier}.name`);
+
+    const text = `${ctx.t('tier_system.menu.title')}\n\n` +
+        `${ctx.t('tier_system.menu.your_rank', { emoji: userInfo.emoji, name: tierName })}\n\n` +
+        `${ctx.t('tier_system.menu.select_tier')}`;
+
+    const getBtnText = (tier, emoji) => {
+        const name = ctx.t(`tier_system.tiers.${tier}.name`);
+        const arrow = userTier === tier ? '▶ ' : '';
+        return `${arrow}${emoji} ${name}`;
+    };
+
+    const keyboard = {
+        inline_keyboard: [
+            [
+                { text: getBtnText(0, '🌑'), callback_data: "tier_detail:0" },
+                { text: getBtnText(1, '⚔️'), callback_data: "tier_detail:1" }
+            ],
+            [
+                { text: getBtnText(2, '🛡️'), callback_data: "tier_detail:2" },
+                { text: getBtnText(3, '👁️'), callback_data: "tier_detail:3" }
+            ],
+            [{ text: ctx.t('tier_system.menu.buttons.flux_works'), callback_data: "tier_flux_calc" }],
+            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
+        ]
+    };
+
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+    }
+}
+
+async function sendTierDetail(ctx, tierNum) {
+    const info = TIER_INFO[tierNum];
+    if (!info) return;
+
+    const tierName = ctx.t(`tier_system.tiers.${tierNum}.name`);
+    let text = `**${info.emoji} ${tierName}**\n`;
+    text += ctx.t('tier_system.details.flux_required', { range: info.fluxRange }) + "\n\n";
+
+    if (info.restrictions.length > 0) {
+        text += `${ctx.t('tier_system.details.restrictions_title')}\n`;
+        info.restrictions.forEach(r => text += `• ${ctx.t('tier_system.details.items.' + r)}\n`);
+    }
+
+    if (info.bypasses.length > 0) {
+        text += `\n${ctx.t('tier_system.details.bypasses_title')}\n`;
+        info.bypasses.forEach(b => text += `• ${ctx.t('tier_system.details.items.' + b)}\n`);
+    } else {
+        text += `\n${ctx.t('tier_system.details.bypasses_title')} ${ctx.t('tier_system.details.bypasses_none')}`;
+    }
+
+    text += `\n\n${ctx.t('tier_system.details.how_to_advance')}`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: ctx.t('tier_system.menu.buttons.back'), callback_data: "tier_menu" }],
+            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
+        ]
+    };
+
+    try {
+        await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard });
+    } catch (e) { }
+}
+
+async function sendFluxCalculation(ctx) {
+    const p = 'tier_system.flux_calc.';
+    const text = `${ctx.t(p + 'title')}\n\n` +
+        `${ctx.t(p + 'earning')}\n\n` +
+        `${ctx.t(p + 'losing')}\n\n` +
+        `${ctx.t(p + 'thresholds')}\n\n` +
+        `${ctx.t(p + 'cap')}`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: ctx.t('tier_system.menu.buttons.back'), callback_data: "tier_menu" }],
+            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
+        ]
+    };
+
+    try {
+        await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard });
+    } catch (e) { }
 }
 
 function getUserTier(userId, guildId) {
@@ -198,8 +375,7 @@ function modifyFlux(userId, guildId, delta, reason) {
 }
 
 function getTierName(tier) {
-    const names = ['Novizio', 'Membro', 'Residente', 'Veterano'];
-    return names[tier] || 'Veterano';
+    return TIER_INFO[tier]?.name || TIER_INFO[3].name;
 }
 
 module.exports = {

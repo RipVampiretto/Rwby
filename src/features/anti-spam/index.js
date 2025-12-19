@@ -105,7 +105,7 @@
 // │                                            │
 // │ 🏛️ Gruppo: Nome Gruppo (@username)        │
 // │ 👤 Utente: @banned_user (ID: 123456)      │
-// │ 📊 TrustFlux: -45 (era 55)                │
+// │ 📊 Flux: -45 (era 55)                │
 // │ ⏰ Ora: 2024-12-17 14:30:25               │
 // │                                            │
 // │ 📝 Motivo: Spam - Volume flood            │
@@ -419,7 +419,7 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
         const text = `🔨 **BAN ESEGUITO**\n\n` +
             `🏛️ Gruppo: ${ctx.chat.title} (@${ctx.chat.username || 'private'})\n` +
             `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
-            `📊 TrustFlux: ${flux}\n` +
+            `📊 Flux: ${flux}\n` +
             `⏰ Ora: ${new Date().toISOString()}\n\n` +
             `📝 Motivo: ${trigger}\n` +
             `🔧 Trigger: anti-spam\n\n` +

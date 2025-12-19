@@ -46,7 +46,7 @@
 // │                                            │
 // │ 🏛️ Gruppo: Nome Gruppo (@handle)          │
 // │ 👤 Utente: @user (ID: 123456)             │
-// │ 📊 TrustFlux: -45                         │
+// │ 📊 Flux: -45                         │
 // │ ⏰ Ora: 2024-12-17 14:30                  │
 // │                                            │
 // │ 📝 Motivo: Anti-Spam - Volume flood       │
@@ -772,7 +772,7 @@ async function forwardBanToParliament(info) {
         const text = `🔨 **BAN ESEGUITO**\n\n` +
             `🏛️ Gruppo: ${guildName}\n` +
             `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
-            `📊 TrustFlux: ${flux}\n` +
+            `📊 Flux: ${flux}\n` +
             `⏰ Ora: ${new Date().toISOString()}\n\n` +
             `📝 Motivo: ${reason}\n` +
             `💬 Evidence: "${evidence ? evidence.substring(0, 200) : 'N/A'}"`;

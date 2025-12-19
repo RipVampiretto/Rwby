@@ -53,6 +53,9 @@ bot.use(async (ctx, next) => {
     await next();
 });
 
+// Global i18n middleware
+bot.use(i18n.middleware());
+
 // ============================================================================
 // FEATURE MODULES - Register
 // ============================================================================
@@ -121,7 +124,7 @@ bot.command("help", async (ctx) => {
 
     let helpText = "📚 **COMANDI DISPONIBILI**\n\n";
     helpText += "👤 **Utente:**\n";
-    helpText += "/myflux - Vedi il tuo TrustFlux e Tier\n\n";
+    helpText += "/myflux - Vedi il tuo Flux e Tier\n\n";
 
     if (isGroupAdmin) {
         helpText += "⚙️ **Admin Gruppo:**\n";

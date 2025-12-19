@@ -140,11 +140,35 @@ function getDefaultLanguage() {
     return DEFAULT_LANG;
 }
 
+/**
+ * Middleware to attach i18n functions to context
+ */
+function middleware() {
+    return async (ctx, next) => {
+        // Attach translation function to context
+        ctx.t = (key, params) => {
+            const guildId = ctx.chat?.id;
+            return t(guildId, key, params);
+        };
+
+        // Attach other helpers
+        ctx.i18n = {
+            getLanguage: () => getLanguage(ctx.chat?.id),
+            setLanguage: (lang) => setLanguage(ctx.chat?.id, lang),
+            available: AVAILABLE_LANGUAGES
+        };
+
+        await next();
+    };
+}
+
 module.exports = {
     init,
     t,
     getLanguage,
     setLanguage,
     getAvailableLanguages,
-    getDefaultLanguage
+    getDefaultLanguage,
+    middleware
 };
+

@@ -48,7 +48,7 @@
 // ├── GLOBAL_BAN_REVOKE → Ban globale rimosso
 // ├── BLACKLIST_ADD → Nuova parola/link/hash bannato
 // ├── BLACKLIST_REMOVE → Rimozione da blacklist
-// └── FLUX_UPDATE → Cambio significativo TrustFlux utente
+// └── FLUX_UPDATE → Cambio significativo Flux utente
 //
 // ON GLOBAL_BAN_ADD:
 // ├── Ricevi userId e metadata
