@@ -327,12 +327,12 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const count = db.getDb().prepare('SELECT COUNT(*) as c FROM word_filters WHERE guild_id = ?').get(ctx.chat.id).c;
 
     const text = `🔤 **PAROLE VIETATE**\n\n` +
-        `Gestione filtri blacklist per parole o frasi non ammesse.\n` +
-        `Supporta corrispondenza esatta, parziale o Regular Expressions.\n\n` +
+        `Blocca messaggi che contengono parole o frasi specifiche che non vuoi nel gruppo.\n` +
+        `Puoi scegliere se cancellare o bannare chi le usa.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Azioni configurabili per parola\n` +
-        `• Supporto Regex avanzato\n` +
-        `• Sync con liste globali (Opzionale)\n\n` +
+        `• Puoi bloccare parole esatte o parziali\n` +
+        `• Supporta regole avanzate per utenti esperti\n` +
+        `• Può usare liste condivise di parole pericolose\n\n` +
         `Filtri attivi: ${count} locali`;
 
     const closeBtn = fromSettings

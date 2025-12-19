@@ -362,17 +362,17 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const v = config.nsfw_check_videos ? '✅' : '❌';
     const g = config.nsfw_check_gifs ? '✅' : '❌';
 
-    const text = `🔞 **NSFW CONFIG**\n\n` +
-        `Analisi immagini e video per contenuti inappropriati.\n` +
-        `Usa Vision LLM locale per classificazione.\n\n` +
+    const text = `🔞 **FILTRO NSFW**\n\n` +
+        `Analizza immagini e video per trovare contenuti non adatti (Nudo, Violenza).\n` +
+        `Protegge il gruppo da contenuti scioccanti.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Supporta: Foto, Video (campionamento), GIF\n` +
-        `• Categorie: Nudity, Gore, Suggestive\n` +
-        `• Richiede risorse elevate (GPU/CPU)\n\n` +
+        `• Funziona su Foto, Video e GIF\n` +
+        `• Blocca pornografia e immagini violente\n` +
+        `• Richiede un po' di tempo per analizzare i video\n\n` +
         `Stato: ${enabled}\n` +
         `Azione: ${action}\n` +
-        `Soglia: ${thr}%\n` +
-        `Checks: Foto ${p} | Vid ${v} | Gif ${g}`;
+        `Sensibilità: ${thr}%\n` +
+        `Controlla: Foto ${p} | Vid ${v} | Gif ${g}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }

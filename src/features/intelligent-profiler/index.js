@@ -280,17 +280,17 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const actFwd = (config.profiler_action_forward || 'delete').toUpperCase().replace(/_/g, ' ');
     const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase().replace(/_/g, ' ');
 
-    const text = `🔍 **PROFILER TIER 0**\n\n` +
-        `Analizza rigorosamente i nuovi utenti (Tier 0) per pattern malevoli.\n` +
-        `Bypass automatico per utenti verificati (Tier 1+).\n\n` +
+    const text = `🔍 **PROFILER NUOVI UTENTI**\n\n` +
+        `Analizza i nuovi arrivati per bloccare bot e spammer istantanei.\n` +
+        `Smette di controllare gli utenti appena diventano fidati.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Controlla: Link Sconosciuti, Forward\n` +
-        `• Rileva: Pattern Scam ("guadagna", "crypto")\n` +
-        `• Target: Solo nuovi arrivati\n\n` +
+        `• Controlla se inviano subito Link o Inoltrati\n` +
+        `• Rileva frasi tipiche da bot ("guadagna subito", ecc)\n` +
+        `• Protegge dalle ondate di account falsi\n\n` +
         `Stato: ${enabled}\n` +
-        `Link: ${actLink}\n` +
-        `Fwd: ${actFwd}\n` +
-        `Pat: ${actPat}`;
+        `Azione Link: ${actLink}\n` +
+        `Azione Fwd: ${actFwd}\n` +
+        `Azione Pattern: ${actPat}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }

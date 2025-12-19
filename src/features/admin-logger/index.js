@@ -264,12 +264,12 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 
     const channelInfo = config.log_channel_id ? `Active (${config.log_channel_id})` : "Not set";
     const text = `📋 **CONFIGURAZIONE LOG**\n\n` +
-        `Sistema centralizzato per registrare azioni di moderazione.\n` +
-        `Supporta logging locale (Canale) e globale (SuperAdmin Audit).\n\n` +
+        `Registra automaticamente tutto quello che succede nel gruppo.\n` +
+        `Utile per vedere chi è stato bannato e perché.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Eventi: Ban, Delete, AI, Spam, Config\n` +
-        `• Scope: Locale (Gruppo) + Global (Rete)\n` +
-        `• Formati: Minimal, Standard, Extended (Debug)\n\n` +
+        `• Scegli quali eventi registrare (Ban, Delete, ecc)\n` +
+        `• Puoi inviare i log in un canale privato\n` +
+        `• Supporta diversi livelli di dettaglio\n\n` +
         `Canale: ${channelInfo}\n` +
         `Eventi attivi: ${logEvents.length}/6`;
 

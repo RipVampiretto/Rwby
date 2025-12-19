@@ -260,18 +260,17 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const dur = config.voteban_duration_minutes || 30;
     const tier = config.voteban_initiator_tier || 1;
 
-    const text = `⚖️ **VOTE BAN CONFIG**\n\n` +
-        `Permette alla community di "processare" utenti sospetti.\n` +
-        `Avvia voto con /voteban in risposta a un messaggio.\n\n` +
+    const text = `⚖️ **VOTE BAN**\n\n` +
+        `Permette alla community di decidere se bannare un utente disturbatore.\n` +
+        `Usa /voteban rispondendo a un messaggio per avviare il sondaggio.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Tier Min: ${tier} (Per avviare)\n` +
-        `• Durata: ${dur} min\n` +
-        `• Quorum: ${thr} voti per il Ban\n` +
-        `• Immunità: Admin e Bot\n\n` +
+        `• Serve un certo numero di voti per bannare\n` +
+        `• Il voto dura un tempo limitato\n` +
+        `• Gli utenti fidati possono avviare votazioni\n\n` +
         `Stato: ${enabled}\n` +
-        `Soglia: ${thr} voti\n` +
+        `Voti Richiesti: ${thr}\n` +
         `Durata: ${dur} min\n` +
-        `Tier Min: ${tier}`;
+        `Tier Minimo: ${tier}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }

@@ -339,16 +339,16 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const sync = config.link_sync_global ? '✅ ON' : '❌ OFF';
     const act = (config.link_action_unknown || 'report_only').toUpperCase().replace(/_/g, ' ');
 
-    const text = `🔗 **LINK CONFIG**\n\n` +
-        `Controllo link in ingresso tramite Whitelist/Blacklist.\n` +
-        `Sync automatico con intelligence globale (scam/phishing).\n\n` +
+    const text = `🔗 **CONTROLLO LINK**\n\n` +
+        `Controlla i link inviati per proteggere da scam e siti pericolosi.\n` +
+        `Usa una lista globale di siti malevoli sempre aggiornata.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Ordine: Local White > Global White > Local Black > Global Black\n` +
-        `• Unknown: Gestione domini non classificati\n` +
-        `• Bypass Tier configurabile\n\n` +
+        `• Blocca siti di phishing e truffe note\n` +
+        `• Permette di creare una lista di siti sicuri\n` +
+        `• Puoi scegliere cosa fare con i link sconosciuti\n\n` +
         `Stato: ${enabled}\n` +
-        `Sync Global: ${sync}\n` +
-        `Action Unknown: ${act}`;
+        `Sync Globale: ${sync}\n` +
+        `Azione (Sconosciuti): ${act}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }

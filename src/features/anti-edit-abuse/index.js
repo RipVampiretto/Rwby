@@ -377,18 +377,18 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const actInj = (config.edit_link_injection_action || 'ban').toUpperCase();
     const actGen = (config.edit_abuse_action || 'delete').toUpperCase();
 
-    const text = `✏️ **ANTI-EDIT CONFIG**\n\n` +
-        `Monitora modifiche sospette (Link Injection) e cambi completi di senso.\n` +
-        `Protegge storico messaggi per 24h.\n\n` +
+    const text = `✏️ **ANTI-EDIT**\n\n` +
+        `Controlla se qualcuno modifica i messaggi vecchi per inserire link o truffe.\n` +
+        `Protegge lo storico della chat.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Link Injection: Critico (Default Ban)\n` +
-        `• Similarità < Soglia: Sospetto\n` +
-        `• Tier 0 Lock: Novizi non possono editare\n\n` +
+        `• Blocca l'inserimento di link nascosti dopo l'invio\n` +
+        `• Impedisce di cambiare completamente il senso di una frase\n` +
+        `• I nuovi utenti non possono modificare per sicurezza\n\n` +
         `Stato: ${enabled}\n` +
-        `Lock Tier 0: ${lockT0}\n` +
-        `Soglia Sim: ${thr}%\n` +
-        `Act (Inject): ${actInj}\n` +
-        `Act (Abuse): ${actGen}`;
+        `Novizi Bloccati: ${lockT0}\n` +
+        `Sensibilità: ${thr}%\n` +
+        `Azione (Link): ${actInj}\n` +
+        `Azione (Abuso): ${actGen}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }

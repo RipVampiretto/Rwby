@@ -264,17 +264,17 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const action = (config.visual_action || 'delete').toUpperCase();
     const thr = config.visual_hamming_threshold || 5;
 
-    const text = `🧬 **VISUAL SYSTEM**\n\n` +
-        `Immunità visiva tramite hashing percettivo.\n` +
-        `Blocca immagini identiche o molto simili a quelle bannate.\n\n` +
+    const text = `🧬 **IMMUNITÀ VISIVA**\n\n` +
+        `Riconosce e blocca le immagini che sono già state segnalate in passato.\n` +
+        `Anche se vengono leggermente modificate, il bot le riconosce lo stesso.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Hashing: pHash (resiliente a resize/crop)\n` +
-        `• Soglia Hamming: < 5 = Match\n` +
-        `• Sync: Condivide hash malevoli globalmente\n\n` +
+        `• Blocca meme spam o immagini raid ricorrenti\n` +
+        `• Condivide le "impronte" delle immagini cattive con altri gruppi\n` +
+        `• Molto veloce ed efficace\n\n` +
         `Stato: ${enabled}\n` +
         `Globale: ${sync}\n` +
         `Azione: ${action}\n` +
-        `Soglia Dist: ${thr}`;
+        `Precisione: ${thr}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
