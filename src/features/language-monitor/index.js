@@ -234,7 +234,7 @@ async function executeAction(ctx, action, detected, allowed) {
 async function sendConfigUI(ctx, isEdit = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.lang_enabled ? '✅ ON' : '❌ OFF';
-    const action = (config.lang_action || 'delete').toUpperCase();
+    const action = (config.lang_action || 'delete').toUpperCase().replace(/_/g, ' ');
 
     let allowed = [];
     try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }

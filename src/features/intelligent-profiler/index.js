@@ -267,9 +267,9 @@ async function executeAction(ctx, action, reason, content) {
 async function sendConfigUI(ctx, isEdit = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.profiler_enabled ? '✅ ON' : '❌ OFF';
-    const actLink = (config.profiler_action_link || 'delete').toUpperCase();
-    const actFwd = (config.profiler_action_forward || 'delete').toUpperCase();
-    const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase();
+    const actLink = (config.profiler_action_link || 'delete').toUpperCase().replace(/_/g, ' ');
+    const actFwd = (config.profiler_action_forward || 'delete').toUpperCase().replace(/_/g, ' ');
+    const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase().replace(/_/g, ' ');
 
     const text = `🔍 **PROFILER TIER 0**\n` +
         `Stato: ${enabled}\n` +

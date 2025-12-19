@@ -95,8 +95,23 @@ bot.command("start", (ctx) => ctx.reply(
     "Uso /help per vedere i comandi disponibili."
 ));
 
-bot.command("help", (ctx) => {
-    const isGroupAdmin = ctx.isAdmin; // Set by isAdmin middleware if re-added
+// ALIAS: /settings -> /help
+bot.command(["help", "settings"], async (ctx) => {
+    let isGroupAdmin = false;
+
+    // Check admin status if in group
+    if (ctx.chat.type !== 'private') {
+        try {
+            const member = await ctx.getChatMember(ctx.from.id);
+            isGroupAdmin = ['creator', 'administrator'].includes(member.status);
+        } catch (e) { }
+    } else {
+        // In private chat, maybe checking if user is "global admin" (super admin)?
+        // For now, let's assume private chat users don't see group config commands 
+        // unless we later implement a "select group" flow.
+        // BUT, if they are testing in private, they might want to see commands.
+        // For safety, only show admin commands in groups where they are admin.
+    }
 
     let helpText = "📚 **COMANDI DISPONIBILI**\n\n";
     helpText += "👤 **Utente:**\n";
@@ -119,7 +134,7 @@ bot.command("help", (ctx) => {
         helpText += "/intel - Status Intel Network\n";
     }
 
-    ctx.reply(helpText, { parse_mode: "Markdown" });
+    await ctx.reply(helpText, { parse_mode: "Markdown" });
 });
 
 // ============================================================================

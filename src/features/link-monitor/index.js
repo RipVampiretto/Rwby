@@ -322,7 +322,7 @@ async function sendConfigUI(ctx, isEdit = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.link_enabled ? '✅ ON' : '❌ OFF';
     const sync = config.link_sync_global ? '✅ ON' : '❌ OFF';
-    const act = (config.link_action_unknown || 'report_only').toUpperCase();
+    const act = (config.link_action_unknown || 'report_only').toUpperCase().replace(/_/g, ' ');
 
     const text = `🔗 **LINK CONFIG**\n` +
         `Stato: ${enabled}\n` +

@@ -17,23 +17,7 @@ function register(bot, database) {
     db = database;
     _botInstance = bot;
 
-    // Ensure table exists
-    db.getDb().prepare(`CREATE TABLE IF NOT EXISTS active_votes (
-        vote_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        target_user_id INTEGER,
-        target_username TEXT,
-        chat_id INTEGER,
-        poll_message_id INTEGER,
-        initiated_by INTEGER,
-        reason TEXT,
-        votes_yes INTEGER DEFAULT 0,
-        votes_no INTEGER DEFAULT 0,
-        required_votes INTEGER,
-        voters TEXT DEFAULT '[]',
-        status TEXT DEFAULT 'active',
-        created_at TEXT,
-        expires_at TEXT
-    )`).run();
+    // Table creation handled in database/index.js
 
     // Command: /voteban (reply to message)
     bot.command("voteban", async (ctx) => {
