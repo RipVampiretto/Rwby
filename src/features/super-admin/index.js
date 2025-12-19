@@ -130,6 +130,20 @@ const adminLogger = require('../admin-logger');
 const { safeEdit, safeDelete, handleCriticalError, handleTelegramError, safeJsonParse } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
+// Wizard Session Management
+const WIZARD_SESSIONS = new Map();
+const WIZARD_SESSION_TTL = 300000; // 5 minutes
+
+// Cleanup expired sessions
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, session] of WIZARD_SESSIONS.entries()) {
+        if (now - session.startedAt > WIZARD_SESSION_TTL) {
+            WIZARD_SESSIONS.delete(key);
+        }
+    }
+}, 60000);
+
 let db = null;
 let _botInstance = null;
 
@@ -359,14 +373,83 @@ function register(bot, database) {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
         }
         else if (data.startsWith("bl_link")) {
-            // Todo implementation for wizard
-            await ctx.answerCallbackQuery("TODO: Link Blacklist Wizard");
+            WIZARD_SESSIONS.set(ctx.from.id, {
+                type: 'link',
+                startedAt: Date.now()
+            });
+            await ctx.answerCallbackQuery("Wizard avviato");
+            await ctx.reply("🔗 **AGGIUNGI DOMINIO ALLA BLACKLIST**\n\nScrivi il dominio da bloccare (es. `scam-site.com`):", {
+                reply_markup: { force_reply: true }
+            });
         }
         else if (data.startsWith("bl_word")) {
-            await ctx.answerCallbackQuery("TODO: Word Blacklist Wizard");
+            WIZARD_SESSIONS.set(ctx.from.id, {
+                type: 'word',
+                startedAt: Date.now()
+            });
+            await ctx.answerCallbackQuery("Wizard avviato");
+            await ctx.reply("🔤 **AGGIUNGI PAROLA ALLA BLACKLIST**\n\nScrivi la parola o frase da bloccare:", {
+                reply_markup: { force_reply: true }
+            });
         }
         else {
             return next();
+        }
+    });
+
+    // WIZARD MESSAGE HANDLER (Must be registered early)
+    bot.on("message:text", async (ctx, next) => {
+        const userId = ctx.from.id;
+        if (!WIZARD_SESSIONS.has(userId)) return next();
+
+        const session = WIZARD_SESSIONS.get(userId);
+
+        // Check if session is expired (double check)
+        if (Date.now() - session.startedAt > WIZARD_SESSION_TTL) {
+            WIZARD_SESSIONS.delete(userId);
+            return ctx.reply("⏳ Sessione scaduta. Riprova.");
+        }
+
+        const input = ctx.message.text.trim();
+        const type = session.type; // 'link' or 'word'
+
+        try {
+            if (type === 'link') {
+                // Add to global link blacklist
+                // Type in intel_data: 'global_blacklist_domain' (based on implicit convention, checking other modules might be good but let's stick to this or 'blacklist_domain' with proper metadata)
+                // Actually intel-network says: 'blacklist_domain' in comment
+
+                // Let's use 'blacklist_domain' as per intel-network comments, ensuring it's marked as global appropriately
+                // Intel data table: type, value, status='active'
+
+                db.getDb().prepare(`
+                    INSERT INTO intel_data (type, value, added_by_user, status)
+                    VALUES ('blacklist_domain', ?, ?, 'active')
+                `).run(input, userId);
+
+                await ctx.reply(`✅ Dominio \`${input}\` aggiunto alla Blacklist Globale.`);
+
+                // Notify logic: Creating a bill/report isn't needed if SuperAdmin does it directly? 
+                // Or maybe we want to log it?
+                logger.info(`[super-admin] Global domain blacklist added: ${input} by ${userId}`);
+            }
+            else if (type === 'word') {
+                db.getDb().prepare(`
+                    INSERT INTO intel_data (type, value, added_by_user, status)
+                    VALUES ('blacklist_word', ?, ?, 'active')
+                `).run(input, userId);
+
+                await ctx.reply(`✅ Parola \`${input}\` aggiunta alla Blacklist Globale.`);
+                logger.info(`[super-admin] Global word blacklist added: ${input} by ${userId}`);
+            }
+
+            // Cleanup session
+            WIZARD_SESSIONS.delete(userId);
+
+        } catch (e) {
+            logger.error(`[super-admin] Error in wizard: ${e.message}`);
+            await ctx.reply("❌ Errore durante il salvataggio: " + e.message);
+            WIZARD_SESSIONS.delete(userId);
         }
     });
 
