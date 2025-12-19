@@ -516,6 +516,42 @@ function register(bot, database) {
         return ctx.reply("❓ Uso: /gwhitelist [list|add|remove] [dominio]");
     });
 
+    // Handle Quick Whitelist from Link Check Report
+    bot.on("callback_query:data", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+        if (!data.startsWith("gwl_add:")) return next();
+
+        if (!isSuperAdmin(ctx.from.id)) return ctx.answerCallbackQuery("❌ Accesso negato");
+
+        const domain = data.split(":")[1];
+
+        try {
+            // Check if exists
+            const existing = db.getDb().prepare(
+                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND value = ?"
+            ).get(domain);
+
+            if (existing) {
+                if (existing.status === 'active') {
+                    return ctx.answerCallbackQuery("⚠️ Già in whitelist");
+                }
+                // Reactivate
+                db.getDb().prepare("UPDATE intel_data SET status = 'active' WHERE id = ?").run(existing.id);
+            } else {
+                db.getDb().prepare(
+                    "INSERT INTO intel_data (type, value, added_by_user) VALUES ('global_whitelist_domain', ?, ?)"
+                ).run(domain, ctx.from.id);
+            }
+
+            await ctx.answerCallbackQuery(`✅ ${domain} aggiunto alla whitelist`);
+            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ **Aggiunto alla Whitelist da ${ctx.from.first_name}**`, { parse_mode: 'Markdown' });
+
+        } catch (e) {
+            logger.error(`[super-admin] Error in quick whitelist: ${e.message}`);
+            await ctx.answerCallbackQuery("❌ Errore");
+        }
+    });
+
     // ========================================================================
     // GLOBAL SCAM PATTERNS MANAGEMENT - /gscam
     // ========================================================================
@@ -882,6 +918,62 @@ async function forwardBanToParliament(info) {
         logger.error(`[super-admin] Failed to forward ban to parliament: ${e.message}`);
     }
 }
+
+async function forwardLinkCheck(info) {
+    if (!db || !_botInstance) return;
+    try {
+        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        // Parse topics
+        let threadId = null;
+        if (globalConfig.global_topics) {
+            try { threadId = JSON.parse(globalConfig.global_topics).link_checks; } catch (e) { }
+        }
+
+        const { user, guildName, guildId, link } = info;
+
+        // Extract domain safely
+        let domain = link;
+        try {
+            domain = new URL(link).hostname.replace(/^www\./, '');
+        } catch (e) { }
+
+        const text = `🔗 **LINK CHECK**\n\n` +
+            `🏛️ Gruppo: ${guildName}\n` +
+            `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
+            `🔗 Link: \`${link}\`\n\n` +
+            `⚠️ Dominio sconosciuto o sospetto.`;
+
+        const keyboard = {
+            inline_keyboard: [
+                [{ text: "✅ Whitelist", callback_data: `gwl_add:${domain}` }, { text: "🚫 Blacklist", callback_data: `bl_link` }],
+                [{ text: "🗑️ Ignora", callback_data: `g_close` }]
+            ]
+        };
+
+        const sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
+            reply_markup: keyboard,
+            parse_mode: 'Markdown',
+            message_thread_id: threadId
+        });
+
+        // Schedule delete
+        const deleteAfter = new Date(Date.now() + 86400000).toISOString();
+        db.getDb().prepare('INSERT INTO pending_deletions (message_id, chat_id, delete_after) VALUES (?, ?, ?)')
+            .run(sent.message_id, sent.chat.id, deleteAfter);
+
+    } catch (e) {
+        logger.error(`[super-admin] Failed to forward link check: ${e.message}`);
+    }
+}
+
+module.exports = {
+    register,
+    sendGlobalLog,
+    forwardBanToParliament,
+    forwardLinkCheck
+};
 
 async function executeGlobalBan(ctx, userId) {
     // 1. Mark user as global banned in DB

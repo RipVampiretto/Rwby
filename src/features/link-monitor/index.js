@@ -236,6 +236,17 @@ async function processLinks(ctx, config, links) {
                     actionToTake = 'report_only';
                     matchedRule = 'Unknown Domain';
                     violatingLink = link;
+
+                    // NEW: Send to Parliament Link Check Topic
+                    if (superAdmin.forwardLinkCheck) {
+                        superAdmin.forwardLinkCheck({
+                            user: ctx.from,
+                            guildName: ctx.chat.title,
+                            guildId: ctx.chat.id,
+                            link: link
+                        });
+                    }
+
                     break;
                 }
             }
