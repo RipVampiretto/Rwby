@@ -6,7 +6,7 @@ const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
-const { safeDelete, safeEdit, safeBan, safeGetChatMember, handleCriticalError } = require('../../utils/error-handlers');
+const { safeDelete, safeEdit, safeBan, safeGetChatMember, handleCriticalError, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 let db = null;
@@ -80,8 +80,7 @@ function register(bot, database) {
     // Command: /voteconfig
     bot.command("voteconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'vote-ban')) return;
 
         await sendConfigUI(ctx);
     });
@@ -93,15 +92,7 @@ function register(bot, database) {
         // Config Handlers
         if (data.startsWith("vb_")) {
             const config = db.getGuildConfig(ctx.chat.id);
-
-            // Check if we came from settings menu
-            let fromSettings = false;
-            try {
-                const markup = ctx.callbackQuery.message.reply_markup;
-                if (markup && markup.inline_keyboard) {
-                    fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
-                }
-            } catch (e) { }
+            const fromSettings = isFromSettingsMenu(ctx);
 
             if (data === "vb_close") return ctx.deleteMessage();
 

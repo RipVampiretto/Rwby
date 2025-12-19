@@ -130,6 +130,24 @@ async function isAdmin(ctx, module = 'unknown') {
     return ['creator', 'administrator'].includes(member.status);
 }
 
+/**
+ * Check if callback query came from settings menu
+ * Detects if the current keyboard contains a "settings_main" back button
+ * @param {object} ctx - grammY callback query context
+ * @returns {boolean} True if came from settings menu
+ */
+function isFromSettingsMenu(ctx) {
+    try {
+        const markup = ctx.callbackQuery?.message?.reply_markup;
+        if (markup && markup.inline_keyboard) {
+            return markup.inline_keyboard.some(row =>
+                row.some(btn => btn.callback_data === 'settings_main')
+            );
+        }
+    } catch (e) { /* ignore */ }
+    return false;
+}
+
 module.exports = {
     handleTelegramError,
     handleCriticalError,
@@ -138,5 +156,6 @@ module.exports = {
     safeEdit,
     safeBan,
     safeGetChatMember,
-    isAdmin
+    isAdmin,
+    isFromSettingsMenu
 };

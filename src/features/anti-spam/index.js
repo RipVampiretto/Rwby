@@ -205,8 +205,7 @@ function register(bot, database) {
     // Command: /spamconfig
     bot.command("spamconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'anti-spam')) return;
 
         await sendConfigUI(ctx);
     });

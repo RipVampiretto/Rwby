@@ -100,7 +100,7 @@
 let db = null;
 let logEvent = null;
 let _botInstance = null;
-const { safeEdit, handleCriticalError, handleTelegramError } = require('../../utils/error-handlers');
+const { safeEdit, handleCriticalError, handleTelegramError, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 function register(bot, database) {
@@ -197,10 +197,7 @@ function register(bot, database) {
     // Command: /logconfig
     bot.command("logconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-
-        const member = await ctx.getChatMember(ctx.from.id);
-        const isAdmin = ['creator', 'administrator'].includes(member.status);
-        if (!isAdmin) return ctx.reply("⚠️ Admin only.");
+        if (!await isAdmin(ctx, 'admin-logger')) return ctx.reply("⚠️ Admin only.");
 
         await sendConfigUI(ctx);
     });
@@ -212,15 +209,7 @@ function register(bot, database) {
 
         const config = db.getGuildConfig(ctx.chat.id);
         let logEvents = config.log_events ? JSON.parse(config.log_events) : [];
-
-        // Check if we came from settings menu
-        let fromSettings = false;
-        try {
-            const markup = ctx.callbackQuery.message.reply_markup;
-            if (markup && markup.inline_keyboard) {
-                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
-            }
-        } catch (e) { }
+        const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === "log_close") {
             await ctx.deleteMessage();
@@ -249,8 +238,7 @@ function register(bot, database) {
 
     bot.command("setlogchannel", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'admin-logger')) return;
 
         db.updateGuildConfig(ctx.chat.id, { log_channel_id: ctx.chat.id }); // If in forum, maybe we want current thread? 
         // If forum, 'log_channel_id' usually refers to the main chat ID, and 'staff_topics' handles routing.

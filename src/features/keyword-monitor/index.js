@@ -90,7 +90,7 @@ const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
-const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError } = require('../../utils/error-handlers');
+const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 let _botInstance = null;
@@ -130,8 +130,7 @@ function register(bot, database) {
         // So default bypass is 2.
 
         // Skip for admins
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (['creator', 'administrator'].includes(member.status)) return next();
+        if (await isAdmin(ctx, 'keyword-monitor')) return next();
         if (ctx.userTier >= 2) return next();
 
         await processKeywords(ctx);
@@ -141,8 +140,7 @@ function register(bot, database) {
     // Command: /wordconfig
     bot.command("wordconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'keyword-monitor')) return;
 
         await sendConfigUI(ctx);
     });
@@ -152,14 +150,7 @@ function register(bot, database) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith("wrd_")) return next();
 
-        // Check if we came from settings menu
-        let fromSettings = false;
-        try {
-            const markup = ctx.callbackQuery.message.reply_markup;
-            if (markup && markup.inline_keyboard) {
-                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
-            }
-        } catch (e) { }
+        const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === "wrd_close") return ctx.deleteMessage();
 

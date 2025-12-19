@@ -11,7 +11,7 @@ const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
-const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError } = require('../../utils/error-handlers');
+const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError, isFromSettingsMenu } = require('../../utils/error-handlers');
 const loggerUtil = require('../../middlewares/logger');
 
 let db = null;
@@ -31,8 +31,7 @@ function register(bot, database) {
         if (ctx.chat.type === 'private') return next();
 
         // Skip admins
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (['creator', 'administrator'].includes(member.status)) return next();
+        if (await isAdmin(ctx, 'nsfw-monitor')) return next();
 
         // Config check
         const config = db.getGuildConfig(ctx.chat.id);
@@ -60,8 +59,7 @@ function register(bot, database) {
     // Command: /nsfwconfig
     bot.command("nsfwconfig", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'nsfw-monitor')) return;
 
         await sendConfigUI(ctx);
     });
@@ -72,14 +70,7 @@ function register(bot, database) {
         if (!data.startsWith("nsf_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
-        // Check if we came from settings menu
-        let fromSettings = false;
-        try {
-            const markup = ctx.callbackQuery.message.reply_markup;
-            if (markup && markup.inline_keyboard) {
-                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
-            }
-        } catch (e) { }
+        const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === "nsf_close") return ctx.deleteMessage();
 

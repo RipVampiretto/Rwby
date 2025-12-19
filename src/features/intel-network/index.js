@@ -119,7 +119,7 @@
 
 let db = null;
 let _botInstance = null;
-const { safeEdit, handleCriticalError, handleTelegramError, safeJsonParse } = require('../../utils/error-handlers');
+const { safeEdit, handleCriticalError, handleTelegramError, safeJsonParse, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 function register(bot, database) {
@@ -129,8 +129,7 @@ function register(bot, database) {
     // Command: /intel
     bot.command("intel", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return; // Admin only
+        if (!await isAdmin(ctx, 'intel-network')) return;
 
         await sendConfigUI(ctx);
     });
@@ -138,8 +137,7 @@ function register(bot, database) {
     // Command: /greport
     bot.command("greport", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-        const member = await ctx.getChatMember(ctx.from.id);
-        if (!['creator', 'administrator'].includes(member.status)) return;
+        if (!await isAdmin(ctx, 'intel-network')) return;
 
         if (!ctx.message.reply_to_message) {
             return ctx.reply("❌ Rispondi al messaggio (o utente) da segnalare.");
@@ -208,14 +206,7 @@ function register(bot, database) {
         if (ctx.callbackQuery.data === 'intel_close') return ctx.deleteMessage();
         if (ctx.callbackQuery.data === 'intel_noop') return ctx.answerCallbackQuery("Feature coming soon");
 
-        // Check if we came from settings menu
-        let fromSettings = false;
-        try {
-            const markup = ctx.callbackQuery.message.reply_markup;
-            if (markup && markup.inline_keyboard) {
-                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
-            }
-        } catch (e) { }
+        const fromSettings = isFromSettingsMenu(ctx);
 
         await next();
     });
