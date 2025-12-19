@@ -229,7 +229,7 @@ function register(bot, database) {
                 "- Link Checks (Link checks)"
             );
         } catch (e) {
-            console.error(e);
+            logger.error(`[super-admin] Setup error: ${e.message}`);
             ctx.reply("❌ Errore setup: " + e.message);
         }
     });
@@ -323,7 +323,7 @@ function register(bot, database) {
 
                 await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
             } catch (e) {
-                console.error(e);
+                logger.error(`[super-admin] Error fetching stats: ${e.message}`);
                 await ctx.answerCallbackQuery("Error fetching stats");
             }
         }
@@ -347,7 +347,7 @@ function register(bot, database) {
 
                 await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
             } catch (e) {
-                console.error("Error fetching bills:", e);
+                logger.error(`[super-admin] Error fetching bills: ${e.message}`);
                 await ctx.answerCallbackQuery("Error: " + e.message);
             }
         }
@@ -406,7 +406,7 @@ async function sendGlobalLog(topicKey, text) {
             .run(sent.message_id, sent.chat.id, deleteAfter);
 
     } catch (e) {
-        console.error(`Failed to send global log (${topicKey})`, e.message);
+        logger.error(`[super-admin] Failed to send global log (${topicKey}): ${e.message}`);
     }
 }
 
@@ -451,7 +451,7 @@ async function forwardBanToParliament(info) {
             .run(sent.message_id, sent.chat.id, deleteAfter);
 
     } catch (e) {
-        console.error("Failed to forward ban to parliament", e);
+        logger.error(`[super-admin] Failed to forward ban to parliament: ${e.message}`);
     }
 }
 
@@ -480,7 +480,7 @@ async function cleanupPendingDeletions() {
             db.getDb().prepare('DELETE FROM pending_deletions WHERE id = ?').run(p.id);
         }
     } catch (e) {
-        console.error("Cleanup error", e);
+        logger.error(`[super-admin] Cleanup error: ${e.message}`);
     }
 }
 

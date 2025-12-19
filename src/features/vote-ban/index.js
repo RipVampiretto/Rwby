@@ -240,7 +240,7 @@ async function finalizeVote(ctx, vote, status, admin) {
                     isGlobal: true
                 });
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { logger.error(`[vote-ban] Finalize vote error: ${e.message}`); }
     } else {
         await ctx.editMessageText(`⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO.\nEsito: ${status === 'pardon' ? 'Graziato da Admin' : 'Votazione Fallita'}`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
     }

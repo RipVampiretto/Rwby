@@ -52,7 +52,7 @@ function register(bot, database) {
 
         // Download and analyze
         // Fire and forget to avoid blocking, but handle errors
-        processMedia(ctx, config).catch(err => console.error("NSFW Process Error", err));
+        processMedia(ctx, config).catch(err => loggerUtil.error(`[nsfw-monitor] Process error: ${err.message}`));
 
         await next();
     });
@@ -211,7 +211,7 @@ async function checkVideo(videoPath, config, reasons) {
                 return true; // Stop early
             }
         } catch (e) {
-            console.error("Frame check error", e);
+            loggerUtil.warn(`[nsfw-monitor] Frame check error: ${e.message}`);
         }
     }
     return false;

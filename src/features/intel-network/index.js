@@ -199,7 +199,7 @@ function register(bot, database) {
             await ctx.reply("✅ Report inviato al network (Bill Created).");
 
         } catch (e) {
-            console.error(e);
+            logger.error(`[intel-network] Error sending report: ${e.message}`);
             await ctx.reply("❌ Errore invio report.");
         }
     });

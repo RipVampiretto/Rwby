@@ -139,7 +139,7 @@ function register(bot, database) {
                 });
 
             } catch (e) {
-                console.error("Error creating topics:", e);
+                logger.error(`[staff-coordination] Error creating topics: ${e.message}`);
                 return ctx.reply("❌ Errore nella creazione dei topic. Assicurati che io sia Admin.");
             }
         } else {
@@ -295,11 +295,11 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 async function reviewQueue(params) {
-    if (!db) return console.error("DB not initialized in staff-coordination");
+    if (!db) return logger.error("[staff-coordination] DB not initialized in reviewQueue");
 
     const config = db.getGuildConfig(params.guildId);
     if (!config || !config.staff_group_id) {
-        return console.log("[REVIEW QUEUE] No staff group set for guild " + params.guildId, params);
+        return logger.debug(`[staff-coordination] No staff group set for guild ${params.guildId}`);
     }
 
     let threadId = null;
@@ -338,7 +338,7 @@ async function reviewQueue(params) {
             reply_markup: keyboard
         });
     } else {
-        console.error("Bot instance not available in reviewQueue");
+        logger.error("[staff-coordination] Bot instance not available in reviewQueue");
     }
 }
 

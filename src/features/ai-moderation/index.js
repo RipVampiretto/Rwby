@@ -280,7 +280,7 @@ async function processMessage(ctx, config) {
             await handleViolation(ctx, config, result);
         }
     } catch (e) {
-        console.error("AI Check failed:", e.message);
+        logger.warn(`[ai-moderation] AI Check failed: ${e.message}`);
     }
 }
 

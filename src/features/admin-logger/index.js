@@ -101,6 +101,7 @@ let db = null;
 let logEvent = null;
 let _botInstance = null;
 const { safeEdit, handleCriticalError, handleTelegramError } = require('../../utils/error-handlers');
+const logger = require('../../middlewares/logger');
 
 function register(bot, database) {
     db = database;
@@ -174,7 +175,7 @@ function register(bot, database) {
                     message_thread_id: messageThreadId
                 });
             } catch (e) {
-                console.error("Failed to send local log:", e.message);
+                logger.error(`[admin-logger] Failed to send local log: ${e.message}`);
             }
         }
 
@@ -188,7 +189,7 @@ function register(bot, database) {
                     });
                 }
             } catch (e) {
-                console.error("Failed to send global log:", e.message);
+                logger.error(`[admin-logger] Failed to send global log: ${e.message}`);
             }
         }
     };

@@ -81,7 +81,7 @@ let _botInstance = null;
 let franc = null;
 
 // Load franc dynamically (ESM)
-import('franc').then(m => franc = m.franc).catch(e => console.error("Failed to load franc", e));
+import('franc').then(m => franc = m.franc).catch(e => loggerUtil.error(`[language-monitor] Failed to load franc: ${e.message}`));
 
 function register(bot, database) {
     db = database;

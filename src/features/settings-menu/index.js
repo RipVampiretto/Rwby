@@ -23,7 +23,7 @@ function register(bot, database) {
 
     // Command: /settings
     bot.command("settings", async (ctx) => {
-        console.log(`[DEBUG] /settings command triggered by ${ctx.from.id}`);
+        logger.debug(`[settings-menu] /settings command triggered by ${ctx.from.id}`);
         if (ctx.chat.type === 'private') return; // Or handle differently
         // Check admin
         try {

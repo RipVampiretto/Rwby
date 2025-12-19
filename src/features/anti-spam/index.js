@@ -440,7 +440,7 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
         // Save pending deletion
         // db.getDb().prepare('INSERT INTO pending_deletions ...') // skipped for brevity
     } catch (e) {
-        console.error("Failed to forward ban", e);
+        logger.error(`[anti-spam] Failed to forward ban: ${e.message}`);
     }
 }
 
