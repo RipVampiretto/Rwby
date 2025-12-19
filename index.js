@@ -35,6 +35,7 @@ const settingsMenu = require("./src/features/settings-menu");
 // DATABASE INIT
 // ============================================================================
 const db = require("./src/database");
+const i18n = require("./src/i18n");
 
 // ============================================================================
 // GLOBAL MIDDLEWARE - Logging & User Cache
@@ -167,6 +168,10 @@ async function start() {
     // Init database
     await db.init();
     logger.info("Database initialized");
+
+    // Init i18n
+    i18n.init(db);
+    logger.info("i18n initialized");
 
     // Start bot
     logger.info("🚀 Bot avviato...");

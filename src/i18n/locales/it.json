@@ -1,0 +1,33 @@
+{
+    "settings": {
+        "main": {
+            "title": "⚙️ **PANNELLO DI CONTROLLO**",
+            "subtitle": "Seleziona un modulo da configurare:",
+            "close": "❌ Chiudi"
+        },
+        "buttons": {
+            "antispam": "🛡️ Anti-Spam",
+            "aimod": "🤖 AI Mod",
+            "antiedit": "✏️ Anti-Edit",
+            "profiler": "🔍 Profiler",
+            "badwords": "🤬 Parole Vietate",
+            "lang": "🌐 Lingua",
+            "links": "🔗 Link Mon",
+            "nsfw": "🔞 NSFW",
+            "visual": "🖼️ Visual Sys",
+            "voteban": "🗳️ Vote Ban",
+            "logger": "📜 Logger",
+            "staff": "👮 Staff",
+            "intel": "🧠 Intel Net",
+            "modals": "📋 Modals",
+            "ui_language": "🌍 Lingua UI"
+        },
+        "language": {
+            "title": "🌍 **LINGUA UI**",
+            "subtitle": "Seleziona la lingua di visualizzazione:",
+            "current": "Corrente: {lang}",
+            "changed": "✅ Lingua cambiata in {lang}",
+            "back": "⬅️ Indietro"
+        }
+    }
+}

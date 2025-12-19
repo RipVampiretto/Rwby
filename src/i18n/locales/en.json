@@ -1,0 +1,33 @@
+{
+    "settings": {
+        "main": {
+            "title": "⚙️ **CONTROL PANEL**",
+            "subtitle": "Select a module to configure:",
+            "close": "❌ Close"
+        },
+        "buttons": {
+            "antispam": "🛡️ Anti-Spam",
+            "aimod": "🤖 AI Mod",
+            "antiedit": "✏️ Anti-Edit",
+            "profiler": "🔍 Profiler",
+            "badwords": "🤬 Bad Words",
+            "lang": "🌐 Language",
+            "links": "🔗 Link Mon",
+            "nsfw": "🔞 NSFW",
+            "visual": "🖼️ Visual Sys",
+            "voteban": "🗳️ Vote Ban",
+            "logger": "📜 Logger",
+            "staff": "👮 Staff",
+            "intel": "🧠 Intel Net",
+            "modals": "📋 Modals",
+            "ui_language": "🌍 UI Language"
+        },
+        "language": {
+            "title": "🌍 **UI LANGUAGE**",
+            "subtitle": "Select display language:",
+            "current": "Current: {lang}",
+            "changed": "✅ Language changed to {lang}",
+            "back": "⬅️ Back"
+        }
+    }
+}

@@ -150,6 +150,9 @@ function createTables() {
             modal_sync_global INTEGER DEFAULT 1,
             modal_tier_bypass INTEGER DEFAULT 2,
             
+            -- UI Language
+            ui_language TEXT DEFAULT 'en',
+            
             -- Metadata
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -434,6 +437,14 @@ function createTables() {
         }
     }
 
+    // UI Language column (added later)
+    try {
+        db.exec(`ALTER TABLE guild_config ADD COLUMN ui_language TEXT DEFAULT 'en'`);
+        logger.info(`[database] Added column ui_language to guild_config`);
+    } catch (e) {
+        // Column already exists, ignore
+    }
+
     logger.info("Database tables created/verified");
 }
 
@@ -492,7 +503,9 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'voteban_enabled', 'voteban_threshold', 'voteban_duration_minutes',
     'voteban_initiator_tier', 'voteban_voter_tier',
     // Modal Pattern System
-    'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass'
+    'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass',
+    // UI Language
+    'ui_language'
 ]);
 
 /**

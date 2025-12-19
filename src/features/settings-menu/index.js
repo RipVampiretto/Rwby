@@ -14,6 +14,7 @@ const intelNetwork = require('../intel-network');
 const modalPatterns = require('../modal-patterns');
 const { safeEdit, isAdmin } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
+const i18n = require('../../i18n');
 
 let db = null;
 let _botInstance = null;
@@ -45,46 +46,59 @@ function register(bot, database) {
             return;
         }
 
+        // UI Language selection
+        if (data.startsWith("settings_ui_lang:")) {
+            const langCode = data.split(':')[1];
+            await handleLanguageChange(ctx, langCode);
+            return;
+        }
+
         await next();
     });
 }
 
 async function sendMainMenu(ctx, isEdit = false) {
-    const text = "⚙️ **PANNELLO DI CONTROLLO**\n\nSeleziona un modulo da configurare:";
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
 
     // Layout: 2 columns
     const keyboard = {
         inline_keyboard: [
             [
-                { text: "🛡️ Anti-Spam", callback_data: "set_goto:antispam" },
-                { text: "🤖 AI Mod", callback_data: "set_goto:aimod" }
+                { text: t('settings.buttons.antispam'), callback_data: "set_goto:antispam" },
+                { text: t('settings.buttons.aimod'), callback_data: "set_goto:aimod" }
             ],
             [
-                { text: "✏️ Anti-Edit", callback_data: "set_goto:antiedit" },
-                { text: "🔍 Profiler", callback_data: "set_goto:profiler" }
+                { text: t('settings.buttons.antiedit'), callback_data: "set_goto:antiedit" },
+                { text: t('settings.buttons.profiler'), callback_data: "set_goto:profiler" }
             ],
             [
-                { text: "🤬 Bad Words", callback_data: "set_goto:badwords" },
-                { text: "🌐 Lingua", callback_data: "set_goto:lang" }
+                { text: t('settings.buttons.badwords'), callback_data: "set_goto:badwords" },
+                { text: t('settings.buttons.lang'), callback_data: "set_goto:lang" }
             ],
             [
-                { text: "🔗 Link Mon", callback_data: "set_goto:links" },
-                { text: "🔞 NSFW", callback_data: "set_goto:nsfw" }
+                { text: t('settings.buttons.links'), callback_data: "set_goto:links" },
+                { text: t('settings.buttons.nsfw'), callback_data: "set_goto:nsfw" }
             ],
             [
-                { text: "🖼️ Visual Sys", callback_data: "set_goto:visual" },
-                { text: "🗳️ Vote Ban", callback_data: "set_goto:voteban" }
+                { text: t('settings.buttons.visual'), callback_data: "set_goto:visual" },
+                { text: t('settings.buttons.voteban'), callback_data: "set_goto:voteban" }
             ],
             [
-                { text: "📜 Logger", callback_data: "set_goto:logger" },
-                { text: "👮 Staff", callback_data: "set_goto:staff" }
+                { text: t('settings.buttons.logger'), callback_data: "set_goto:logger" },
+                { text: t('settings.buttons.staff'), callback_data: "set_goto:staff" }
             ],
             [
-                { text: "🧠 Intel Net", callback_data: "set_goto:intel" },
-                { text: "📋 Modals", callback_data: "set_goto:modals" }
+                { text: t('settings.buttons.intel'), callback_data: "set_goto:intel" },
+                { text: t('settings.buttons.modals'), callback_data: "set_goto:modals" }
             ],
             [
-                { text: "❌ Chiudi", callback_data: "settings_close" }
+                { text: t('settings.buttons.ui_language'), callback_data: "set_goto:ui_lang" }
+            ],
+            [
+                { text: t('settings.main.close'), callback_data: "settings_close" }
             ]
         ]
     };
@@ -95,6 +109,55 @@ async function sendMainMenu(ctx, isEdit = false) {
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
+}
+
+async function sendLanguageUI(ctx) {
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+    const currentLang = i18n.getLanguage(guildId);
+    const availableLangs = i18n.getAvailableLanguages();
+
+    const text = `${t('settings.language.title')}\n\n${t('settings.language.subtitle')}\n${t('settings.language.current', { lang: availableLangs[currentLang] })}`;
+
+    // Create buttons for each available language
+    const langButtons = Object.entries(availableLangs).map(([code, name]) => {
+        const isSelected = code === currentLang ? '✓ ' : '';
+        return { text: `${isSelected}${name}`, callback_data: `settings_ui_lang:${code}` };
+    });
+
+    // Arrange in rows of 2
+    const rows = [];
+    for (let i = 0; i < langButtons.length; i += 2) {
+        rows.push(langButtons.slice(i, i + 2));
+    }
+
+    // Add back button
+    rows.push([{ text: t('settings.language.back'), callback_data: "settings_main" }]);
+
+    const keyboard = { inline_keyboard: rows };
+
+    try {
+        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    } catch (e) { }
+}
+
+async function handleLanguageChange(ctx, langCode) {
+    const guildId = ctx.chat.id;
+    const availableLangs = i18n.getAvailableLanguages();
+
+    if (!availableLangs[langCode]) {
+        await ctx.answerCallbackQuery("Invalid language");
+        return;
+    }
+
+    i18n.setLanguage(guildId, langCode);
+
+    // Use the NEW language for the success message
+    const t = (key, params) => i18n.t(guildId, key, params);
+    await ctx.answerCallbackQuery(t('settings.language.changed', { lang: availableLangs[langCode] }));
+
+    // Refresh the language UI with new language
+    await sendLanguageUI(ctx);
 }
 
 async function routeToFeature(ctx, feature) {
@@ -148,6 +211,9 @@ async function routeToFeature(ctx, feature) {
             break;
         case 'modals':
             if (modalPatterns.sendConfigUI) await modalPatterns.sendConfigUI(ctx, true, true);
+            break;
+        case 'ui_lang':
+            await sendLanguageUI(ctx);
             break;
     }
 }
