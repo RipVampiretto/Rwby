@@ -145,7 +145,7 @@ function register(bot, database) {
         try {
             const stats = db.getDb().prepare(`
                 SELECT 
-                    (SELECT COUNT(*) FROM user_global_flux WHERE is_banned_global = 1) as global_bans,
+                    (SELECT COUNT(*) FROM users WHERE is_banned_global = 1) as global_bans,
                     (SELECT COUNT(*) FROM bills WHERE status = 'pending') as pending_bills,
                     (SELECT COUNT(*) FROM guild_trust) as guilds
             `).get();
@@ -162,7 +162,12 @@ function register(bot, database) {
                 ]
             };
 
-            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            // If callback, edit. If command, reply.
+            if (ctx.callbackQuery) {
+                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            } else {
+                await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            }
         } catch (e) {
             ctx.reply("❌ Error fetching stats");
         }
@@ -245,12 +250,43 @@ function register(bot, database) {
         if (!isSuperAdmin(ctx.from.id)) {
             // Only superadmins can interact with global ban buttons?
             // Yes generally.
+
+
             if (data.startsWith("gban") || data.startsWith("g_")) {
                 return ctx.answerCallbackQuery("❌ Accesso negato");
             }
         }
 
         if (data === "g_close") return ctx.deleteMessage();
+
+        if (data === "g_menu") {
+            // Re-render main menu
+            try {
+                const stats = db.getDb().prepare(`
+                    SELECT 
+                        (SELECT COUNT(*) FROM users WHERE is_banned_global = 1) as global_bans,
+                        (SELECT COUNT(*) FROM bills WHERE status = 'pending') as pending_bills,
+                        (SELECT COUNT(*) FROM guild_trust) as guilds
+                `).get();
+
+                const text = `🌍 **GLOBAL GOVERNANCE PANEL**\n` +
+                    `🏛️ Gruppi: ${stats.guilds}\n` +
+                    `🚫 Ban globali: ${stats.global_bans}\n` +
+                    `📜 Bills pending: ${stats.pending_bills}`;
+
+                const keyboard = {
+                    inline_keyboard: [
+                        [{ text: "📜 Bills Pendenti", callback_data: "g_bills" }, { text: "📊 Statistiche Rete", callback_data: "g_stats" }],
+                        [{ text: "🛠️ Configurazione", callback_data: "g_config" }, { text: "❌ Chiudi", callback_data: "g_close" }]
+                    ]
+                };
+
+                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            } catch (e) {
+                await ctx.answerCallbackQuery("Error reloading menu");
+            }
+            return;
+        }
 
         if (data.startsWith("gban:")) {
             const userId = data.split(":")[1];
@@ -263,9 +299,69 @@ function register(bot, database) {
             await ctx.deleteMessage();
             // Should verify this deletes the report message.
         }
+        else if (data === "g_stats") {
+            try {
+                const stats = db.getDb().prepare(`
+                    SELECT 
+                        (SELECT COUNT(*) FROM users WHERE is_banned_global = 1) as global_bans,
+                        (SELECT COUNT(*) FROM bills WHERE status = 'pending') as pending_bills,
+                        (SELECT COUNT(*) FROM guild_trust) as guilds,
+                        (SELECT AVG(trust_score) FROM guild_trust) as avg_trust
+                `).get();
+
+                const text = `📊 **NETWORK STATISTICS**\n\n` +
+                    `🏛️ Active Guilds: ${stats.guilds}\n` +
+                    `🚫 Global Bans: ${stats.global_bans}\n` +
+                    `📜 Pending Bills: ${stats.pending_bills}\n` +
+                    `🤝 Avg Network Trust: ${Math.round(stats.avg_trust || 0)}/100`;
+
+                const keyboard = {
+                    inline_keyboard: [[{ text: "🔙 Indietro", callback_data: "g_menu" }]]
+                };
+
+                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            } catch (e) {
+                console.error(e);
+                await ctx.answerCallbackQuery("Error fetching stats");
+            }
+        }
+        else if (data === "g_bills") {
+            try {
+                const bills = db.getDb().prepare("SELECT * FROM bills WHERE status = 'pending' LIMIT 5").all();
+
+                let text = "";
+                if (bills.length === 0) {
+                    text = "📜 **Nessuna proposta in attesa**";
+                } else {
+                    text = "📜 **PENDING BILLS**\n\n";
+                    bills.forEach(b => {
+                        text += `#${b.id} ${b.type.toUpperCase()} -> ${b.target}\n`;
+                    });
+                }
+
+                const keyboard = {
+                    inline_keyboard: [[{ text: "🔙 Indietro", callback_data: "g_menu" }]]
+                };
+
+                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            } catch (e) {
+                console.error("Error fetching bills:", e);
+                await ctx.answerCallbackQuery("Error: " + e.message);
+            }
+        }
+        else if (data === "g_config") {
+            const text = "🛠️ **CONFIGURAZIONE**\n\nUsa `/setgstaff` nel gruppo parlamento o modifiche il file .env per i super admin.";
+            const keyboard = {
+                inline_keyboard: [[{ text: "🔙 Indietro", callback_data: "g_menu" }]]
+            };
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        }
         else if (data.startsWith("bl_link")) {
             // Todo implementation for wizard
             await ctx.answerCallbackQuery("TODO: Link Blacklist Wizard");
+        }
+        else if (data.startsWith("bl_word")) {
+            await ctx.answerCallbackQuery("TODO: Word Blacklist Wizard");
         }
         else {
             return next();
@@ -364,7 +460,7 @@ async function executeGlobalBan(ctx, userId) {
     await ctx.editMessageCaption({ caption: ctx.callbackQuery.message.caption + "\n\n✅ **GLOBAL BANNED**" });
     // 3. (Optional) Broadcast to all guilds (not implemented here, costly)
     // 4. Update Global Flux
-    db.getDb().prepare('UPDATE user_global_flux SET is_banned_global = 1, global_flux = -1000 WHERE user_id = ?').run(userId);
+    db.getDb().prepare('UPDATE user_global_flux SET global_flux = -1000 WHERE user_id = ?').run(userId);
 }
 
 async function cleanupPendingDeletions() {
