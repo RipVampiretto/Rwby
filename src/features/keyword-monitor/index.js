@@ -91,7 +91,7 @@ const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 
-
+let _botInstance = null;
 
 // Temporary store for wizard sessions
 const WIZARD_SESSIONS = new Map();

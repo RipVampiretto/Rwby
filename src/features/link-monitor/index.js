@@ -85,7 +85,7 @@ const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 
-
+let _botInstance = null;
 
 function register(bot, database) {
     db = database;

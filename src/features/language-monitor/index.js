@@ -75,7 +75,8 @@ const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 
-
+let _botInstance = null;
+let franc = null;
 
 // Load franc dynamically (ESM)
 import('franc').then(m => franc = m.franc).catch(e => console.error("Failed to load franc", e));

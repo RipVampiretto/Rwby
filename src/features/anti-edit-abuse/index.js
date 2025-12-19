@@ -122,7 +122,7 @@ const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 
-
+let _botInstance = null;
 
 // Clean snapshots periodically (every hour)
 setInterval(cleanupSnapshots, 3600000);

@@ -158,7 +158,7 @@ const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 
-
+let _botInstance = null;
 
 const CACHE = new Map(); // Simple cache for message hashes
 const CACHE_TTL = 3600000; // 1 hour
