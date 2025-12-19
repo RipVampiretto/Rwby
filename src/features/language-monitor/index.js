@@ -79,9 +79,16 @@ const loggerUtil = require('../../middlewares/logger');
 
 let _botInstance = null;
 let franc = null;
+let francReady = false;
 
-// Load franc dynamically (ESM)
-import('franc').then(m => franc = m.franc).catch(e => loggerUtil.error(`[language-monitor] Failed to load franc: ${e.message}`));
+// Load franc dynamically (ESM) - block until ready
+const francPromise = import('franc').then(m => {
+    franc = m.franc;
+    francReady = true;
+    loggerUtil.info('[language-monitor] Franc library loaded successfully');
+}).catch(e => {
+    loggerUtil.error(`[language-monitor] Failed to load franc: ${e.message}`);
+});
 
 function register(bot, database) {
     db = database;
@@ -90,6 +97,12 @@ function register(bot, database) {
     // Middleware: language detection
     bot.on("message:text", async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
+
+        // Wait for franc to be ready (only blocks first few messages)
+        if (!francReady) {
+            await francPromise;
+            if (!francReady) return next(); // Franc failed to load, skip
+        }
 
         // Skip admins
         if (await isAdmin(ctx, 'language-monitor')) return next();
