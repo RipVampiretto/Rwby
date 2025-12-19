@@ -214,21 +214,19 @@ function register(bot, database) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith("spam_")) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
-        const parts = data.split(":");
-        const action = parts[1];
+        // Format: spam_ACTION:FROM_SETTINGS (0 or 1)
+        // Example: spam_toggle:1
+        const [actionKey, fromSettingsFlag] = data.split(":");
+        const fromSettings = fromSettingsFlag === '1';
 
-        // Check if we came from settings menu
-        let fromSettings = false;
-        try {
-            const markup = ctx.callbackQuery.message.reply_markup;
-            if (markup && markup.inline_keyboard) {
-                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
-            }
-        } catch (e) { }
+        // Remove "spam_" prefix for cleaner switching if desired, or switch on full key
+        const action = actionKey.replace("spam_", "");
+
+        const config = db.getGuildConfig(ctx.chat.id);
 
         if (action === "close") {
             await ctx.deleteMessage();
+            return; // Close doesn't need re-render
         } else if (action === "toggle") {
             db.updateGuildConfig(ctx.chat.id, { spam_enabled: config.spam_enabled ? 0 : 1 });
         } else if (action === "sens") {
@@ -261,22 +259,27 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         `Stato: ${enabled}\n` +
         `Sensibilità: ${sens}`;
 
+    // Callback suffix
+    const s = fromSettings ? ':1' : ':0';
+
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "spam_close" };
+        : { text: "❌ Chiudi", callback_data: `spam_close${s}` };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🛡️ Monitor: ${enabled}`, callback_data: "spam_toggle" }],
-            [{ text: `🌡️ Sens: ${sens}`, callback_data: "spam_sens" }],
-            [{ text: `⚡ Flood: ${actVol}`, callback_data: "spam_act_vol" }],
-            [{ text: `🔁 Repeat: ${actRep}`, callback_data: "spam_act_rep" }],
+            [{ text: `🛡️ Monitor: ${enabled}`, callback_data: `spam_toggle${s}` }],
+            [{ text: `🌡️ Sens: ${sens}`, callback_data: `spam_sens${s}` }],
+            [{ text: `⚡ Flood: ${actVol}`, callback_data: `spam_act_vol${s}` }],
+            [{ text: `🔁 Repeat: ${actRep}`, callback_data: `spam_act_rep${s}` }],
             [closeBtn]
         ]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) { }
     } else {
         await ctx.reply(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -287,6 +290,12 @@ async function checkSpam(ctx, config) {
     const guildId = ctx.chat.id;
     const now = Date.now();
     const content = ctx.message.text;
+
+    // Admin Bypass
+    try {
+        const member = await ctx.getChatMember(userId);
+        if (['creator', 'administrator'].includes(member.status)) return false;
+    } catch (e) { }
 
     // Get stats
     let stats = db.getDb().prepare('SELECT * FROM user_active_stats WHERE user_id = ? AND guild_id = ?').get(userId, guildId);

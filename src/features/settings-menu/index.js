@@ -21,6 +21,7 @@ function register(bot, database) {
 
     // Command: /settings
     bot.command("settings", async (ctx) => {
+        console.log(`[DEBUG] /settings command triggered by ${ctx.from.id}`);
         if (ctx.chat.type === 'private') return; // Or handle differently
         // Check admin
         try {
@@ -35,12 +36,10 @@ function register(bot, database) {
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;
         if (data === "settings_main") {
-            // Check admin again? Mostly safe as it's a callback
             await sendMainMenu(ctx, true);
-            return; // Stop propagation
+            return;
         }
 
-        // Handle routing to modules
         if (data.startsWith("set_goto:")) {
             const target = data.split(':')[1];
             await routeToFeature(ctx, target);

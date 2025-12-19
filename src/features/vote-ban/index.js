@@ -184,6 +184,8 @@ function register(bot, database) {
                 try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
             }
         }
+
+        await next();
     });
 }
 
