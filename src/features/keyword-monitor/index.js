@@ -97,6 +97,23 @@ let _botInstance = null;
 
 // Temporary store for wizard sessions
 const WIZARD_SESSIONS = new Map();
+const WIZARD_SESSION_TTL = 300000; // 5 minutes
+const WIZARD_CLEANUP_INTERVAL = 60000; // 1 minute
+
+// Cleanup abandoned wizard sessions every minute
+setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [key, session] of WIZARD_SESSIONS.entries()) {
+        if (now - (session.startedAt || 0) > WIZARD_SESSION_TTL) {
+            WIZARD_SESSIONS.delete(key);
+            cleaned++;
+        }
+    }
+    if (cleaned > 0) {
+        logger.debug(`[keyword-monitor] Wizard cleanup: removed ${cleaned} expired sessions, ${WIZARD_SESSIONS.size} remaining`);
+    }
+}, WIZARD_CLEANUP_INTERVAL);
 
 function register(bot, database) {
     db = database;
@@ -171,7 +188,7 @@ function register(bot, database) {
         } else if (data === "wrd_back_main") {
             return sendConfigUI(ctx, true, true);
         } else if (data === "wrd_add") {
-            WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, { step: 1, fromSettings: fromSettings });
+            WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, { step: 1, fromSettings: fromSettings, startedAt: Date.now() });
             await ctx.reply("✍️ Digita la parola o regex da bloccare:", { reply_markup: { force_reply: true } });
             await ctx.answerCallbackQuery();
             return;

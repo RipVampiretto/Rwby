@@ -164,6 +164,22 @@ let _botInstance = null;
 
 const CACHE = new Map(); // Simple cache for message hashes
 const CACHE_TTL = 3600000; // 1 hour
+const CACHE_CLEANUP_INTERVAL = 600000; // 10 minutes
+
+// Cleanup old cache entries every 10 minutes
+setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [key, value] of CACHE.entries()) {
+        if (now - value.ts > CACHE_TTL) {
+            CACHE.delete(key);
+            cleaned++;
+        }
+    }
+    if (cleaned > 0) {
+        logger.debug(`[ai-moderation] Cache cleanup: removed ${cleaned} expired entries, ${CACHE.size} remaining`);
+    }
+}, CACHE_CLEANUP_INTERVAL);
 
 function register(bot, database) {
     db = database;
