@@ -232,13 +232,13 @@ async function executeAction(ctx, action, detected, allowed) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
-        // Log?
+        await safeDelete(ctx, 'language-monitor');
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'language-monitor');
+        const banned = await safeBan(ctx, user.id, 'language-monitor');
+
+        if (banned) {
             userReputation.modifyFlux(user.id, ctx.chat.id, -20, 'lang_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -254,8 +254,7 @@ async function executeAction(ctx, action, detected, allowed) {
 
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) { console.error(e); }
+        }
     }
     else if (action === 'report_only') {
         staffCoordination.reviewQueue({

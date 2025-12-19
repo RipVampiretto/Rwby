@@ -325,12 +325,13 @@ async function executeAction(ctx, action, reason, original, current) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
+        await safeDelete(ctx, 'anti-edit-abuse');
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'anti-edit-abuse');
+        const banned = await safeBan(ctx, user.id, 'anti-edit-abuse');
+
+        if (banned) {
             userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'edit_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -345,8 +346,7 @@ async function executeAction(ctx, action, reason, original, current) {
             }
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) { console.error(e); }
+        }
     }
     else if (action === 'report_only') {
         staffCoordination.reviewQueue({
@@ -363,11 +363,9 @@ async function executeAction(ctx, action, reason, original, current) {
 function cleanupSnapshots() {
     if (!db) return;
     try {
-        // Delete snapshots older than 24h
-        // SQLite: datetime('now', '-1 day')
         db.getDb().prepare("DELETE FROM message_snapshots WHERE created_at < datetime('now', '-1 day')").run();
     } catch (e) {
-        console.error("Snapshot cleanup failed", e);
+        handleCriticalError('anti-edit-abuse', 'cleanupSnapshots', e);
     }
 }
 

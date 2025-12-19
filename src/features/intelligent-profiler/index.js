@@ -239,12 +239,13 @@ async function executeAction(ctx, action, reason, content) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
+        await safeDelete(ctx, 'intelligent-profiler');
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'intelligent-profiler');
+        const banned = await safeBan(ctx, user.id, 'intelligent-profiler');
+
+        if (banned) {
             userReputation.modifyFlux(user.id, ctx.chat.id, -50, 'profiler_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -260,8 +261,7 @@ async function executeAction(ctx, action, reason, content) {
 
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) { console.error(e); }
+        }
     }
     else if (action === 'report_only') {
         staffCoordination.reviewQueue({

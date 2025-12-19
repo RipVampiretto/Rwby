@@ -283,16 +283,14 @@ async function executeAction(ctx, action, keyword, fullText) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
-        // Local log handled via adminLogger if enabled?
-        // Let's assume adminLogger logs 'word_filter' event type if configured.
+        await safeDelete(ctx, 'keyword-monitor');
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
-            await ctx.reply(`🚫 **BANNED (Keyword)**\nTrigger: "||${keyword}||"`, { parse_mode: 'MarkdownV2' });
+        await safeDelete(ctx, 'keyword-monitor');
+        const banned = await safeBan(ctx, user.id, 'keyword-monitor');
 
+        if (banned) {
+            await ctx.reply(`🚫 **BANNED (Keyword)**\nTrigger: "||${keyword}||"`, { parse_mode: 'MarkdownV2' });
             userReputation.modifyFlux(user.id, ctx.chat.id, -50, 'keyword_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -308,9 +306,6 @@ async function executeAction(ctx, action, keyword, fullText) {
 
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) {
-            console.error("Keyword ban failed", e);
         }
     }
     else if (action === 'report_only') {
@@ -350,7 +345,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'keyword-monitor');
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }

@@ -133,9 +133,9 @@ async function processVisual(ctx, config) {
             await executeAction(ctx, config.visual_action || 'delete', match, hash);
         }
     } catch (e) {
-        console.error("Visual check failed", e);
+        handleCriticalError('visual-immune', 'processVisual', e, ctx);
     } finally {
-        try { fs.unlinkSync(localPath); } catch (e) { }
+        try { fs.unlinkSync(localPath); } catch (e) { /* cleanup - ignore */ }
     }
 }
 
@@ -154,7 +154,7 @@ async function addToDb(ctx, msg, type, category) {
     } catch (e) {
         await ctx.reply("❌ Errore: " + e.message);
     } finally {
-        try { fs.unlinkSync(localPath); } catch (e) { }
+        try { fs.unlinkSync(localPath); } catch (e) { /* cleanup - ignore */ }
     }
 }
 
@@ -223,12 +223,13 @@ async function executeAction(ctx, action, match, currentHash) {
     } catch (e) { }
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
+        await safeDelete(ctx, 'visual-immune');
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'visual-immune');
+        const banned = await safeBan(ctx, user.id, 'visual-immune');
+
+        if (banned) {
             userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'visual_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -244,8 +245,7 @@ async function executeAction(ctx, action, match, currentHash) {
 
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) { console.error(e); }
+        }
     }
     else if (action === 'report_only') {
         staffCoordination.reviewQueue({
@@ -292,7 +292,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'visual-immune');
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }

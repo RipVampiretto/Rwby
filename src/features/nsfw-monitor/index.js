@@ -300,16 +300,16 @@ async function executeAction(ctx, action, reason, type) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
-        // Log basic
+        await safeDelete(ctx, 'nsfw-monitor');
         if (superAdmin.sendGlobalLog) {
             superAdmin.sendGlobalLog('image_spam', `🖼️ **Image Scan**\nGruppo: ${ctx.chat.title}\nUser: @${user.username}\nResult: NSFW Detected (${reason})`);
         }
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'nsfw-monitor');
+        const banned = await safeBan(ctx, user.id, 'nsfw-monitor');
+
+        if (banned) {
             userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'nsfw_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -324,8 +324,7 @@ async function executeAction(ctx, action, reason, type) {
             }
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) { console.error(e); }
+        }
     }
     else if (action === 'report_only') {
         // Maybe forward image?

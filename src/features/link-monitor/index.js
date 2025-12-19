@@ -286,18 +286,16 @@ async function executeAction(ctx, action, rule, link) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
-        // Log locally
+        await safeDelete(ctx, 'link-monitor');
         if (superAdmin.sendGlobalLog && rule === 'Unknown Domain') {
-            // Request: "link checks <- log/notifica dei link NON presenti in whitelist"
             superAdmin.sendGlobalLog('link_checks', `🔗 **Link Unknown**\nGruppo: ${ctx.chat.title}\nUser: @${user.username}\nLink: ${link}`);
         }
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'link-monitor');
+        const banned = await safeBan(ctx, user.id, 'link-monitor');
 
+        if (banned) {
             userReputation.modifyFlux(user.id, ctx.chat.id, -50, 'link_ban');
 
             if (superAdmin.forwardBanToParliament) {
@@ -313,9 +311,6 @@ async function executeAction(ctx, action, rule, link) {
 
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) {
-            console.error("Link Ban failed", e);
         }
     }
     else if (action === 'report_only') {
@@ -366,7 +361,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'link-monitor');
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
