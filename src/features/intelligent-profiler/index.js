@@ -143,6 +143,15 @@ function register(bot, database) {
         if (!data.startsWith("prf_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "prf_close") return ctx.deleteMessage();
 
         if (data === "prf_toggle") {
@@ -167,7 +176,7 @@ function register(bot, database) {
             db.updateGuildConfig(ctx.chat.id, { profiler_action_pattern: nextAct });
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -264,7 +273,7 @@ async function executeAction(ctx, action, reason, content) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.profiler_enabled ? '✅ ON' : '❌ OFF';
     const actLink = (config.profiler_action_link || 'delete').toUpperCase().replace(/_/g, ' ');
@@ -277,13 +286,17 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Fwd: ${actFwd}\n` +
         `Pat: ${actPat}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "prf_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `🔍 Profiler: ${enabled}`, callback_data: "prf_toggle" }],
             [{ text: `🔗 Link: ${actLink}`, callback_data: "prf_act_link" }],
             [{ text: `📤 Forward: ${actFwd}`, callback_data: "prf_act_fwd" }],
             [{ text: `📝 Pattern: ${actPat}`, callback_data: "prf_act_pat" }],
-            [{ text: "❌ Chiudi", callback_data: "prf_close" }]
+            [closeBtn]
         ]
     };
 
@@ -294,4 +307,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

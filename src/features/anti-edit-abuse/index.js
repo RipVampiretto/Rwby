@@ -169,6 +169,15 @@ function register(bot, database) {
         if (!data.startsWith("edt_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "edt_close") return ctx.deleteMessage();
 
         if (data === "edt_toggle") {
@@ -193,7 +202,7 @@ function register(bot, database) {
             db.updateGuildConfig(ctx.chat.id, { edit_abuse_action: nextAct });
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -360,7 +369,7 @@ function cleanupSnapshots() {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.edit_monitor_enabled ? '✅ ON' : '❌ OFF';
     const lockT0 = config.edit_lock_tier0 ? '✅ ON' : '❌ OFF';
@@ -375,13 +384,17 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Act (Inject): ${actInj}\n` +
         `Act (Abuse): ${actGen}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "edt_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `✏️ Monitor: ${enabled}`, callback_data: "edt_toggle" }, { text: `🔒 Lock T0: ${lockT0}`, callback_data: "edt_lock" }],
             [{ text: `📊 Soglia: ${thr}%`, callback_data: "edt_thr" }],
             [{ text: `🔗 Inj Act: ${actInj}`, callback_data: "edt_act_inj" }],
             [{ text: `👮 Abuse Act: ${actGen}`, callback_data: "edt_act_gen" }],
-            [{ text: "❌ Chiudi", callback_data: "edt_close" }]
+            [closeBtn]
         ]
     };
 
@@ -392,4 +405,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

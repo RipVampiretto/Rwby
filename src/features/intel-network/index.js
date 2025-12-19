@@ -127,28 +127,10 @@ function register(bot, database) {
     // Command: /intel
     bot.command("intel", async (ctx) => {
         if (ctx.chat.type === 'private') return;
-
         const member = await ctx.getChatMember(ctx.from.id);
         if (!['creator', 'administrator'].includes(member.status)) return; // Admin only
 
-        const guildStats = getGuildTrust(ctx.chat.id);
-
-        const tierName = ['New', 'Verified', 'Trusted', 'Authority'][guildStats.tier] || 'Unknown';
-
-        const text = `🌐 **INTEL NETWORK STATUS**\n\n` +
-            `🏷️ Tier Gruppo: ${guildStats.tier} (${tierName})\n` +
-            `📊 Trust Score: ${guildStats.trust_score}/100\n` +
-            `✅ Contributi validi: ${guildStats.contributions_valid}\n` +
-            `❌ Contributi invalidi: ${guildStats.contributions_invalid}`;
-
-        const keyboard = {
-            inline_keyboard: [
-                [{ text: "🔄 Sync Ban: ON", callback_data: "intel_noop" }, { text: "🔄 Sync Link: ON", callback_data: "intel_noop" }], // Placeholders for config
-                [{ text: "❌ Chiudi", callback_data: "intel_close" }]
-            ]
-        };
-
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await sendConfigUI(ctx);
     });
 
     // Command: /greport
@@ -223,8 +205,46 @@ function register(bot, database) {
     bot.on("callback_query:data", async (ctx, next) => {
         if (ctx.callbackQuery.data === 'intel_close') return ctx.deleteMessage();
         if (ctx.callbackQuery.data === 'intel_noop') return ctx.answerCallbackQuery("Feature coming soon");
+
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         await next();
     });
+}
+
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
+    const guildStats = getGuildTrust(ctx.chat.id);
+    const tierName = ['New', 'Verified', 'Trusted', 'Authority'][guildStats.tier] || 'Unknown';
+
+    const text = `🌐 **INTEL NETWORK STATUS**\n\n` +
+        `🏷️ Tier Gruppo: ${guildStats.tier} (${tierName})\n` +
+        `📊 Trust Score: ${guildStats.trust_score}/100\n` +
+        `✅ Contributi validi: ${guildStats.contributions_valid}\n` +
+        `❌ Contributi invalidi: ${guildStats.contributions_invalid}`;
+
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "intel_close" };
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: "🔄 Sync Ban: ON", callback_data: "intel_noop" }, { text: "🔄 Sync Link: ON", callback_data: "intel_noop" }],
+            [closeBtn]
+        ]
+    };
+
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    }
 }
 
 function getGuildTrust(guildId) {
@@ -237,4 +257,4 @@ function getGuildTrust(guildId) {
     return row;
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

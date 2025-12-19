@@ -128,6 +128,15 @@ function register(bot, database) {
         if (!data.startsWith("lnk_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "lnk_close") return ctx.deleteMessage();
 
         if (data === "lnk_toggle") {
@@ -147,13 +156,19 @@ function register(bot, database) {
             if (rules.length === 0) msg += "Nessuna regola.";
             else rules.slice(0, 20).forEach(r => msg += `- ${r.pattern} (${r.type})\n`);
 
-            try { await ctx.editMessageText(msg, { reply_markup: { inline_keyboard: [[{ text: "🔙 Back", callback_data: "lnk_main" }]] }, parse_mode: 'Markdown' }); } catch (e) { }
+            const backBtn = fromSettings
+                ? { text: "🔙 Back to Menu", callback_data: "lnk_back_main" }
+                : { text: "🔙 Back", callback_data: "lnk_main" };
+
+            try { await ctx.editMessageText(msg, { reply_markup: { inline_keyboard: [[backBtn]] }, parse_mode: 'Markdown' }); } catch (e) { }
             return;
         } else if (data === "lnk_main") {
-            // fall through to refresh
+            return sendConfigUI(ctx, true, false);
+        } else if (data === "lnk_back_main") {
+            return sendConfigUI(ctx, true, true);
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -318,7 +333,7 @@ async function executeAction(ctx, action, rule, link) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.link_enabled ? '✅ ON' : '❌ OFF';
     const sync = config.link_sync_global ? '✅ ON' : '❌ OFF';
@@ -329,12 +344,16 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Sync Global: ${sync}\n` +
         `Action Unknown: ${act}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "lnk_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `🔗 Monitor: ${enabled}`, callback_data: "lnk_toggle" }, { text: `🌐 Sync: ${sync}`, callback_data: "lnk_sync" }],
             [{ text: `❓ Unknown: ${act}`, callback_data: "lnk_act_unk" }],
             [{ text: "➕ Aggiungi (Use /link add)", callback_data: "lnk_noop" }, { text: "📜 Lista", callback_data: "lnk_list" }],
-            [{ text: "❌ Chiudi", callback_data: "lnk_close" }]
+            [closeBtn]
         ]
     };
 
@@ -345,4 +364,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

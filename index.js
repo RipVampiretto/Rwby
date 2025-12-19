@@ -28,6 +28,7 @@ const linkMonitor = require("./src/features/link-monitor");
 const nsfwMonitor = require("./src/features/nsfw-monitor");
 const visualImmuneSystem = require("./src/features/visual-immune-system");
 const voteBan = require("./src/features/vote-ban");
+const settingsMenu = require("./src/features/settings-menu");
 
 // ============================================================================
 // DATABASE INIT
@@ -86,17 +87,19 @@ visualImmuneSystem.register(bot, db);
 
 // Community moderation
 voteBan.register(bot, db);
+settingsMenu.register(bot, db);
 
+// ============================================================================
+// COMMANDS - Basic
 // ============================================================================
 // COMMANDS - Basic
 // ============================================================================
 bot.command("start", (ctx) => ctx.reply(
     "👋 Ciao! Sono il bot di moderazione.\n\n" +
-    "Uso /help per vedere i comandi disponibili."
+    "Uso /help per vedere i comandi disponibili o /settings per il pannello di controllo."
 ));
 
-// ALIAS: /settings -> /help
-bot.command(["help", "settings"], async (ctx) => {
+bot.command("help", async (ctx) => {
     let isGroupAdmin = false;
 
     // Check admin status if in group
@@ -119,6 +122,8 @@ bot.command(["help", "settings"], async (ctx) => {
 
     if (isGroupAdmin) {
         helpText += "⚙️ **Admin Gruppo:**\n";
+        helpText += "/settings - 🎛️ **PANNELLO DI CONTROLLO** (Consigliato)\n\n";
+        helpText += "Comandi diretti:\n";
         helpText += "/spamconfig - Configura anti-spam\n";
         helpText += "/aiconfig - Configura AI moderation\n";
         helpText += "/editconfig - Configura anti-edit abuse\n";

@@ -70,6 +70,15 @@ function register(bot, database) {
         if (!data.startsWith("nsf_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "nsf_close") return ctx.deleteMessage();
 
         if (data === "nsf_toggle") {
@@ -95,7 +104,7 @@ function register(bot, database) {
             }
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -342,7 +351,7 @@ async function testConnection(ctx) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.nsfw_enabled ? '✅ ON' : '❌ OFF';
     const action = (config.nsfw_action || 'delete').toUpperCase();
@@ -359,12 +368,16 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Soglia: ${thr}%\n` +
         `Checks: Foto ${p} | Vid ${v} | Gif ${g}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "nsf_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }, { text: "🔗 Test Conn", callback_data: "nsf_test" }],
             [{ text: `👮 Azione: ${action}`, callback_data: "nsf_act" }, { text: `📊 Soglia: ${thr}%`, callback_data: "nsf_thr" }],
             [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }, { text: `🎞️ ${g}`, callback_data: "nsf_tog_gif" }],
-            [{ text: "❌ Chiudi", callback_data: "nsf_close" }]
+            [closeBtn]
         ]
     };
 
@@ -375,4 +388,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

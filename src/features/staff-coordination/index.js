@@ -253,6 +253,43 @@ function register(bot, database) {
             return next();
         }
     });
+
+    // Config UI Callback
+    bot.on("callback_query:data", async (ctx, next) => {
+        if (ctx.callbackQuery.data === "stf_close") {
+            await ctx.deleteMessage();
+        } else {
+            return next();
+        }
+    });
+}
+
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
+    const config = db.getGuildConfig(ctx.chat.id);
+    const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : "❌ Not Set";
+
+    const text = `👮 **STAFF COORDINATION**\n` +
+        `Staff Group: ${staffGroup}\n\n` +
+        `**Comandi:**\n` +
+        `/setstaff - Imposta questo gruppo come Staff Group\n` +
+        `/gnote @user type text - Aggiungi nota globale\n` +
+        `/notes @user - Vedi note`;
+
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "stf_close" };
+
+    const keyboard = {
+        inline_keyboard: [
+            [closeBtn]
+        ]
+    };
+
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    }
 }
 
 async function reviewQueue(params) {
@@ -303,4 +340,4 @@ async function reviewQueue(params) {
     }
 }
 
-module.exports = { register, reviewQueue };
+module.exports = { register, reviewQueue, sendConfigUI };

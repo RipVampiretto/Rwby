@@ -91,6 +91,16 @@ function register(bot, database) {
         // Config Handlers
         if (data.startsWith("vb_")) {
             const config = db.getGuildConfig(ctx.chat.id);
+
+            // Check if we came from settings menu
+            let fromSettings = false;
+            try {
+                const markup = ctx.callbackQuery.message.reply_markup;
+                if (markup && markup.inline_keyboard) {
+                    fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+                }
+            } catch (e) { }
+
             if (data === "vb_close") return ctx.deleteMessage();
 
             if (data === "vb_toggle") {
@@ -108,7 +118,7 @@ function register(bot, database) {
                 val = val >= 3 ? 0 : val + 1;
                 db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: val });
             }
-            await sendConfigUI(ctx, true);
+            await sendConfigUI(ctx, true, fromSettings);
             return;
         }
 
@@ -241,7 +251,7 @@ async function cleanupVotes() {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.voteban_enabled ? '✅ ON' : '❌ OFF';
     const thr = config.voteban_threshold || 5;
@@ -254,13 +264,17 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Durata: ${dur} min\n` +
         `Tier Min: ${tier}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "vb_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `⚖️ Sys: ${enabled}`, callback_data: "vb_toggle" }],
             [{ text: `📊 Soglia: ${thr}`, callback_data: "vb_thr" }],
             [{ text: `⏱️ Durata: ${dur}`, callback_data: "vb_dur" }],
             [{ text: `🏷️ Tier: ${tier}`, callback_data: "vb_tier" }],
-            [{ text: "❌ Chiudi", callback_data: "vb_close" }]
+            [closeBtn]
         ]
     };
 
@@ -271,4 +285,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

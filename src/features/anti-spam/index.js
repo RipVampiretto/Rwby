@@ -218,6 +218,15 @@ function register(bot, database) {
         const parts = data.split(":");
         const action = parts[1];
 
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (action === "close") {
             await ctx.deleteMessage();
         } else if (action === "toggle") {
@@ -237,28 +246,32 @@ function register(bot, database) {
             db.updateGuildConfig(ctx.chat.id, { spam_action_repetition: acts[(idx + 1) % 3] });
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.spam_enabled ? '✅ ON' : '❌ OFF';
     const sens = (config.spam_sensitivity || 'medium').toUpperCase();
-    const actVol = (config.spam_action_volume || 'delete').toUpperCase();
-    const actRep = (config.spam_action_repetition || 'delete').toUpperCase();
+    const actVol = (config.spam_action_volume || 'delete').toUpperCase().replace(/_/g, ' ');
+    const actRep = (config.spam_action_repetition || 'delete').toUpperCase().replace(/_/g, ' ');
 
     const statusText = `🛡️ **CONFIGURAZIONE ANTI-SPAM**\n` +
         `Stato: ${enabled}\n` +
         `Sensibilità: ${sens}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "spam_close" };
+
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🛡️ Anti-Spam: ${enabled}`, callback_data: "spam_toggle" }],
-            [{ text: `🌡️ Sensibilità: ${sens}`, callback_data: "spam_sens" }],
-            [{ text: `⚡ Su Flood: ${actVol}`, callback_data: "spam_act_vol" }],
-            [{ text: `🔁 Su Ripetizione: ${actRep}`, callback_data: "spam_act_rep" }],
-            [{ text: "❌ Chiudi", callback_data: "spam_close" }]
+            [{ text: `🛡️ Monitor: ${enabled}`, callback_data: "spam_toggle" }],
+            [{ text: `🌡️ Sens: ${sens}`, callback_data: "spam_sens" }],
+            [{ text: `⚡ Flood: ${actVol}`, callback_data: "spam_act_vol" }],
+            [{ text: `🔁 Repeat: ${actRep}`, callback_data: "spam_act_rep" }],
+            [closeBtn]
         ]
     };
 
@@ -427,4 +440,6 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
     }
 }
 
-module.exports = { register };
+// ... checkSpam implementation unchanged ...
+
+module.exports = { register, sendConfigUI };

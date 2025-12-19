@@ -144,7 +144,42 @@ function register(bot, database) {
             db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
         }
 
-        await sendConfigUI(ctx, true);
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
+        if (data === "lng_close") return ctx.deleteMessage();
+
+        if (data === "lng_toggle") {
+            db.updateGuildConfig(ctx.chat.id, { lang_enabled: config.lang_enabled ? 0 : 1 });
+        } else if (data === "lng_act") {
+            const acts = ['delete', 'ban', 'report_only'];
+            let cur = config.lang_action || 'delete';
+            if (!acts.includes(cur)) cur = 'delete';
+            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
+            db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
+        } else if (data.startsWith("lng_set:")) {
+            const lang = data.split(':')[1];
+            let allowed = [];
+            try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }
+            if (allowed.length === 0) allowed = ['it', 'en'];
+
+            if (allowed.includes(lang)) {
+                // Remove if > 1
+                if (allowed.length > 1)
+                    allowed = allowed.filter(l => l !== lang);
+            } else {
+                allowed.push(lang);
+            }
+            db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
+        }
+
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -231,7 +266,7 @@ async function executeAction(ctx, action, detected, allowed) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.lang_enabled ? '✅ ON' : '❌ OFF';
     const action = (config.lang_action || 'delete').toUpperCase().replace(/_/g, ' ');
@@ -252,12 +287,16 @@ async function sendConfigUI(ctx, isEdit = false) {
         return { text: `${isAllowed ? '✅' : '⬜'} ${l.toUpperCase()}`, callback_data: `lng_set:${l}` };
     });
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "lng_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `🌐 Filtro: ${enabled}`, callback_data: "lng_toggle" }],
             langRow,
             [{ text: `👮 Azione: ${action}`, callback_data: "lng_act" }],
-            [{ text: "❌ Chiudi", callback_data: "lng_close" }]
+            [closeBtn]
         ]
     };
 
@@ -268,4 +307,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

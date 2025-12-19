@@ -200,6 +200,15 @@ function register(bot, database) {
 
         const config = db.getGuildConfig(ctx.chat.id);
 
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "ai_close") return ctx.deleteMessage();
 
         if (data === "ai_toggle") {
@@ -218,7 +227,7 @@ function register(bot, database) {
             thr = thr >= 0.9 ? 0.5 : thr + 0.05;
             db.updateGuildConfig(ctx.chat.id, { ai_confidence_threshold: parseFloat(thr.toFixed(2)) });
         } else if (data === "ai_config_cats") {
-            return sendCategoryConfigUI(ctx);
+            return sendCategoryConfigUI(ctx, fromSettings);
         } else if (data.startsWith("ai_set_act:")) {
             // act:CAT:NEXT_ACTION
             const parts = data.split(":");
@@ -231,13 +240,13 @@ function register(bot, database) {
                 if (!actions.includes(current)) current = 'report_only';
                 const nextAct = actions[(actions.indexOf(current) + 1) % 3];
                 db.updateGuildConfig(ctx.chat.id, { [key]: nextAct });
-                return sendCategoryConfigUI(ctx); // Stay in sub-menu
+                return sendCategoryConfigUI(ctx, fromSettings); // Stay in sub-menu
             }
         } else if (data === "ai_back_main") {
-            return sendConfigUI(ctx, true);
+            return sendConfigUI(ctx, true, fromSettings);
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -382,7 +391,7 @@ async function handleViolation(ctx, config, result) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.ai_enabled ? '✅ ON' : '❌ OFF';
     const sens = (config.ai_sensitivity || 'medium').toUpperCase();
@@ -393,6 +402,10 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Sensibilità: ${sens}\n` +
         `Soglia: ${thr}%`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "ai_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `🤖 AI: ${enabled}`, callback_data: "ai_toggle" }, { text: "🔗 Test Conn", callback_data: "ai_test_conn" }],
@@ -400,7 +413,7 @@ async function sendConfigUI(ctx, isEdit = false) {
             [{ text: `🎭 Contesto: ${config.ai_context_aware ? 'ON' : 'OFF'}`, callback_data: "ai_ctx" }],
             [{ text: "⚙️ Configura Azioni Categoria", callback_data: "ai_config_cats" }],
             [{ text: `📊 Soglia: ${thr}%`, callback_data: "ai_threshold" }],
-            [{ text: "❌ Chiudi", callback_data: "ai_close" }]
+            [closeBtn]
         ]
     };
 
@@ -411,7 +424,7 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-async function sendCategoryConfigUI(ctx) {
+async function sendCategoryConfigUI(ctx, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const cats = ['scam', 'hate', 'nsfw', 'threat', 'spam'];
 
@@ -455,4 +468,4 @@ async function isUserAdmin(ctx) {
     return ['creator', 'administrator'].includes(member.status);
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

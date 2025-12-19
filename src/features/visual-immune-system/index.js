@@ -81,6 +81,15 @@ function register(bot, database) {
         if (!data.startsWith("vis_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "vis_close") return ctx.deleteMessage();
 
         if (data === "vis_toggle") {
@@ -99,7 +108,7 @@ function register(bot, database) {
             db.updateGuildConfig(ctx.chat.id, { visual_action: nextAct });
         }
 
-        await sendConfigUI(ctx, true);
+        await sendConfigUI(ctx, true, fromSettings);
     });
 }
 
@@ -248,7 +257,7 @@ async function executeAction(ctx, action, match, currentHash) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.visual_enabled ? '✅ ON' : '❌ OFF';
     const sync = config.visual_sync_global ? '✅ ON' : '❌ OFF';
@@ -261,12 +270,16 @@ async function sendConfigUI(ctx, isEdit = false) {
         `Azione: ${action}\n` +
         `Soglia Dist: ${thr}`;
 
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "vis_close" };
+
     const keyboard = {
         inline_keyboard: [
             [{ text: `🧬 Sys: ${enabled}`, callback_data: "vis_toggle" }, { text: `🌐 Sync: ${sync}`, callback_data: "vis_sync" }],
             [{ text: `👮 Azione: ${action}`, callback_data: "vis_act" }],
             [{ text: `🎯 Soglia: ${thr}`, callback_data: "vis_thr" }],
-            [{ text: "❌ Chiudi", callback_data: "vis_close" }]
+            [closeBtn]
         ]
     };
 
@@ -277,4 +290,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };

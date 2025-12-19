@@ -200,46 +200,7 @@ function register(bot, database) {
         const isAdmin = ['creator', 'administrator'].includes(member.status);
         if (!isAdmin) return ctx.reply("⚠️ Admin only.");
 
-        const config = db.getGuildConfig(ctx.chat.id);
-        const logEvents = config.log_events ? JSON.parse(config.log_events) : [];
-
-        function has(ev) { return logEvents.includes(ev) ? '✅' : '❌'; }
-
-        const keyboard = {
-            inline_keyboard: [
-                [
-                    { text: "📢 Imposta Canale", callback_data: "log_set_channel" }
-                ],
-                [
-                    { text: `Formato: ${config.log_format || 'standard'}`, callback_data: "log_toggle_format" }
-                ],
-                [
-                    { text: `${has('ban')} Ban`, callback_data: `log_toggle:ban` },
-                    { text: `${has('delete')} Delete`, callback_data: `log_toggle:delete` },
-                    { text: `${has('ai_action')} AI`, callback_data: `log_toggle:ai_action` }
-                ],
-                [
-                    { text: `${has('spam')} Spam`, callback_data: `log_toggle:spam` },
-                    { text: `${has('config')} Config`, callback_data: `log_toggle:config` },
-                    { text: `${has('flux')} Flux`, callback_data: `log_toggle:flux` }
-                ],
-                [
-                    { text: "❌ Chiudi", callback_data: "log_close" }
-                ]
-            ]
-        };
-
-        const channelInfo = config.log_channel_id ? `Active (${config.log_channel_id})` : "Not set";
-
-        await ctx.reply(
-            `📋 **CONFIGURAZIONE LOG**\n` +
-            `Canale: ${channelInfo}\n` +
-            `Eventi attivi: ${logEvents.length}/6`,
-            {
-                reply_markup: keyboard,
-                parse_mode: 'Markdown'
-            }
-        );
+        await sendConfigUI(ctx);
     });
 
     // Action Handlers for Config
@@ -250,23 +211,27 @@ function register(bot, database) {
         const config = db.getGuildConfig(ctx.chat.id);
         let logEvents = config.log_events ? JSON.parse(config.log_events) : [];
 
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "log_close") {
             await ctx.deleteMessage();
         }
         else if (data === "log_set_channel") {
-            await ctx.answerCallbackQuery("Invia 'setlog' in un altro canale o topic per impostarlo.");
-            // To simplify, we can just say: Run /log_set_here in target channel?
-            // Or handle next message... implementation complexity.
-            // Simplified: "Reply with channel ID" or use /setlogchannel command separately or here.
-            // Let's implement a quick waiter? No, stateless.
-            // Just instruct user.
-            await ctx.reply("ℹ️ Per impostare il canale di log, crea un topic 'Audit Log' e assegnalo con /setstaff (consigliato) oppure usa /setlogchannel nel canale desiderato.");
+            await ctx.answerCallbackQuery("Sii nel canale e usa /setlogchannel"); // Short simplified feedback
+            await ctx.reply("ℹ️ Usa /setlogchannel nel canale desiderato.", { ephemeral: true });
         }
         else if (data === "log_toggle_format") {
             const current = config.log_format || 'standard';
             const nextFmt = current === 'minimal' ? 'standard' : (current === 'standard' ? 'extended' : 'minimal');
             db.updateGuildConfig(ctx.chat.id, { log_format: nextFmt });
-            await refreshConfigUI(ctx, db);
+            await sendConfigUI(ctx, true, fromSettings);
         }
         else if (data.startsWith("log_toggle:")) {
             const event = data.split(":")[1];
@@ -276,7 +241,7 @@ function register(bot, database) {
                 logEvents.push(event);
             }
             db.updateGuildConfig(ctx.chat.id, { log_events: JSON.stringify(logEvents) });
-            await refreshConfigUI(ctx, db);
+            await sendConfigUI(ctx, true, fromSettings);
         }
     });
 
@@ -292,10 +257,19 @@ function register(bot, database) {
     });
 }
 
-async function refreshConfigUI(ctx, db) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const logEvents = config.log_events ? JSON.parse(config.log_events) : [];
     function has(ev) { return logEvents.includes(ev) ? '✅' : '❌'; }
+
+    const channelInfo = config.log_channel_id ? `Active (${config.log_channel_id})` : "Not set";
+    const text = `📋 **CONFIGURAZIONE LOG**\n` +
+        `Canale: ${channelInfo}\n` +
+        `Eventi attivi: ${logEvents.length}/6`;
+
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "log_close" };
 
     const keyboard = {
         inline_keyboard: [
@@ -311,14 +285,15 @@ async function refreshConfigUI(ctx, db) {
                 { text: `${has('config')} Config`, callback_data: `log_toggle:config` },
                 { text: `${has('flux')} Flux`, callback_data: `log_toggle:flux` }
             ],
-            [{ text: "❌ Chiudi", callback_data: "log_close" }]
+            [closeBtn]
         ]
     };
 
-    // Try to edit
-    try {
-        await ctx.editMessageReplyMarkup({ reply_markup: keyboard });
-    } catch (e) { }
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    }
 }
 
 function getEventEmoji(type) {
@@ -328,4 +303,4 @@ function getEventEmoji(type) {
     return map[type] || 'ℹ️';
 }
 
-module.exports = { register, getLogEvent: () => logEvent };
+module.exports = { register, getLogEvent: () => logEvent, sendConfigUI };

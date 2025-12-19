@@ -150,6 +150,15 @@ function register(bot, database) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith("wrd_")) return next();
 
+        // Check if we came from settings menu
+        let fromSettings = false;
+        try {
+            const markup = ctx.callbackQuery.message.reply_markup;
+            if (markup && markup.inline_keyboard) {
+                fromSettings = markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
+            }
+        } catch (e) { }
+
         if (data === "wrd_close") return ctx.deleteMessage();
 
         if (data === "wrd_list") {
@@ -157,12 +166,19 @@ function register(bot, database) {
             let msg = "📜 **Word Rules**\n";
             if (rules.length === 0) msg += "Nessuna regola.";
             else rules.slice(0, 20).forEach(r => msg += `- \`${r.word}\` (${r.action})\n`);
-            try { await ctx.editMessageText(msg, { reply_markup: { inline_keyboard: [[{ text: "🔙 Back", callback_data: "wrd_back" }]] }, parse_mode: 'Markdown' }); } catch (e) { }
+
+            const backBtn = fromSettings
+                ? { text: "🔙 Back to Menu", callback_data: "wrd_back_main" }
+                : { text: "🔙 Back", callback_data: "wrd_back" };
+
+            try { await ctx.editMessageText(msg, { reply_markup: { inline_keyboard: [[backBtn]] }, parse_mode: 'Markdown' }); } catch (e) { }
             return;
         } else if (data === "wrd_back") {
-            return sendConfigUI(ctx, true);
+            return sendConfigUI(ctx, true, false);
+        } else if (data === "wrd_back_main") {
+            return sendConfigUI(ctx, true, true);
         } else if (data === "wrd_add") {
-            WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, { step: 1 });
+            WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, { step: 1, fromSettings: fromSettings });
             await ctx.reply("✍️ Digita la parola o regex da bloccare:", { reply_markup: { force_reply: true } });
             await ctx.answerCallbackQuery();
             return;
@@ -195,7 +211,8 @@ function register(bot, database) {
 
                 WIZARD_SESSIONS.delete(sessionKey);
                 await ctx.editMessageText(`✅ Regola aggiunta: \`${session.word}\` -> ${session.action}`, { parse_mode: 'Markdown' });
-                await sendConfigUI(ctx);
+                // Return to appropriate menu using saved state
+                await sendConfigUI(ctx, false, session.fromSettings || false);
             }
         }
     });
@@ -306,26 +323,21 @@ async function executeAction(ctx, action, keyword, fullText) {
     }
 }
 
-async function sendConfigUI(ctx, isEdit = false) {
+async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const count = db.getDb().prepare('SELECT COUNT(*) as c FROM word_filters WHERE guild_id = ?').get(ctx.chat.id).c;
-
-    // Check if global sync is a thing? Prompt mentioned "Fetch filtri locali + globali" in step 1.
-    // But config UI only shows "Sync Globale: ON". We need to store that setting somewhere?
-    // Maybe re-use global_config or guild_config? 
-    // Assuming implicit or stored in guild_config which we don't have column for in prompt 1.
-    // Prompt 1 DB model: word_filters has guild_id=0 for global.
-    // Prompt 4 UI: [ 🌐 Sync Globale: ON ]
-    // Let's assume it's just a toggle that maybe updates guild_config (need to add column or allow flexible json?)
-    // For now I'll just show it static or mock it.
 
     const text = `🔤 **PAROLE VIETATE**\n` +
         `Filtri attivi: ${count} locali`;
+
+    const closeBtn = fromSettings
+        ? { text: "🔙 Back", callback_data: "settings_main" }
+        : { text: "❌ Chiudi", callback_data: "wrd_close" };
 
     const keyboard = {
         inline_keyboard: [
             [{ text: "➕ Aggiungi Parola", callback_data: "wrd_add" }, { text: "📜 Lista", callback_data: "wrd_list" }],
             [{ text: "🌐 Sync Globale: ON", callback_data: "wrd_noop" }],
-            [{ text: "❌ Chiudi", callback_data: "wrd_close" }]
+            [closeBtn]
         ]
     };
 
@@ -336,4 +348,4 @@ async function sendConfigUI(ctx, isEdit = false) {
     }
 }
 
-module.exports = { register };
+module.exports = { register, sendConfigUI };
