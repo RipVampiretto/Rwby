@@ -70,10 +70,10 @@ intelNetwork.register(bot, db);
 
 // Detection: Text-based
 antiSpam.register(bot, db);
-aiModeration.register(bot, db);
 keywordMonitor.register(bot, db);
 languageMonitor.register(bot, db);
 linkMonitor.register(bot, db);
+aiModeration.register(bot, db);
 
 // Detection: Edit monitoring
 antiEditAbuse.register(bot, db);
