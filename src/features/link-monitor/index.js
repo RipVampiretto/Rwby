@@ -339,7 +339,13 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const sync = config.link_sync_global ? '✅ ON' : '❌ OFF';
     const act = (config.link_action_unknown || 'report_only').toUpperCase().replace(/_/g, ' ');
 
-    const text = `🔗 **LINK CONFIG**\n` +
+    const text = `🔗 **LINK CONFIG**\n\n` +
+        `Controllo link in ingresso tramite Whitelist/Blacklist.\n` +
+        `Sync automatico con intelligence globale (scam/phishing).\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Ordine: Local White > Global White > Local Black > Global Black\n` +
+        `• Unknown: Gestione domini non classificati\n` +
+        `• Bypass Tier configurabile\n\n` +
         `Stato: ${enabled}\n` +
         `Sync Global: ${sync}\n` +
         `Action Unknown: ${act}`;

@@ -362,7 +362,13 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const v = config.nsfw_check_videos ? '✅' : '❌';
     const g = config.nsfw_check_gifs ? '✅' : '❌';
 
-    const text = `🔞 **NSFW CONFIG**\n` +
+    const text = `🔞 **NSFW CONFIG**\n\n` +
+        `Analisi immagini e video per contenuti inappropriati.\n` +
+        `Usa Vision LLM locale per classificazione.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Supporta: Foto, Video (campionamento), GIF\n` +
+        `• Categorie: Nudity, Gore, Suggestive\n` +
+        `• Richiede risorse elevate (GPU/CPU)\n\n` +
         `Stato: ${enabled}\n` +
         `Azione: ${action}\n` +
         `Soglia: ${thr}%\n` +

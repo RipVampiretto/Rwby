@@ -280,7 +280,13 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const actFwd = (config.profiler_action_forward || 'delete').toUpperCase().replace(/_/g, ' ');
     const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase().replace(/_/g, ' ');
 
-    const text = `🔍 **PROFILER TIER 0**\n` +
+    const text = `🔍 **PROFILER TIER 0**\n\n` +
+        `Analizza rigorosamente i nuovi utenti (Tier 0) per pattern malevoli.\n` +
+        `Bypass automatico per utenti verificati (Tier 1+).\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Controlla: Link Sconosciuti, Forward\n` +
+        `• Rileva: Pattern Scam ("guadagna", "crypto")\n` +
+        `• Target: Solo nuovi arrivati\n\n` +
         `Stato: ${enabled}\n` +
         `Link: ${actLink}\n` +
         `Fwd: ${actFwd}\n` +

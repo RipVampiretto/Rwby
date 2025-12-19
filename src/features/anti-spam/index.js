@@ -255,7 +255,12 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const actVol = (config.spam_action_volume || 'delete').toUpperCase().replace(/_/g, ' ');
     const actRep = (config.spam_action_repetition || 'delete').toUpperCase().replace(/_/g, ' ');
 
-    const statusText = `🛡️ **CONFIGURAZIONE ANTI-SPAM**\n` +
+    const statusText = `🛡️ **CONFIGURAZIONE ANTI-SPAM**\n\n` +
+        `Protezione contro flood, burst e messaggi ripetuti.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Sensibilità Low: 15/min, Medium: 10/min, High: 5/min\n` +
+        `• Rileva: Burst (10s), Flood (60s), Ripetizioni\n` +
+        `• Tier 2+ Bypass\n\n` +
         `Stato: ${enabled}\n` +
         `Sensibilità: ${sens}`;
 

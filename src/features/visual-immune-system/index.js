@@ -264,7 +264,13 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const action = (config.visual_action || 'delete').toUpperCase();
     const thr = config.visual_hamming_threshold || 5;
 
-    const text = `🧬 **VISUAL SYSTEM**\n` +
+    const text = `🧬 **VISUAL SYSTEM**\n\n` +
+        `Immunità visiva tramite hashing percettivo.\n` +
+        `Blocca immagini identiche o molto simili a quelle bannate.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Hashing: pHash (resiliente a resize/crop)\n` +
+        `• Soglia Hamming: < 5 = Match\n` +
+        `• Sync: Condivide hash malevoli globalmente\n\n` +
         `Stato: ${enabled}\n` +
         `Globale: ${sync}\n` +
         `Azione: ${action}\n` +

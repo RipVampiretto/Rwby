@@ -377,7 +377,13 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const actInj = (config.edit_link_injection_action || 'ban').toUpperCase();
     const actGen = (config.edit_abuse_action || 'delete').toUpperCase();
 
-    const text = `✏️ **ANTI-EDIT CONFIG**\n` +
+    const text = `✏️ **ANTI-EDIT CONFIG**\n\n` +
+        `Monitora modifiche sospette (Link Injection) e cambi completi di senso.\n` +
+        `Protegge storico messaggi per 24h.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Link Injection: Critico (Default Ban)\n` +
+        `• Similarità < Soglia: Sospetto\n` +
+        `• Tier 0 Lock: Novizi non possono editare\n\n` +
         `Stato: ${enabled}\n` +
         `Lock Tier 0: ${lockT0}\n` +
         `Soglia Sim: ${thr}%\n` +

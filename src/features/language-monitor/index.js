@@ -275,7 +275,12 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }
     if (allowed.length === 0) allowed = ['it', 'en']; // Visual default
 
-    const text = `🌐 **CONFIGURAZIONE LINGUA**\n` +
+    const text = `🌐 **CONFIGURAZIONE LINGUA**\n\n` +
+        `Rileva automaticamente la lingua dei messaggi e agisce se non è tra quelle permesse.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Minimo 20 caratteri per analisi\n` +
+        `• Ignora Admin e Tier alti\n` +
+        `• Franc library (detection ~85%)\n\n` +
         `Stato: ${enabled}\n` +
         `Azione: ${action}\n` +
         `Permesse: ${allowed.join(', ').toUpperCase()}`;

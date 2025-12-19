@@ -326,7 +326,13 @@ async function executeAction(ctx, action, keyword, fullText) {
 async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const count = db.getDb().prepare('SELECT COUNT(*) as c FROM word_filters WHERE guild_id = ?').get(ctx.chat.id).c;
 
-    const text = `🔤 **PAROLE VIETATE**\n` +
+    const text = `🔤 **PAROLE VIETATE**\n\n` +
+        `Gestione filtri blacklist per parole o frasi non ammesse.\n` +
+        `Supporta corrispondenza esatta, parziale o Regular Expressions.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Azioni configurabili per parola\n` +
+        `• Supporto Regex avanzato\n` +
+        `• Sync con liste globali (Opzionale)\n\n` +
         `Filtri attivi: ${count} locali`;
 
     const closeBtn = fromSettings

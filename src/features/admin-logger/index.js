@@ -263,7 +263,13 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     function has(ev) { return logEvents.includes(ev) ? '✅' : '❌'; }
 
     const channelInfo = config.log_channel_id ? `Active (${config.log_channel_id})` : "Not set";
-    const text = `📋 **CONFIGURAZIONE LOG**\n` +
+    const text = `📋 **CONFIGURAZIONE LOG**\n\n` +
+        `Sistema centralizzato per registrare azioni di moderazione.\n` +
+        `Supporta logging locale (Canale) e globale (SuperAdmin Audit).\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Eventi: Ban, Delete, AI, Spam, Config\n` +
+        `• Scope: Locale (Gruppo) + Global (Rete)\n` +
+        `• Formati: Minimal, Standard, Extended (Debug)\n\n` +
         `Canale: ${channelInfo}\n` +
         `Eventi attivi: ${logEvents.length}/6`;
 

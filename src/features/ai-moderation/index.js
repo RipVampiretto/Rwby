@@ -397,7 +397,14 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const sens = (config.ai_sensitivity || 'medium').toUpperCase();
     const thr = (config.ai_confidence_threshold || 0.75) * 100;
 
-    const text = `🤖 **CONFIGURAZIONE AI MODERATION**\n` +
+    const text = `🤖 **CONFIGURAZIONE AI MODERATION**\n\n` +
+        `Analisi intelligente del contenuto tramite LLM Locale (o API).\n` +
+        `Verifica Scam, Hate Speech, NSFW, Minacce e Spam contestuale.\n\n` +
+        `ℹ️ **Info:**\n` +
+        `• Richiede backend LM Studio attivo\n` +
+        `• Analizza messaggi > 10 caratteri\n` +
+        `• Ignora Admin e Tier 2+ ( Trusted)\n` +
+        `• Cache risultati per 1h\n\n` +
         `Stato: ${enabled}\n` +
         `Sensibilità: ${sens}\n` +
         `Soglia: ${thr}%`;
