@@ -127,6 +127,8 @@
 // ============================================================================
 
 const adminLogger = require('../admin-logger');
+const { safeEdit, safeDelete, handleCriticalError, handleTelegramError, safeJsonParse } = require('../../utils/error-handlers');
+const logger = require('../../middlewares/logger');
 
 let db = null;
 let _botInstance = null;

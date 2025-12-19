@@ -11,6 +11,8 @@ const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
+const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError } = require('../../utils/error-handlers');
+const loggerUtil = require('../../middlewares/logger');
 
 let db = null;
 let _botInstance = null;

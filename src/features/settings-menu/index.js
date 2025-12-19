@@ -11,6 +11,8 @@ const voteBan = require('../vote-ban');
 const adminLogger = require('../admin-logger');
 const staffCoordination = require('../staff-coordination');
 const intelNetwork = require('../intel-network');
+const { safeEdit } = require('../../utils/error-handlers');
+const logger = require('../../middlewares/logger');
 
 let db = null;
 let _botInstance = null;

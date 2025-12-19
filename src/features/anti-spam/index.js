@@ -173,6 +173,8 @@ let db = null;
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
+const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError } = require('../../utils/error-handlers');
+const logger = require('../../middlewares/logger');
 
 let _botInstance = null;
 
@@ -283,9 +285,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     };
 
     if (isEdit) {
-        try {
-            await ctx.editMessageText(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' });
-        } catch (e) { }
+        await safeEdit(ctx, statusText, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'anti-spam');
     } else {
         await ctx.reply(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -298,10 +298,7 @@ async function checkSpam(ctx, config) {
     const content = ctx.message.text;
 
     // Admin Bypass
-    try {
-        const member = await ctx.getChatMember(userId);
-        if (['creator', 'administrator'].includes(member.status)) return false;
-    } catch (e) { }
+    if (await isAdmin(ctx, 'anti-spam')) return false;
 
     // Get stats
     let stats = db.getDb().prepare('SELECT * FROM user_active_stats WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
@@ -370,42 +367,34 @@ async function checkSpam(ctx, config) {
 
 async function executeAction(ctx, action, trigger, config) {
     const user = ctx.from;
-    console.log(`[ANTI-SPAM] Trigger: ${trigger} Action: ${action} User: ${user.id}`);
+    logger.info(`[anti-spam] Trigger: ${trigger} Action: ${action} User: ${user.id}`);
 
     // Log Logic using adminLogger if available
     const logParams = {
         guildId: ctx.chat.id,
-        eventType: 'spam', // or 'ban' if banned
+        eventType: 'spam',
         targetUser: user,
-        executorAdmin: null, // System
+        executorAdmin: null,
         reason: trigger,
         isGlobal: false
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
-        // Log locally
+        await safeDelete(ctx, 'anti-spam');
         if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
+        await safeDelete(ctx, 'anti-spam');
+        const banned = await safeBan(ctx, user.id, 'anti-spam');
+
+        if (banned) {
             await ctx.reply(`🚫 **BANNED**\nHas been banned for spam.`);
-
-            // Reduce Flux
             userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'spam_ban');
-
-            // Forward to SuperAdmin
             await forwardBanToSuperAdmin(ctx, user, trigger);
 
-            // Log Extended
             logParams.eventType = 'ban';
-            logParams.isGlobal = true; // Ban is global event
+            logParams.isGlobal = true;
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) {
-            console.error("Ban failed", e);
         }
     }
     else if (action === 'report_only') {

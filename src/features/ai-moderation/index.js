@@ -157,6 +157,8 @@ const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
+const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError } = require('../../utils/error-handlers');
+const logger = require('../../middlewares/logger');
 
 let _botInstance = null;
 
@@ -347,20 +349,17 @@ async function handleViolation(ctx, config, result) {
     };
 
     if (action === 'delete') {
-        try { await ctx.deleteMessage(); } catch (e) { }
+        await safeDelete(ctx, 'ai-moderation');
         if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
     }
     else if (action === 'ban') {
-        try {
-            await ctx.deleteMessage();
-            await ctx.banChatMember(user.id);
-            await ctx.reply(`🚫 **BANNED (AI)**\nReason: ${category}`);
+        await safeDelete(ctx, 'ai-moderation');
+        const banned = await safeBan(ctx, user.id, 'ai-moderation');
 
+        if (banned) {
+            await ctx.reply(`🚫 **BANNED (AI)**\nReason: ${category}`);
             userReputation.modifyFlux(user.id, ctx.chat.id, -100, `ai_ban_${category}`);
 
-            // Forward to SuperAdmin using existing function or manual message?
-            // The spec says "FORWARD A SUPERADMIN". anti-spam has a helper, super-admin handles endpoint.
-            // Using superAdmin module export directly if possible or manual.
             if (superAdmin.forwardBanToParliament) {
                 superAdmin.forwardBanToParliament({
                     user: user,
@@ -374,9 +373,6 @@ async function handleViolation(ctx, config, result) {
 
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-
-        } catch (e) {
-            console.error("AI Ban failed", e);
         }
     }
     else { // report_only

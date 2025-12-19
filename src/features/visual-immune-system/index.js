@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const imghash = require('imghash');
+const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError } = require('../../utils/error-handlers');
+const loggerUtil = require('../../middlewares/logger');
 
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');

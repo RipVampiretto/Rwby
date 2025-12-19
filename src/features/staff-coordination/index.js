@@ -85,6 +85,8 @@
 
 let db = null;
 let _botInstance = null;
+const { safeEdit, safeDelete, handleCriticalError, handleTelegramError } = require('../../utils/error-handlers');
+const logger = require('../../middlewares/logger');
 
 function register(bot, database) {
     db = database;

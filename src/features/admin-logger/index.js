@@ -100,6 +100,7 @@
 let db = null;
 let logEvent = null;
 let _botInstance = null;
+const { safeEdit, handleCriticalError, handleTelegramError } = require('../../utils/error-handlers');
 
 function register(bot, database) {
     db = database;
