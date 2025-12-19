@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - SUPER ADMIN (Parliament System)
+// SUPER ADMIN MODULE (Parliament System)
 // ============================================================================
 // SCOPO: Governance centrale della rete federata.
 // RICEVE: Forward di TUTTI i ban dalla rete (auto-delete dopo 24h).

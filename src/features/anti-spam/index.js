@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - ANTI-SPAM
+// ANTI-SPAM MODULE
 // ============================================================================
 // SCOPO: Rilevamento spam tramite analisi volume e ripetizione messaggi.
 // Azioni semplificate: solo DELETE (silenzioso) o BAN (con forward a SuperAdmin).

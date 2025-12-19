@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - LINK MONITOR
+// LINK MONITOR MODULE
 // ============================================================================
 // SCOPO: Controllo link/URL nei messaggi con whitelist/blacklist domini.
 // Integrato con IntelNetwork per blacklist globale.

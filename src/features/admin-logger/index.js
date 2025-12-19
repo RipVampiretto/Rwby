@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - ADMIN LOGGER
+// ADMIN LOGGER MODULE
 // ============================================================================
 // SCOPO: Sistema centralizzato di logging per tutte le azioni di moderazione.
 // Registra ban, delete, e azioni automatiche. Dual scope: locale e globale.

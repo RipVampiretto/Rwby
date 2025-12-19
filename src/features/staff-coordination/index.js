@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - STAFF COORDINATION
+// STAFF COORDINATION MODULE
 // ============================================================================
 // SCOPO: Hub centrale per coordinamento staff locale.
 // Gestisce gruppo staff, review queue, sistema note.

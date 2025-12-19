@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - INTELLIGENT PROFILER
+// INTELLIGENT PROFILER MODULE
 // ============================================================================
 // SCOPO: Profilazione nuovi utenti (Tier 0) per rilevare comportamenti
 // sospetti. Analizza link, forward, pattern scam nei primi messaggi.

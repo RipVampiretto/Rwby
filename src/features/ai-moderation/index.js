@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - AI MODERATION
+// AI MODERATION MODULE
 // ============================================================================
 // SCOPO: Analisi intelligente contenuti tramite LLM locale (LM Studio).
 // Classifica messaggi per rilevare scam, hate speech, NSFW, minacce.

@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - ANTI-EDIT ABUSE
+// ANTI-EDIT ABUSE MODULE
 // ============================================================================
 // SCOPO: Rilevare abusi della funzione modifica messaggio.
 // Tattica scammer: messaggio innocuo → modifica con link scam.

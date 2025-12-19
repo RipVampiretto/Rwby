@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - INTEL NETWORK
+// INTEL NETWORK MODULE
 // ============================================================================
 // SCOPO: Rete federata per condivisione intelligence tra gruppi.
 // Sincronizza ban globali, blacklist link/parole, e hash immagini.

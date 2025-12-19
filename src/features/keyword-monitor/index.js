@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - KEYWORD MONITOR (Blacklist)
+// KEYWORD MONITOR MODULE
 // ============================================================================
 // SCOPO: Filtro parole/frasi vietate con supporto regex.
 // Ogni parola può avere azione indipendente.

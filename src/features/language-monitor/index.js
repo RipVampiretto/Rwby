@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - LANGUAGE MONITOR
+// LANGUAGE MONITOR MODULE
 // ============================================================================
 // SCOPO: Rilevamento lingua messaggi e enforcement lingue permesse.
 // Usa libreria 'franc' per detection.

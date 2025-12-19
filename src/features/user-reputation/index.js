@@ -1,5 +1,5 @@
 // ============================================================================
-// TODO: IMPLEMENTATION PLAN - USER REPUTATION ("Flux")
+// USER REPUTATION MODULE
 // ============================================================================
 // SCOPO: Sistema reputazione organico basato su attività.
 // Flux = punteggio dinamico con scope locale e globale.
