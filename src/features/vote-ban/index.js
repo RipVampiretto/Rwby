@@ -34,7 +34,7 @@ function register(bot, database) {
         if (target.id === ctx.from.id) return ctx.reply("❌ Non puoi autobannarti.");
 
         const config = db.getGuildConfig(ctx.chat.id);
-        if (!config.voteban_enabled) return ctx.reply("❌ Vote ban disabilitato.");
+        if (!config.voteban_enabled) return // ctx.reply("❌ Vote ban disabilitato.");
 
         // Check tiers
         if (ctx.userTier < (config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 1)) {
@@ -45,7 +45,7 @@ function register(bot, database) {
         try {
             const member = await ctx.getChatMember(target.id);
             if (['creator', 'administrator'].includes(member.status)) {
-                return ctx.reply("❌ Non puoi votare contro un admin.");
+                return // ctx.reply("❌ Non puoi votare contro un admin.");
             }
         } catch (e) { }
 

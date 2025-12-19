@@ -100,12 +100,17 @@ const logger = require('../../middlewares/logger');
 
 let _botInstance = null;
 
-// Heuristic scam patterns
-const SCAM_PATTERNS = [
-    /guadagna/i, /gratis/i, /crypto/i, /airdrop/i, /investi/i,
-    /bitcoin/i, /usdt/i, /wallet/i, /passiva/i, /rendita/i,
-    /click here/i, /limited time/i, /free money/i, /giveaway/i
-];
+// Heuristic scam patterns - loaded from DB
+function getScamPatterns() {
+    const rows = db.getDb().prepare(
+        "SELECT word, is_regex FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'"
+    ).all();
+    return rows.map(r => r.is_regex ? new RegExp(r.word, 'i') : new RegExp(escapeRegExp(r.word), 'i'));
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+}
 
 function register(bot, database) {
     db = database;
@@ -181,10 +186,11 @@ async function processNewUser(ctx, config) {
     if (links.length > 0) {
         // Unknown links from Tier 0 are suspicious
         // Logic: if not whitelisted locally or globally -> SUSPICIOUS
-        // We rely on link-monitor for detailed checks, but here we can be stricter for Tier 0.
-        // Let's assume ANY link from Tier 0 is suspect if configured action is strict.
-        // Or check standard whitelist (google, telegram, etc.)
-        const whitelist = ['telegram.org', 't.me', 'youtube.com', 'google.com']; // Hardcoded base
+        // Load whitelist from database (global entries have guild_id = 0)
+        const whitelistRows = db.getDb().prepare(
+            "SELECT value FROM intel_data WHERE type = 'global_whitelist_domain' AND status = 'active'"
+        ).all();
+        const whitelist = whitelistRows.map(r => r.value);
         const isSafe = links.every(l => {
             try { return whitelist.some(w => new URL(l).hostname.endsWith(w)); } catch (e) { return false; }
         });
@@ -203,7 +209,8 @@ async function processNewUser(ctx, config) {
 
     // 3. Pattern Check
     let patternScore = 0;
-    for (const p of SCAM_PATTERNS) {
+    const scamPatterns = getScamPatterns();
+    for (const p of scamPatterns) {
         if (p.test(text)) patternScore++;
     }
 

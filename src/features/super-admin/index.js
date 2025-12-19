@@ -369,6 +369,196 @@ function register(bot, database) {
             return next();
         }
     });
+
+    // ========================================================================
+    // GLOBAL WHITELIST MANAGEMENT - /gwhitelist
+    // ========================================================================
+    bot.command("gwhitelist", async (ctx) => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const action = args[0]; // add, remove, list
+        const domain = args[1];
+
+        if (!action || action === 'list') {
+            const items = db.getDb().prepare(
+                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND status = 'active'"
+            ).all();
+
+            if (items.length === 0) {
+                return ctx.reply("🔗 **WHITELIST DOMINI GLOBALE**\n\nNessun dominio in whitelist.");
+            }
+
+            let msg = "🔗 **WHITELIST DOMINI GLOBALE**\n\n";
+            items.forEach((item, i) => {
+                msg += `${i + 1}. \`${item.value}\`\n`;
+            });
+            msg += "\n_Usa /gwhitelist add <dominio> o /gwhitelist remove <dominio>_";
+            return ctx.reply(msg, { parse_mode: 'Markdown' });
+        }
+
+        if (action === 'add' && domain) {
+            // Check if exists
+            const existing = db.getDb().prepare(
+                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND value = ?"
+            ).get(domain);
+
+            if (existing) {
+                if (existing.status === 'active') {
+                    return ctx.reply(`⚠️ \`${domain}\` è già in whitelist.`, { parse_mode: 'Markdown' });
+                }
+                // Reactivate
+                db.getDb().prepare(
+                    "UPDATE intel_data SET status = 'active' WHERE id = ?"
+                ).run(existing.id);
+            } else {
+                db.getDb().prepare(
+                    "INSERT INTO intel_data (type, value, added_by_user) VALUES ('global_whitelist_domain', ?, ?)"
+                ).run(domain, ctx.from.id);
+            }
+            return ctx.reply(`✅ \`${domain}\` aggiunto alla whitelist globale.`, { parse_mode: 'Markdown' });
+        }
+
+        if (action === 'remove' && domain) {
+            const result = db.getDb().prepare(
+                "UPDATE intel_data SET status = 'removed' WHERE type = 'global_whitelist_domain' AND value = ?"
+            ).run(domain);
+
+            if (result.changes > 0) {
+                return ctx.reply(`🗑️ \`${domain}\` rimosso dalla whitelist globale.`, { parse_mode: 'Markdown' });
+            }
+            return ctx.reply(`⚠️ \`${domain}\` non trovato in whitelist.`, { parse_mode: 'Markdown' });
+        }
+
+        return ctx.reply("❓ Uso: /gwhitelist [list|add|remove] [dominio]");
+    });
+
+    // ========================================================================
+    // GLOBAL SCAM PATTERNS MANAGEMENT - /gscam
+    // ========================================================================
+    bot.command("gscam", async (ctx) => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const action = args[0]; // add, remove, list
+        const pattern = args.slice(1).join(' ');
+
+        if (!action || action === 'list') {
+            const items = db.getDb().prepare(
+                "SELECT * FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'"
+            ).all();
+
+            if (items.length === 0) {
+                return ctx.reply("🎯 **SCAM PATTERNS GLOBALI**\n\nNessun pattern configurato.");
+            }
+
+            let msg = "🎯 **SCAM PATTERNS GLOBALI**\n\n";
+            items.forEach((item, i) => {
+                const isRegex = item.is_regex ? '(regex)' : '';
+                msg += `${i + 1}. \`${item.word}\` ${isRegex}\n`;
+            });
+            msg += "\n_Usa /gscam add <pattern> o /gscam addregex <pattern>_";
+            return ctx.reply(msg, { parse_mode: 'Markdown' });
+        }
+
+        if ((action === 'add' || action === 'addregex') && pattern) {
+            const isRegex = action === 'addregex' ? 1 : 0;
+
+            // Validate regex if needed
+            if (isRegex) {
+                try { new RegExp(pattern); } catch (e) {
+                    return ctx.reply(`❌ Regex non valido: ${e.message}`);
+                }
+            }
+
+            // Check if exists
+            const existing = db.getDb().prepare(
+                "SELECT * FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern' AND word = ?"
+            ).get(pattern);
+
+            if (existing) {
+                return ctx.reply(`⚠️ Pattern già presente.`, { parse_mode: 'Markdown' });
+            }
+
+            db.getDb().prepare(
+                "INSERT INTO word_filters (guild_id, word, is_regex, category, action, bypass_tier) VALUES (0, ?, ?, 'scam_pattern', 'report_only', 2)"
+            ).run(pattern, isRegex);
+
+            return ctx.reply(`✅ Pattern \`${pattern}\` aggiunto.`, { parse_mode: 'Markdown' });
+        }
+
+        if (action === 'remove' && pattern) {
+            const result = db.getDb().prepare(
+                "DELETE FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern' AND word = ?"
+            ).run(pattern);
+
+            if (result.changes > 0) {
+                return ctx.reply(`🗑️ Pattern \`${pattern}\` rimosso.`, { parse_mode: 'Markdown' });
+            }
+            return ctx.reply(`⚠️ Pattern non trovato.`, { parse_mode: 'Markdown' });
+        }
+
+        return ctx.reply("❓ Uso: /gscam [list|add|addregex|remove] [pattern]");
+    });
+
+    // ========================================================================
+    // GLOBAL BLACKLIST DOMAINS - /gblacklist
+    // ========================================================================
+    bot.command("gblacklist", async (ctx) => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const action = args[0]; // add, remove, list
+        const domain = args[1];
+
+        if (!action || action === 'list') {
+            const items = db.getDb().prepare(
+                "SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND status = 'active'"
+            ).all();
+
+            if (items.length === 0) {
+                return ctx.reply("🚫 **BLACKLIST DOMINI GLOBALE**\n\nNessun dominio in blacklist.");
+            }
+
+            let msg = "🚫 **BLACKLIST DOMINI GLOBALE**\n\n";
+            items.forEach((item, i) => {
+                msg += `${i + 1}. \`${item.value}\`\n`;
+            });
+            msg += "\n_Usa /gblacklist add <dominio> o /gblacklist remove <dominio>_";
+            return ctx.reply(msg, { parse_mode: 'Markdown' });
+        }
+
+        if (action === 'add' && domain) {
+            const existing = db.getDb().prepare(
+                "SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND value = ?"
+            ).get(domain);
+
+            if (existing) {
+                if (existing.status === 'active') {
+                    return ctx.reply(`⚠️ \`${domain}\` è già in blacklist.`, { parse_mode: 'Markdown' });
+                }
+                db.getDb().prepare("UPDATE intel_data SET status = 'active' WHERE id = ?").run(existing.id);
+            } else {
+                db.getDb().prepare(
+                    "INSERT INTO intel_data (type, value, added_by_user) VALUES ('blacklist_domain', ?, ?)"
+                ).run(domain, ctx.from.id);
+            }
+            return ctx.reply(`✅ \`${domain}\` aggiunto alla blacklist globale.`, { parse_mode: 'Markdown' });
+        }
+
+        if (action === 'remove' && domain) {
+            const result = db.getDb().prepare(
+                "UPDATE intel_data SET status = 'removed' WHERE type = 'blacklist_domain' AND value = ?"
+            ).run(domain);
+
+            if (result.changes > 0) {
+                return ctx.reply(`🗑️ \`${domain}\` rimosso dalla blacklist.`, { parse_mode: 'Markdown' });
+            }
+            return ctx.reply(`⚠️ \`${domain}\` non trovato.`, { parse_mode: 'Markdown' });
+        }
+
+        return ctx.reply("❓ Uso: /gblacklist [list|add|remove] [dominio]");
+    });
 }
 
 function isSuperAdmin(userId) {
