@@ -72,7 +72,7 @@ async function sendMainMenu(ctx, isEdit = false) {
             ],
             [
                 { text: t('settings.buttons.antiedit'), callback_data: "set_goto:antiedit" },
-                { text: t('settings.buttons.profiler'), callback_data: "set_goto:profiler" }
+                // { text: t('settings.buttons.profiler'), callback_data: "set_goto:profiler" } // DISABLED
             ],
             [
                 { text: t('settings.buttons.badwords'), callback_data: "set_goto:badwords" },
@@ -176,7 +176,8 @@ async function routeToFeature(ctx, feature) {
             if (antiEditAbuse.sendConfigUI) await antiEditAbuse.sendConfigUI(ctx, true, true);
             break;
         case 'profiler':
-            if (intelligentProfiler.sendConfigUI) await intelligentProfiler.sendConfigUI(ctx, true, true);
+            // if (intelligentProfiler.sendConfigUI) await intelligentProfiler.sendConfigUI(ctx, true, true);
+            await ctx.answerCallbackQuery("Profiler module is disabled.");
             break;
         case 'badwords':
             // keywordMonitor has Wizard, might be tricky. Check sendConfigUI

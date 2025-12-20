@@ -118,6 +118,9 @@ function register(bot, database) {
 
     // Middleware: profile Tier 0 users
     bot.on("message", async (ctx, next) => {
+        // INTELLIGENT PROFILER DISABLED BY CONFIGURATION
+        return next();
+
         if (ctx.chat.type === 'private') return next();
 
         // Skip check for admins
@@ -136,6 +139,7 @@ function register(bot, database) {
 
     // Command: /profilerconfig
     bot.command("profilerconfig", async (ctx) => {
+        return; // DISABLED
         if (ctx.chat.type === 'private') return;
         if (!await isAdmin(ctx, 'intelligent-profiler')) return;
 
