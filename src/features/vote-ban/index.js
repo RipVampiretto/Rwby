@@ -21,31 +21,38 @@ function register(bot, database) {
 
     // Table creation handled in database/index.js
 
-    // Command: /voteban (reply to message)
-    bot.command("voteban", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
+    // Trigger: @admin, !admin, .admin, /admin (reply to message)
+    bot.on('message:text', async (ctx, next) => {
+        const text = ctx.message.text.toLowerCase().trim();
+        const triggers = ['@admin', '!admin', '.admin', '/admin'];
+
+        if (!triggers.some(t => text.startsWith(t))) {
+            return next();
+        }
+
+        if (ctx.chat.type === 'private') return next();
 
         if (!ctx.message.reply_to_message) {
-            return ctx.reply("⚖️ Rispondi al messaggio dell'utente che vuoi bannare.");
+            return ctx.reply("⚖️ Rispondi al messaggio dell'utente che vuoi segnalare.");
         }
 
         const target = ctx.message.reply_to_message.from;
-        if (target.is_bot) return ctx.reply("❌ Non puoi bannare i bot.");
-        if (target.id === ctx.from.id) return ctx.reply("❌ Non puoi autobannarti.");
+        if (target.is_bot) return ctx.reply("❌ Non puoi segnalare i bot.");
+        if (target.id === ctx.from.id) return ctx.reply("❌ Non puoi segnalare te stesso.");
 
         const config = db.getGuildConfig(ctx.chat.id);
-        if (!config.voteban_enabled) return // ctx.reply("❌ Vote ban disabilitato.");
+        if (!config.voteban_enabled) return; // Silently ignore if disabled
 
         // Check tiers
-        if (ctx.userTier < (config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 1)) {
-            return ctx.reply(`❌ Devi essere almeno Tier ${config.voteban_initiator_tier || 1} per avviare un voto.`);
+        if (ctx.userTier < (config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 0)) {
+            return ctx.reply(`❌ Devi essere almeno T${config.voteban_initiator_tier || 0} per segnalare.`);
         }
 
         // Check if target is admin (immune)
         try {
             const member = await ctx.getChatMember(target.id);
             if (['creator', 'administrator'].includes(member.status)) {
-                return // ctx.reply("❌ Non puoi votare contro un admin.");
+                return; // Silently ignore admins
             }
         } catch (e) { }
 
@@ -57,10 +64,15 @@ function register(bot, database) {
             });
         }
 
-        const reason = ctx.message.text.split(' ').slice(1).join(' ') || "Nessun motivo specificato";
+        // Extract reason from trigger text
+        const reason = text.replace(/^[@!.\/]admin\s*/i, '').trim() || "Nessun motivo specificato";
         const duration = config.voteban_duration_minutes || 30;
         const required = config.voteban_threshold || 5;
-        const expires = new Date(Date.now() + duration * 60000).toISOString();
+
+        // Handle disabled duration (0 = no expiry)
+        const expires = duration === 0
+            ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year 
+            : new Date(Date.now() + duration * 60000).toISOString();
 
         // Insert vote first to get vote_id
         const insertResult = db.getDb().prepare(`INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at)
@@ -70,8 +82,8 @@ function register(bot, database) {
         const voteId = insertResult.lastInsertRowid;
 
         // Create Vote Message with the actual voteId
-        const { text, keyboard } = getVoteMessage(target, ctx.from, reason, 0, 0, required, expires, voteId);
-        const msg = await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        const { text: msgText, keyboard } = getVoteMessage(target, ctx.from, reason, 0, 0, required, expires, voteId, duration === 0);
+        const msg = await ctx.reply(msgText, { reply_markup: keyboard, parse_mode: 'Markdown' });
 
         // Update the vote with the poll_message_id
         db.getDb().prepare("UPDATE active_votes SET poll_message_id = ? WHERE vote_id = ?").run(msg.message_id, voteId);
@@ -99,16 +111,23 @@ function register(bot, database) {
             if (data === "vb_toggle") {
                 db.updateGuildConfig(ctx.chat.id, { voteban_enabled: config.voteban_enabled ? 0 : 1 });
             } else if (data === "vb_thr") {
-                let val = config.voteban_threshold || 5;
-                val = val >= 20 ? 3 : val + 1;
-                db.updateGuildConfig(ctx.chat.id, { voteban_threshold: val });
+                // Cycle: 3 -> 5 -> 7 -> 10 -> 3
+                const val = config.voteban_threshold || 5;
+                const thresholds = [3, 5, 7, 10];
+                const idx = thresholds.indexOf(val);
+                const next = thresholds[(idx + 1) % thresholds.length];
+                db.updateGuildConfig(ctx.chat.id, { voteban_threshold: next });
             } else if (data === "vb_dur") {
-                let val = config.voteban_duration_minutes || 30;
-                val = val >= 120 ? 10 : val + 10;
-                db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: val });
+                // Cycle: 15 -> 30 -> 60 -> 0 (disabled)
+                const val = config.voteban_duration_minutes;
+                const durations = [15, 30, 60, 0];
+                const idx = durations.indexOf(val);
+                const next = durations[(idx + 1) % durations.length];
+                db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: next });
             } else if (data === "vb_tier") {
-                let val = config.voteban_initiator_tier || 1;
-                val = val >= 3 ? 0 : val + 1;
+                // Cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0
+                let val = config.voteban_initiator_tier || 0;
+                val = val >= 4 ? 0 : val + 1;
                 db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: val });
             }
             await sendConfigUI(ctx, true, fromSettings);
@@ -172,7 +191,7 @@ function register(bot, database) {
                 const { text, keyboard } = getVoteMessage(
                     { id: vote.target_user_id, username: vote.target_username },
                     { id: vote.initiated_by, username: "..." }, // initiator info not critical for update
-                    vote.reason, yes, no, vote.required_votes, vote.expires_at, voteId
+                    vote.reason, yes, no, vote.required_votes, vote.expires_at, voteId, false
                 );
                 try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
             }
@@ -182,13 +201,14 @@ function register(bot, database) {
     });
 }
 
-function getVoteMessage(target, initiator, reason, yes, no, required, expires, voteId) {
+function getVoteMessage(target, initiator, reason, yes, no, required, expires, voteId, noExpiry = false) {
     const minLeft = Math.max(0, Math.ceil((new Date(expires) - Date.now()) / 60000));
+    const timeDisplay = noExpiry ? '♾️ Illimitato' : `${minLeft} min`;
     const text = `⚖️ **TRIBUNALE DELLA COMMUNITY**\n\n` +
         `👤 **Accusato:** @${target.username || target.first_name}\n` +
         `📝 **Motivo:** ${reason}\n\n` +
         `📊 **Voti:** ${yes}/${required} (N: ${no})\n` +
-        `⏱️ **Scade:** ${minLeft} min\n\n` +
+        `⏱️ **Scade:** ${timeDisplay}\n\n` +
         `_La community decide se bannare questo utente._`;
 
     const k = {
@@ -250,20 +270,19 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.voteban_enabled ? '✅ ON' : '❌ OFF';
     const thr = config.voteban_threshold || 5;
-    const dur = config.voteban_duration_minutes || 30;
-    const tier = config.voteban_initiator_tier || 1;
+    const dur = config.voteban_duration_minutes;
+    const durDisplay = dur === 0 ? '❌ Disattivato' : `${dur} min`;
+    const tier = config.voteban_initiator_tier || 0;
 
     const text = `⚖️ **VOTE BAN**\n\n` +
-        `Permette alla community di decidere se bannare un utente disturbatore.\n` +
-        `Usa /voteban rispondendo a un messaggio per avviare il sondaggio.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Serve un certo numero di voti per bannare\n` +
-        `• Il voto dura un tempo limitato\n` +
-        `• Gli utenti fidati possono avviare votazioni\n\n` +
+        `Permette alla community di decidere se bannare un utente.\n` +
+        `Trigger: @admin  !admin  .admin  /admin\n\n` +
+        `ℹ️ **Uso:**\n` +
+        `Rispondi al messaggio dell'utente con uno dei trigger.\n\n` +
         `Stato: ${enabled}\n` +
         `Voti Richiesti: ${thr}\n` +
-        `Durata: ${dur} min\n` +
-        `Tier Minimo: ${tier}`;
+        `Timer: ${durDisplay}\n` +
+        `Tier Initiator: T${tier}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -273,8 +292,8 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         inline_keyboard: [
             [{ text: `⚖️ Sys: ${enabled}`, callback_data: "vb_toggle" }],
             [{ text: `📊 Soglia: ${thr}`, callback_data: "vb_thr" }],
-            [{ text: `⏱️ Durata: ${dur}`, callback_data: "vb_dur" }],
-            [{ text: `🏷️ Tier: ${tier}`, callback_data: "vb_tier" }],
+            [{ text: `⏱️ Durata: ${durDisplay}`, callback_data: "vb_dur" }],
+            [{ text: `🏷️ Tier: T${tier}`, callback_data: "vb_tier" }],
             [closeBtn]
         ]
     };
