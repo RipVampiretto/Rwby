@@ -32,9 +32,30 @@ async function processEdit(ctx, config) {
         return;
     }
 
-    // Check B: Similarity
+    // Check B: Similarity - but allow legitimate additions
     // Skip if very short
     if (originalText.length > 5 && newText.length > 5) {
+        // Allow if the original text is preserved at the start (append case)
+        // e.g., "ciao" -> "ciao, come stai?" is OK
+        const normalizedOriginal = originalText.toLowerCase().trim();
+        const normalizedNew = newText.toLowerCase().trim();
+
+        // Check if it's just an append (original preserved at start)
+        if (normalizedNew.startsWith(normalizedOriginal)) {
+            return; // Legitimate append, skip
+        }
+
+        // Check if original content is preserved somewhere (prepend case)
+        if (normalizedNew.endsWith(normalizedOriginal)) {
+            return; // Legitimate prepend, skip
+        }
+
+        // Check if original is contained in new (middle insertion)
+        if (normalizedNew.includes(normalizedOriginal) && normalizedNew.length < normalizedOriginal.length * 3) {
+            return; // Legitimate addition, skip
+        }
+
+        // Now check similarity for actual replacements
         const sim = detection.similarity(originalText, newText);
         const threshold = config.edit_similarity_threshold || 0.5;
         if (sim < threshold) {
