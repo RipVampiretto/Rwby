@@ -2,31 +2,29 @@
 // AI MODERATION MODULE
 // ============================================================================
 // SCOPO: Analisi intelligente contenuti tramite LLM locale (LM Studio).
-// Classifica messaggi per rilevare scam, hate speech, NSFW, minacce.
-// Azioni semplificate: solo DELETE o BAN (con forward a SuperAdmin).
+// Classifica messaggi per rilevare scam, nsfw, spam.
+// Funziona come "ULTIMA SPIAGGIA" - chiamato da altri moduli dopo i loro filtri.
+// Azioni semplificate: solo DELETE, BAN o REPORT_ONLY.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
 // 1. DATA MODEL - Struttura Database SQLite
 // ----------------------------------------------------------------------------
 //
-// TABELLA: ai_config (per-gruppo)
-// ├── guild_id: INTEGER PRIMARY KEY
+// TABELLA: guild_config (campi AI Moderation)
 // ├── ai_enabled: INTEGER (0/1, DEFAULT 1)
-// ├── action_scam: TEXT (DEFAULT 'ban')
+// ├── ai_action_scam: TEXT (DEFAULT 'ban')
 // │   └── Valori SOLO: 'delete', 'ban', 'report_only'
-// ├── action_hate: TEXT (DEFAULT 'report_only')
+// ├── ai_action_nsfw: TEXT (DEFAULT 'delete')
 // │   └── Valori SOLO: 'delete', 'ban', 'report_only'
-// ├── action_nsfw: TEXT (DEFAULT 'delete')
+// ├── ai_action_spam: TEXT (DEFAULT 'delete')
 // │   └── Valori SOLO: 'delete', 'ban', 'report_only'
-// ├── action_threat: TEXT (DEFAULT 'report_only')
-// │   └── Valori SOLO: 'delete', 'ban', 'report_only'
-// ├── action_spam: TEXT (DEFAULT 'delete')
-// │   └── Valori SOLO: 'delete', 'ban', 'report_only'
-// ├── confidence_threshold: REAL (DEFAULT 0.75)
-// ├── context_aware: INTEGER (0/1, DEFAULT 1)
-// ├── context_messages: INTEGER (DEFAULT 3)
-// └── sensitivity: TEXT (DEFAULT 'medium')
+// ├── ai_confidence_threshold: REAL (DEFAULT 0.75)
+// ├── ai_context_aware: INTEGER (0/1, DEFAULT 1)
+// ├── ai_context_messages: INTEGER (DEFAULT 3)
+// └── ai_tier_bypass: INTEGER (DEFAULT 2) - Tier da cui viene ignorato
+//
+// NOTA: Rimossi ai_sensitivity (inutilizzato), ai_action_hate, ai_action_threat
 
 // ----------------------------------------------------------------------------
 // 2. INFRASTRUCTURE - LLM Locale (LM Studio)
@@ -35,7 +33,7 @@
 // PROVIDER: LM Studio (https://lmstudio.ai/)
 // ENDPOINT: process.env.LM_STUDIO_URL || 'http://localhost:1234'
 // PATH: /v1/chat/completions
-// TIMEOUT: 5000ms
+// TIMEOUT: 10000ms
 //
 // MODELLI CONSIGLIATI:
 // 1. TheBloke/Mistral-7B-Instruct-v0.2-GGUF (Q4_K_M)
@@ -49,39 +47,41 @@
 // 3. SYSTEM PROMPT - Classificazione
 // ----------------------------------------------------------------------------
 //
-// CATEGORIE:
+// CATEGORIE (RIDOTTE):
 // - "safe": Contenuto normale
 // - "scam": Truffe, phishing, fake giveaway
-// - "hate": Discriminazione, razzismo
 // - "nsfw": Contenuto sessuale
-// - "threat": Minacce, doxxing
 // - "spam": Promozione non richiesta
 //
 // RISPOSTA JSON:
 // {"category": "...", "confidence": 0.0-1.0, "reason": "..."}
 
 // ----------------------------------------------------------------------------
-// 4. WORKFLOW - Flusso di Esecuzione
+// 4. WORKFLOW - Flusso di Esecuzione (NUOVA ARCHITETTURA)
 // ----------------------------------------------------------------------------
 //
-// TRIGGER: Ogni messaggio testuale
+// TRIGGER: NON automatico! Chiamato esplicitamente da altri moduli.
+// └── Funzione exported: analyzeMessage(ctx, contextMessages)
 //
-// STEP 1 - PRE-FILTERING:
+// STEP 1 - PRE-FILTERING (nel chiamante):
 // ├── Admin → Skip
-// ├── Tier 2+ → Skip (trusted)
+// ├── Tier >= ai_tier_bypass → Skip (configurabile)
 // ├── < 10 caratteri → Skip
 // └── ai_enabled === false → Skip
 //
-// STEP 2 - CACHE CHECK:
-// └── Hash contenuto, lookup cache (TTL 1h)
+// STEP 2 - CONTEXT (opzionale):
+// └── Se ai_context_aware, include ultimi N messaggi nel prompt
 //
-// STEP 3 - API CALL:
+// STEP 3 - CACHE CHECK:
+// └── Hash contenuto + contesto, lookup cache (TTL 1h)
+//
+// STEP 4 - API CALL:
 // └── fetch() a LM Studio con timeout
 //
-// STEP 4 - RESPONSE PARSING:
+// STEP 5 - RESPONSE PARSING:
 // └── Estrai JSON, valida schema
 //
-// STEP 5 - ACTION:
+// STEP 6 - ACTION:
 // └── Esegui action_[category] configurata
 
 // ----------------------------------------------------------------------------
@@ -112,39 +112,23 @@
 //
 // action === 'report_only':
 // ├── NON eliminare, NON bannare
-// └── Invia a staff locale:
-//     ┌────────────────────────────────────────────┐
-//     │ 🤖 **AI DETECTION REPORT**                 │
-//     │ 📁 Categoria: HATE (87%)                  │
-//     │ 👤 Utente: @username                       │
-//     │ 💬 Messaggio: "testo..."                  │
-//     └────────────────────────────────────────────┘
-//     [ 🔨 Ban ] [ 🗑️ Delete ] [ ✅ Ignora ]
+// └── Invia a staff locale per review
 
 // ----------------------------------------------------------------------------
 // 6. CONFIGURATION UI - /aiconfig
 // ----------------------------------------------------------------------------
 //
-// MESSAGGIO:
-// ┌────────────────────────────────────────────┐
-// │ 🤖 **CONFIGURAZIONE AI MODERATION**        │
-// │ Stato: 🟢 Attivo                           │
-// │ Server: localhost:1234 (Online)            │
-// └────────────────────────────────────────────┘
-//
 // KEYBOARD:
 // [ 🤖 AI: ON ] [ 🔗 Test Connessione ]
-// [ 🌡️ Sensibilità: ◀ Medium ▶ ]
 // [ 🎭 Contesto: ON ]
+// [ 👤 Bypass Tier: 2 ]
 // [ ⚙️ Configura Azioni Categoria ]
-// [ 📊 Soglia: 75% ◀▶ ]
-// [ 💾 Salva ] [ ❌ Chiudi ]
+// [ 📊 Soglia: 75% ]
+// [ 🔙 Back / ❌ Chiudi ]
 //
-// SUBMENU AZIONI:
+// SUBMENU AZIONI (RIDOTTO):
 // [ 💸 SCAM: Ban ▼ ]    → [ Delete | Ban | Report ]
-// [ 🗯️ HATE: Report ▼ ] → [ Delete | Ban | Report ]
 // [ 🔞 NSFW: Delete ▼ ] → [ Delete | Ban | Report ]
-// [ ⚔️ THREAT: Report ▼ ] → [ Delete | Ban | Report ]
 // [ 📢 SPAM: Delete ▼ ] → [ Delete | Ban | Report ]
 
 // ============================================================================
@@ -166,6 +150,10 @@ const CACHE = new Map(); // Simple cache for message hashes
 const CACHE_TTL = 3600000; // 1 hour
 const CACHE_CLEANUP_INTERVAL = 600000; // 10 minutes
 
+// In-memory context storage: Map<chatId, Array<{userId, text, ts}>>
+const CONTEXT_BUFFER = new Map();
+const MAX_CONTEXT_SIZE = 10; // Keep last 10 messages per chat
+
 // Cleanup old cache entries every 10 minutes
 setInterval(() => {
     const now = Date.now();
@@ -185,20 +173,27 @@ function register(bot, database) {
     db = database;
     _botInstance = bot;
 
-    // Middleware: AI moderation
+    // Context collector middleware - stores recent messages for context
     bot.on("message:text", async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
 
-        // Skip for admins or trusted users
-        if (await isUserAdmin(ctx)) return next();
-        if (ctx.userTier && ctx.userTier >= 2) return next();
-        if (ctx.message.text.length < 10) return next();
+        // Store message in context buffer
+        const chatId = ctx.chat.id;
+        if (!CONTEXT_BUFFER.has(chatId)) {
+            CONTEXT_BUFFER.set(chatId, []);
+        }
+        const buffer = CONTEXT_BUFFER.get(chatId);
+        buffer.push({
+            userId: ctx.from.id,
+            username: ctx.from.username || ctx.from.first_name,
+            text: ctx.message.text,
+            ts: Date.now()
+        });
+        // Keep only last MAX_CONTEXT_SIZE messages
+        if (buffer.length > MAX_CONTEXT_SIZE) {
+            buffer.shift();
+        }
 
-        // Check if Enabled
-        const config = db.getGuildConfig(ctx.chat.id);
-        if (!config.ai_enabled) return next();
-
-        await processMessage(ctx, config);
         await next();
     });
 
@@ -208,6 +203,37 @@ function register(bot, database) {
         if (!await isAdmin(ctx, 'ai-moderation')) return;
 
         await sendConfigUI(ctx);
+    });
+
+    // Command: /testai <message> - Admin only, test AI analysis
+    bot.command("testai", async (ctx) => {
+        if (ctx.chat.type === 'private') return;
+        if (!await isAdmin(ctx, 'ai-moderation')) return;
+
+        const text = ctx.message.text.replace(/^\/testai\s*/, '').trim();
+        if (!text) {
+            await ctx.reply("⚠️ Uso: `/testai <messaggio da analizzare>`", { parse_mode: 'Markdown' });
+            return;
+        }
+
+        await ctx.reply("🔄 Analisi in corso...");
+
+        try {
+            const config = db.getGuildConfig(ctx.chat.id);
+            const result = await callLLM(text, [], config);
+
+            const emoji = result.category === 'safe' ? '✅' : '🚨';
+            const response = `${emoji} **RISULTATO AI**\n\n` +
+                `📁 Categoria: \`${result.category}\`\n` +
+                `📊 Confidenza: \`${Math.round(result.confidence * 100)}%\`\n` +
+                `📝 Motivo: ${result.reason}\n\n` +
+                `🔧 Soglia attuale: ${(config.ai_confidence_threshold || 0.75) * 100}%\n` +
+                `⚡ Azione se rilevato: \`${config['ai_action_' + result.category] || 'N/A'}\``;
+
+            await ctx.reply(response, { parse_mode: 'Markdown' });
+        } catch (e) {
+            await ctx.reply(`❌ Errore: ${e.message}`);
+        }
     });
 
     // Action Handlers
@@ -225,12 +251,13 @@ function register(bot, database) {
         } else if (data === "ai_test_conn") {
             await testConnection(ctx);
             return; // Don't refresh UI immediately, testConnection sends a message
-        } else if (data === "ai_sens") {
-            const levels = ['low', 'medium', 'high'];
-            const idx = levels.indexOf(config.ai_sensitivity || 'medium');
-            db.updateGuildConfig(ctx.chat.id, { ai_sensitivity: levels[(idx + 1) % 3] });
         } else if (data === "ai_ctx") {
             db.updateGuildConfig(ctx.chat.id, { ai_context_aware: config.ai_context_aware ? 0 : 1 });
+        } else if (data === "ai_tier_bypass") {
+            // Cycle through 0, 1, 2, 3
+            const current = config.ai_tier_bypass ?? 2;
+            const next = (current + 1) % 4;
+            db.updateGuildConfig(ctx.chat.id, { ai_tier_bypass: next });
         } else if (data === "ai_threshold") {
             let thr = config.ai_confidence_threshold || 0.75;
             thr = thr >= 0.9 ? 0.5 : thr + 0.05;
@@ -240,7 +267,7 @@ function register(bot, database) {
         } else if (data.startsWith("ai_set_act:")) {
             // act:CAT:NEXT_ACTION
             const parts = data.split(":");
-            if (parts.length === 3) {
+            if (parts.length === 2) {
                 const cat = parts[1];
                 const key = `ai_action_${cat}`;
                 // Actions: delete, ban, report_only
@@ -259,6 +286,72 @@ function register(bot, database) {
     });
 }
 
+// ============================================================================
+// EXPORTED FUNCTION - Called by other modules as "last resort"
+// ============================================================================
+
+/**
+ * Analyze a message using AI as a last resort filter.
+ * Should be called by other modules after their own checks pass.
+ * 
+ * @param {Context} ctx - Telegram context
+ * @returns {Promise<{triggered: boolean, result: object|null}>}
+ */
+async function analyzeMessage(ctx) {
+    if (!db) {
+        logger.warn('[ai-moderation] analyzeMessage called but module not initialized');
+        return { triggered: false, result: null };
+    }
+
+    const config = db.getGuildConfig(ctx.chat.id);
+
+    // Check if enabled
+    if (!config.ai_enabled) {
+        return { triggered: false, result: null };
+    }
+
+    // Check tier bypass
+    const tierBypass = config.ai_tier_bypass ?? 2;
+    if (ctx.userTier !== undefined && ctx.userTier >= tierBypass) {
+        return { triggered: false, result: null };
+    }
+
+    // Check admin bypass
+    if (await isUserAdmin(ctx)) {
+        return { triggered: false, result: null };
+    }
+
+    // Check minimum length
+    const text = ctx.message?.text;
+    if (!text || text.length < 10) {
+        return { triggered: false, result: null };
+    }
+
+    // Get context messages if enabled
+    let contextMessages = [];
+    if (config.ai_context_aware) {
+        const numContext = config.ai_context_messages || 3;
+        const buffer = CONTEXT_BUFFER.get(ctx.chat.id) || [];
+        // Get last N messages excluding current one
+        contextMessages = buffer.slice(-numContext - 1, -1);
+    }
+
+    // Process with AI
+    try {
+        const result = await processWithAI(text, contextMessages, config);
+
+        if (result.category !== 'safe' && result.confidence >= (config.ai_confidence_threshold || 0.75)) {
+            await handleViolation(ctx, config, result);
+            return { triggered: true, result: result };
+        }
+
+        return { triggered: false, result: result };
+    } catch (e) {
+        logger.warn(`[ai-moderation] AI Check failed: ${e.message}`);
+        return { triggered: false, result: null };
+    }
+}
+
 function djb2(str) {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
@@ -267,53 +360,57 @@ function djb2(str) {
     return hash;
 }
 
-async function processMessage(ctx, config) {
-    const text = ctx.message.text;
-    const hash = djb2(text); // Simple hash for cache
+async function processWithAI(text, contextMessages, config) {
+    // Create cache key including context
+    const contextStr = contextMessages.map(m => m.text).join('|');
+    const hash = djb2(text + contextStr);
     const cached = CACHE.get(hash);
 
     if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
-        if (cached.res && cached.res.category !== 'safe') {
-            await handleViolation(ctx, config, cached.res);
-        }
-        return;
+        return cached.res;
     }
 
-    try {
-        const result = await callLLM(text, config);
-        CACHE.set(hash, { ts: Date.now(), res: result });
+    const result = await callLLM(text, contextMessages, config);
+    CACHE.set(hash, { ts: Date.now(), res: result });
 
-        if (result.category !== 'safe' && result.confidence >= (config.ai_confidence_threshold || 0.75)) {
-            await handleViolation(ctx, config, result);
-        }
-    } catch (e) {
-        logger.warn(`[ai-moderation] AI Check failed: ${e.message}`);
-    }
+    return result;
 }
 
-async function callLLM(text, config) {
+async function callLLM(text, contextMessages, config) {
     const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
-    const systemPrompt = `Classify this message for a chat bot moderation system.
-Categories:
-- "safe": Normal content
-- "scam": Scams, phishing, fake giveaways
-- "sex": Sexual content, explicit
-- "spam": Unsolicited promotion
 
-Return ONLY JSON:
-{"category": "...", "confidence": 0.0-1.0, "reason": "..."}`;
+    // Build context string
+    let contextStr = '';
+    if (contextMessages.length > 0) {
+        contextStr = '\n\nPrevious messages for context:\n' +
+            contextMessages.map(m => `[${m.username}]: ${m.text}`).join('\n');
+    }
+
+    const systemPrompt = `You are a chat moderation AI. Classify the user's message for a Telegram group moderation bot.
+
+Categories (choose ONE):
+- "safe": Normal, acceptable content
+- "scam": Scams, phishing, fake giveaways, crypto schemes, money-making promises
+- "nsfw": Sexual content, explicit material
+- "spam": Unsolicited promotion, advertising, repetitive content
+
+Respond with ONLY a JSON object:
+{"category": "...", "confidence": 0.0-1.0, "reason": "brief explanation"}`;
+
+    const userMessage = text + contextStr;
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+        const timeout = setTimeout(() => controller.abort(), 10000);
 
         const response = await fetch(`${url}/v1/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                model: process.env.LM_STUDIO_MODEL || undefined, // Use specific model if set
                 messages: [
                     { role: "system", content: systemPrompt },
-                    { role: "user", content: text }
+                    { role: "user", content: userMessage }
                 ],
                 temperature: 0.1,
                 max_tokens: 150
@@ -332,13 +429,14 @@ Return ONLY JSON:
         return JSON.parse(content);
 
     } catch (e) {
-        // Fallback or safe
+        // Fallback to safe
+        logger.debug(`[ai-moderation] LLM call failed: ${e.message}`);
         return { category: "safe", confidence: 1 };
     }
 }
 
 async function handleViolation(ctx, config, result) {
-    const category = result.category; // scam, hate, nsfw, threat, spam
+    const category = result.category; // scam, nsfw, spam
     const actionKey = `ai_action_${category}`;
     const action = config[actionKey] || 'report_only';
 
@@ -397,18 +495,19 @@ async function handleViolation(ctx, config, result) {
 async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.ai_enabled ? '✅ ON' : '❌ OFF';
-    const sens = (config.ai_sensitivity || 'medium').toUpperCase();
+    const tierBypass = config.ai_tier_bypass ?? 2;
     const thr = (config.ai_confidence_threshold || 0.75) * 100;
 
     const text = `🤖 **AI MODERATION**\n\n` +
         `Un'intelligenza artificiale che legge il *senso* dei messaggi.\n` +
-        `Riesce a bloccare truffe, violenza e contenuti tossici anche se usano parole normali.\n\n` +
+        `Riesce a bloccare truffe e contenuti tossici anche se usano parole normali.\n\n` +
         `ℹ️ **Info:**\n` +
+        `• Funziona come "ultima spiaggia" dopo altri filtri\n` +
         `• Capisce il contesto della conversazione\n` +
-        `• Blocca Scam, Hate Speech e Minacce\n\n` +
+        `• Blocca Scam, NSFW e Spam\n\n` +
         `Stato: ${enabled}\n` +
-        `Sensibilità: ${sens}\n` +
-        `Sicurezza AI: ${thr}%`;
+        `Bypass da Tier: ${tierBypass}+\n` +
+        `Soglia Confidenza: ${thr}%`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -416,9 +515,9 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🤖 AI: ${enabled}`, callback_data: "ai_toggle" }, { text: "🔗 Test Conn", callback_data: "ai_test_conn" }],
-            [{ text: `🌡️ Sensibilità: ${sens}`, callback_data: "ai_sens" }],
+            [{ text: `🤖 AI: ${enabled}`, callback_data: "ai_toggle" }],
             [{ text: `🎭 Contesto: ${config.ai_context_aware ? 'ON' : 'OFF'}`, callback_data: "ai_ctx" }],
+            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "ai_tier_bypass" }],
             [{ text: "⚙️ Configura Azioni Categoria", callback_data: "ai_config_cats" }],
             [{ text: `📊 Soglia: ${thr}%`, callback_data: "ai_threshold" }],
             [closeBtn]
@@ -434,25 +533,16 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 
 async function sendCategoryConfigUI(ctx, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
-    const cats = ['scam', 'hate', 'nsfw', 'threat', 'spam'];
+    const cats = ['scam', 'nsfw', 'spam']; // Reduced categories
 
     const rows = [];
-    for (let i = 0; i < cats.length; i += 2) { // 2 per row makes it cleaner ? Or 1 per row for clarity
-        const c1 = cats[i];
-        const a1 = (config[`ai_action_${c1}`] || 'report_only').toUpperCase();
-        const btn1 = { text: `${c1.toUpperCase()}: ${a1}`, callback_data: `ai_set_act:${c1}` };
-
-        const row = [btn1];
-        if (i + 1 < cats.length) {
-            const c2 = cats[i + 1];
-            const a2 = (config[`ai_action_${c2}`] || 'report_only').toUpperCase();
-            row.push({ text: `${c2.toUpperCase()}: ${a2}`, callback_data: `ai_set_act:${c2}` });
-        }
-        rows.push(row);
+    for (const cat of cats) {
+        const action = (config[`ai_action_${cat}`] || 'report_only').toUpperCase().replace('_', ' ');
+        rows.push([{ text: `${cat.toUpperCase()}: ${action}`, callback_data: `ai_set_act:${cat}` }]);
     }
     rows.push([{ text: "🔙 Indietro", callback_data: "ai_back_main" }]);
 
-    const text = "⚙️ **CONFIGURAZIONE AZIONI CATEGORIE**\nClick per cambiare (Delete/Ban/Report)";
+    const text = "⚙️ **AZIONI PER CATEGORIA**\nClick per cambiare (Delete/Ban/Report)";
     try {
         await ctx.editMessageText(text, { reply_markup: { inline_keyboard: rows }, parse_mode: 'Markdown' });
     } catch (e) { }
@@ -472,8 +562,12 @@ async function testConnection(ctx) {
 }
 
 async function isUserAdmin(ctx) {
-    const member = await ctx.getChatMember(ctx.from.id);
-    return ['creator', 'administrator'].includes(member.status);
+    try {
+        const member = await ctx.getChatMember(ctx.from.id);
+        return ['creator', 'administrator'].includes(member.status);
+    } catch (e) {
+        return false;
+    }
 }
 
-module.exports = { register, sendConfigUI };
+module.exports = { register, sendConfigUI, analyzeMessage };

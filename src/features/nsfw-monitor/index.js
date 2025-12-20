@@ -379,6 +379,7 @@ Categories:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                model: process.env.LM_STUDIO_NSFW_MODEL || undefined, // Use specific vision model if set
                 messages: [
                     { role: "system", content: systemPrompt },
                     {
@@ -531,7 +532,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }, { text: "🔗 Test Conn", callback_data: "nsf_test" }],
+            [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }],
             [{ text: `👮 Azione: ${action}`, callback_data: "nsf_act" }, { text: `📊 Soglia: ${thr}%`, callback_data: "nsf_thr" }],
             [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }, { text: `🎞️ ${g}`, callback_data: "nsf_tog_gif" }],
             [closeBtn]

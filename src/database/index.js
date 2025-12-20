@@ -445,6 +445,14 @@ function createTables() {
         // Column already exists, ignore
     }
 
+    // AI Tier Bypass column (added later)
+    try {
+        db.exec(`ALTER TABLE guild_config ADD COLUMN ai_tier_bypass INTEGER DEFAULT 2`);
+        logger.info(`[database] Added column ai_tier_bypass to guild_config`);
+    } catch (e) {
+        // Column already exists, ignore
+    }
+
     logger.info("Database tables created/verified");
 }
 
@@ -479,8 +487,8 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'spam_enabled', 'spam_sensitivity', 'spam_action_volume', 'spam_action_repetition',
     'spam_volume_limit_60s', 'spam_volume_limit_10s', 'spam_duplicate_limit',
     // AI Moderation
-    'ai_enabled', 'ai_action_scam', 'ai_action_hate', 'ai_action_nsfw', 'ai_action_threat',
-    'ai_action_spam', 'ai_confidence_threshold', 'ai_context_aware', 'ai_sensitivity', 'ai_context_messages',
+    'ai_enabled', 'ai_action_scam', 'ai_action_nsfw',
+    'ai_action_spam', 'ai_confidence_threshold', 'ai_context_aware', 'ai_context_messages', 'ai_tier_bypass',
     // Anti-Edit Abuse
     'edit_monitor_enabled', 'edit_abuse_action', 'edit_lock_tier0',
     'edit_similarity_threshold', 'edit_link_injection_action',
