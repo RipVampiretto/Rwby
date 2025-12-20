@@ -184,6 +184,9 @@ function register(bot, database) {
 
     // Middleware: spam detection
     bot.on("message:text", async (ctx, next) => {
+        // ANTI-SPAM DISABLED BY CONFIGURATION
+        return next();
+
         if (ctx.chat.type === 'private') return next();
 
         // Check Tier (Bypass for Tier 2+)
@@ -204,6 +207,7 @@ function register(bot, database) {
 
     // Command: /spamconfig
     bot.command("spamconfig", async (ctx) => {
+        return; // DISABLED
         if (ctx.chat.type === 'private') return;
         if (!await isAdmin(ctx, 'anti-spam')) return;
 

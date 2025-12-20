@@ -67,7 +67,7 @@ async function sendMainMenu(ctx, isEdit = false) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: t('settings.buttons.antispam'), callback_data: "set_goto:antispam" },
+                // { text: t('settings.buttons.antispam'), callback_data: "set_goto:antispam" }, // DISABLED
                 { text: t('settings.buttons.aimod'), callback_data: "set_goto:aimod" }
             ],
             [
@@ -166,7 +166,8 @@ async function routeToFeature(ctx, feature) {
 
     switch (feature) {
         case 'antispam':
-            if (antiSpam.sendConfigUI) await antiSpam.sendConfigUI(ctx, true, true);
+            // if (antiSpam.sendConfigUI) await antiSpam.sendConfigUI(ctx, true, true);
+            await ctx.answerCallbackQuery("Anti-Spam module is disabled.");
             break;
         case 'aimod':
             if (aiModeration.sendConfigUI) await aiModeration.sendConfigUI(ctx, true, true);
