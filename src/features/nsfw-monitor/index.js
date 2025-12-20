@@ -4,8 +4,10 @@ const https = require('https');
 const { Readable } = require('stream');
 const fluentFfmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 const sharp = require('sharp');
 fluentFfmpeg.setFfmpegPath(ffmpegPath);
+fluentFfmpeg.setFfprobePath(ffprobePath);
 
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
@@ -25,33 +27,66 @@ if (!fs.existsSync(TEMP_DIR)) {
 function register(bot, database) {
     db = database;
     _botInstance = bot;
+    loggerUtil.info('[nsfw-monitor] Module registered and ready');
 
     // Handler: photos, videos, animations
     bot.on(["message:photo", "message:video", "message:animation", "message:document"], async (ctx, next) => {
-        if (ctx.chat.type === 'private') return next();
+        const chatId = ctx.chat.id;
+        const userId = ctx.from?.id;
+        const msgId = ctx.message?.message_id;
+
+        loggerUtil.debug(`[nsfw-monitor] 📥 Media received - Chat: ${chatId}, User: ${userId}, MsgId: ${msgId}`);
+
+        if (ctx.chat.type === 'private') {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: private chat`);
+            return next();
+        }
 
         // Skip admins
-        if (await isAdmin(ctx, 'nsfw-monitor')) return next();
+        if (await isAdmin(ctx, 'nsfw-monitor')) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} is admin`);
+            return next();
+        }
 
         // Config check
         const config = db.getGuildConfig(ctx.chat.id);
-        if (!config.nsfw_enabled) return next();
+        if (!config.nsfw_enabled) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: NSFW monitor disabled for chat ${chatId}`);
+            return next();
+        }
 
         // Tier bypass
-        if (ctx.userTier !== undefined && ctx.userTier >= (config.nsfw_tier_bypass || 3)) return next();
+        if (ctx.userTier !== undefined && ctx.userTier >= (config.nsfw_tier_bypass || 3)) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${config.nsfw_tier_bypass || 3})`);
+            return next();
+        }
 
         // Check types enabled
         const isVideo = ctx.message.video || (ctx.message.document && ctx.message.document.mime_type.startsWith('video'));
         const isGif = ctx.message.animation || (ctx.message.document && ctx.message.document.mime_type === 'image/gif');
         const isPhoto = ctx.message.photo;
 
-        if (isVideo && !config.nsfw_check_videos) return next();
-        if (isGif && !config.nsfw_check_gifs) return next();
-        if (isPhoto && !config.nsfw_check_photos) return next();
+        const mediaType = isVideo ? 'VIDEO' : (isGif ? 'GIF' : (isPhoto ? 'PHOTO' : 'UNKNOWN'));
+        loggerUtil.info(`[nsfw-monitor] 🎬 Media type detected: ${mediaType} - Chat: ${chatId}, User: ${userId}`);
+
+        if (isVideo && !config.nsfw_check_videos) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: video check disabled`);
+            return next();
+        }
+        if (isGif && !config.nsfw_check_gifs) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: GIF check disabled`);
+            return next();
+        }
+        if (isPhoto && !config.nsfw_check_photos) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: photo check disabled`);
+            return next();
+        }
+
+        loggerUtil.info(`[nsfw-monitor] ✅ Proceeding with analysis for ${mediaType} - Chat: ${chatId}, User: ${userId}`);
 
         // Download and analyze
         // Fire and forget to avoid blocking, but handle errors
-        processMedia(ctx, config).catch(err => loggerUtil.error(`[nsfw-monitor] Process error: ${err.message}`));
+        processMedia(ctx, config).catch(err => loggerUtil.error(`[nsfw-monitor] ❌ Process error: ${err.message}\n${err.stack}`));
 
         await next();
     });
@@ -102,59 +137,98 @@ function register(bot, database) {
 }
 
 async function processMedia(ctx, config) {
+    const chatId = ctx.chat.id;
+    const userId = ctx.from?.id;
+    const startTime = Date.now();
+
+    loggerUtil.info(`[nsfw-monitor] 🔄 Starting processMedia - Chat: ${chatId}, User: ${userId}`);
+
     let fileId;
     let type = 'photo';
+    let fileSize = 0;
 
     if (ctx.message.photo) {
-        fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        const photo = ctx.message.photo[ctx.message.photo.length - 1];
+        fileId = photo.file_id;
+        fileSize = photo.file_size || 0;
+        loggerUtil.debug(`[nsfw-monitor] 📷 Photo detected - Size: ${fileSize} bytes, Dimensions: ${photo.width}x${photo.height}`);
     } else if (ctx.message.video) {
         fileId = ctx.message.video.file_id;
         type = 'video';
+        fileSize = ctx.message.video.file_size || 0;
+        loggerUtil.debug(`[nsfw-monitor] 🎥 Video detected - Size: ${fileSize} bytes, Duration: ${ctx.message.video.duration}s`);
     } else if (ctx.message.animation) {
         fileId = ctx.message.animation.file_id;
         type = 'gif';
+        fileSize = ctx.message.animation.file_size || 0;
+        loggerUtil.debug(`[nsfw-monitor] 🎞️ Animation/GIF detected - Size: ${fileSize} bytes`);
     } else if (ctx.message.document) {
         fileId = ctx.message.document.file_id;
+        fileSize = ctx.message.document.file_size || 0;
+        loggerUtil.debug(`[nsfw-monitor] 📄 Document detected - MIME: ${ctx.message.document.mime_type}, Size: ${fileSize} bytes`);
         if (ctx.message.document.mime_type.startsWith('video')) type = 'video';
         else if (ctx.message.document.mime_type.startsWith('image')) type = 'photo';
-        else return;
+        else {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Document is not image/video, skipping`);
+            return;
+        }
     }
 
+    loggerUtil.info(`[nsfw-monitor] 📁 Getting file info from Telegram - FileId: ${fileId?.substring(0, 20)}...`);
     const file = await ctx.api.getFile(fileId);
-    const downloadUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+    loggerUtil.debug(`[nsfw-monitor] 📁 File path: ${file.file_path}`);
+
+    const downloadUrl = `https://api.telegram.org/file/bot***/${file.file_path}`;
     const ext = path.extname(file.file_path) || (type === 'video' ? '.mp4' : '.jpg');
     const localPath = path.join(TEMP_DIR, `${file.file_unique_id}${ext}`);
 
-    await downloadFile(downloadUrl, localPath);
+    loggerUtil.info(`[nsfw-monitor] ⬇️ Downloading file to: ${localPath}`);
+    const downloadStart = Date.now();
+    await downloadFile(downloadUrl.replace('***', process.env.BOT_TOKEN), localPath);
+    const downloadTime = Date.now() - downloadStart;
+
+    const actualSize = fs.statSync(localPath).size;
+    loggerUtil.info(`[nsfw-monitor] ✅ Download complete - Size: ${actualSize} bytes, Time: ${downloadTime}ms`);
 
     try {
         let isNsfw = false;
         let reasons = [];
 
         if (type === 'video' || type === 'gif') {
+            loggerUtil.info(`[nsfw-monitor] 🎬 Starting VIDEO/GIF analysis...`);
             isNsfw = await checkVideo(localPath, config, reasons);
         } else {
+            loggerUtil.info(`[nsfw-monitor] 🖼️ Starting IMAGE analysis...`);
             isNsfw = await checkImage(localPath, config, reasons);
         }
 
+        const totalTime = Date.now() - startTime;
         if (isNsfw) {
+            loggerUtil.warn(`[nsfw-monitor] 🚨 NSFW DETECTED - Chat: ${chatId}, User: ${userId}, Reason: ${reasons[0]}, TotalTime: ${totalTime}ms`);
             await executeAction(ctx, config.nsfw_action || 'delete', reasons[0], type);
+        } else {
+            loggerUtil.info(`[nsfw-monitor] ✅ Content is SAFE - Chat: ${chatId}, User: ${userId}, TotalTime: ${totalTime}ms`);
         }
     } finally {
         // Cleanup main file
+        loggerUtil.debug(`[nsfw-monitor] 🧹 Cleaning up temp file: ${localPath}`);
         try { fs.unlinkSync(localPath); } catch (e) { }
     }
 }
 
 async function downloadFile(url, dest) {
+    loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: Starting download to ${dest}`);
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(dest);
         https.get(url, (response) => {
+            loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: Got response, status: ${response.statusCode}`);
             response.pipe(file);
             file.on('finish', () => {
+                loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: File write finished`);
                 file.close(resolve);
             });
         }).on('error', (err) => {
+            loggerUtil.error(`[nsfw-monitor] ❌ downloadFile: Error - ${err.message}`);
             fs.unlink(dest, () => { });
             reject(err);
         });
@@ -162,23 +236,40 @@ async function downloadFile(url, dest) {
 }
 
 async function checkImage(imagePath, config, reasons) {
-    // Resize/Compress before sending to LLM for speed? Vision models often handle standard resolutions.
-    // Convert to base64
+    loggerUtil.debug(`[nsfw-monitor] 🖼️ checkImage: Reading file ${imagePath}`);
     const buffer = fs.readFileSync(imagePath);
     const base64 = buffer.toString('base64');
+    const base64Size = Math.round(base64.length / 1024);
+    loggerUtil.debug(`[nsfw-monitor] 🖼️ checkImage: Base64 size: ${base64Size}KB`);
 
+    loggerUtil.info(`[nsfw-monitor] 🤖 Sending image to Vision LLM for analysis...`);
+    const llmStart = Date.now();
     const res = await callVisionLLM(base64, config);
-    if (res.nsfw && res.confidence >= (config.nsfw_threshold || 0.7)) {
+    const llmTime = Date.now() - llmStart;
+
+    loggerUtil.info(`[nsfw-monitor] 🤖 LLM Response (${llmTime}ms): nsfw=${res.nsfw}, category=${res.category}, confidence=${res.confidence}, reason=${res.reason || 'N/A'}`);
+
+    const threshold = config.nsfw_threshold || 0.7;
+    if (res.nsfw && res.confidence >= threshold) {
+        loggerUtil.warn(`[nsfw-monitor] ⚠️ NSFW threshold exceeded: ${res.confidence} >= ${threshold}`);
         reasons.push(`${res.category} (${Math.round(res.confidence * 100)}%)`);
         return true;
     }
+    loggerUtil.debug(`[nsfw-monitor] ✅ Image passed check (confidence ${res.confidence} < threshold ${threshold})`);
     return false;
 }
 
 async function checkVideo(videoPath, config, reasons) {
+    loggerUtil.info(`[nsfw-monitor] 🎬 checkVideo: Analyzing ${videoPath}`);
+
     // Get duration
+    loggerUtil.debug(`[nsfw-monitor] 🎬 Getting video duration...`);
     const duration = await getVideoDuration(videoPath);
-    if (!duration) return false;
+    if (!duration) {
+        loggerUtil.warn(`[nsfw-monitor] ⚠️ Could not get video duration, skipping analysis`);
+        return false;
+    }
+    loggerUtil.info(`[nsfw-monitor] 🎬 Video duration: ${duration.toFixed(2)}s`);
 
     // Extract frames: every 5%
     const intervalPct = config.nsfw_frame_interval_percent || 5;
@@ -188,49 +279,81 @@ async function checkVideo(videoPath, config, reasons) {
     }
 
     // Safety cap: max 20 frames
-    if (timestamps.length > 20) timestamps.length = 20;
+    if (timestamps.length > 20) {
+        loggerUtil.debug(`[nsfw-monitor] 🎬 Capping timestamps from ${timestamps.length} to 20`);
+        timestamps.length = 20;
+    }
 
-    for (const ts of timestamps) {
+    loggerUtil.info(`[nsfw-monitor] 🎬 Will extract ${timestamps.length} frames at ${intervalPct}% intervals`);
+
+    for (let i = 0; i < timestamps.length; i++) {
+        const ts = timestamps[i];
         const framePath = path.join(TEMP_DIR, `frame_${path.basename(videoPath)}_${ts}.jpg`);
+        loggerUtil.debug(`[nsfw-monitor] 🎬 Processing frame ${i + 1}/${timestamps.length} at ${ts.toFixed(2)}s`);
+
         try {
+            loggerUtil.debug(`[nsfw-monitor] 🎬 Extracting frame at ${ts.toFixed(2)}s to ${framePath}`);
+            const extractStart = Date.now();
             await extractFrame(videoPath, ts, framePath);
+            loggerUtil.debug(`[nsfw-monitor] 🎬 Frame extracted in ${Date.now() - extractStart}ms`);
+
             const isNsfw = await checkImage(framePath, config, reasons);
-            fs.unlinkSync(framePath); // cleanup frame
+
+            loggerUtil.debug(`[nsfw-monitor] 🧹 Cleaning up frame: ${framePath}`);
+            fs.unlinkSync(framePath);
 
             if (isNsfw) {
                 reasons[0] += ` @ ${ts.toFixed(1)}s`;
-                return true; // Stop early
+                loggerUtil.warn(`[nsfw-monitor] 🚨 NSFW detected at frame ${i + 1} (${ts.toFixed(1)}s) - stopping early`);
+                return true;
             }
         } catch (e) {
-            loggerUtil.warn(`[nsfw-monitor] Frame check error: ${e.message}`);
+            loggerUtil.warn(`[nsfw-monitor] ⚠️ Frame ${i + 1} check error: ${e.message}`);
         }
     }
+
+    loggerUtil.info(`[nsfw-monitor] ✅ All ${timestamps.length} frames passed check`);
     return false;
 }
 
 function getVideoDuration(filePath) {
     return new Promise((resolve) => {
+        loggerUtil.debug(`[nsfw-monitor] 🎬 ffprobe: Getting duration for ${filePath}`);
         fluentFfmpeg.ffprobe(filePath, (err, metadata) => {
-            if (err) resolve(0);
-            else resolve(metadata.format.duration);
+            if (err) {
+                loggerUtil.error(`[nsfw-monitor] ❌ ffprobe error: ${err.message}`);
+                resolve(0);
+            } else {
+                loggerUtil.debug(`[nsfw-monitor] 🎬 ffprobe: Duration = ${metadata.format.duration}s, Format = ${metadata.format.format_name}`);
+                resolve(metadata.format.duration);
+            }
         });
     });
 }
 
 function extractFrame(videoPath, timestamp, outputPath) {
     return new Promise((resolve, reject) => {
+        loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath}`);
         fluentFfmpeg(videoPath)
             .seekInput(timestamp)
             .frames(1)
             .output(outputPath)
-            .on('end', resolve)
-            .on('error', reject)
+            .on('end', () => {
+                loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Frame extracted successfully`);
+                resolve();
+            })
+            .on('error', (err) => {
+                loggerUtil.error(`[nsfw-monitor] ❌ ffmpeg error: ${err.message}`);
+                reject(err);
+            })
             .run();
     });
 }
 
 async function callVisionLLM(base64Image, config) {
     const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+    loggerUtil.debug(`[nsfw-monitor] 🤖 callVisionLLM: Connecting to ${url}`);
+
     const systemPrompt = `You are an image content classifier. Analyze this image and respond ONLY with a JSON object:
 {"nsfw": true/false, "category": "...", "confidence": 0.0-1.0, "reason": "..."}
 
@@ -244,7 +367,13 @@ Categories:
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout for vision
+        const timeout = setTimeout(() => {
+            loggerUtil.warn(`[nsfw-monitor] ⏰ LLM request timeout (60s)`);
+            controller.abort();
+        }, 60000);
+
+        loggerUtil.debug(`[nsfw-monitor] 🤖 Sending request to LLM API...`);
+        const requestStart = Date.now();
 
         const response = await fetch(`${url}/v1/chat/completions`, {
             method: 'POST',
@@ -266,16 +395,37 @@ Categories:
         });
         clearTimeout(timeout);
 
-        if (!response.ok) throw new Error("API Error");
+        const responseTime = Date.now() - requestStart;
+        loggerUtil.debug(`[nsfw-monitor] 🤖 LLM response received in ${responseTime}ms, status: ${response.status}`);
+
+        if (!response.ok) {
+            loggerUtil.error(`[nsfw-monitor] ❌ LLM API error: status ${response.status}`);
+            throw new Error(`API Error: ${response.status}`);
+        }
+
         const data = await response.json();
         const content = data.choices[0].message.content;
+        loggerUtil.debug(`[nsfw-monitor] 🤖 LLM raw response: ${content}`);
 
         const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) return JSON.parse(jsonMatch[0]);
-        return JSON.parse(content);
+        let result;
+        if (jsonMatch) {
+            result = JSON.parse(jsonMatch[0]);
+        } else {
+            result = JSON.parse(content);
+        }
+
+        loggerUtil.debug(`[nsfw-monitor] 🤖 LLM parsed result: ${JSON.stringify(result)}`);
+        return result;
 
     } catch (e) {
-        return { nsfw: false, category: "safe", confidence: 1 };
+        if (e.name === 'AbortError') {
+            loggerUtil.error(`[nsfw-monitor] ❌ LLM request aborted (timeout)`);
+        } else {
+            loggerUtil.error(`[nsfw-monitor] ❌ LLM error: ${e.message}`);
+        }
+        loggerUtil.debug(`[nsfw-monitor] 🤖 Returning safe default due to error`);
+        return { nsfw: false, category: "safe", confidence: 1, reason: "LLM error - defaulting to safe" };
     }
 }
 
@@ -291,12 +441,21 @@ async function executeAction(ctx, action, reason, type) {
     };
 
     if (action === 'delete') {
-        await safeDelete(ctx, 'nsfw-monitor');
-        if (superAdmin.sendGlobalLog) {
-            superAdmin.sendGlobalLog('image_spam', `🖼️ **Image Scan**\nGruppo: ${ctx.chat.title}\nUser: @${user.username}\nResult: NSFW Detected (${reason})`);
+        // Forward original media to Parliament BEFORE deleting
+        if (superAdmin.forwardMediaToParliament) {
+            const caption = `🖼️ NSFW Detected\n\nGruppo: ${ctx.chat.title}\nUser: ${user.first_name} (@${user.username || 'N/A'})\nUser ID: ${user.id}\nResult: ${reason}\nAction: DELETE`;
+            await superAdmin.forwardMediaToParliament('image_spam', ctx, caption);
         }
+
+        await safeDelete(ctx, 'nsfw-monitor');
     }
     else if (action === 'ban') {
+        // Forward original media to Parliament BEFORE deleting
+        if (superAdmin.forwardMediaToParliament) {
+            const caption = `🖼️ NSFW Detected + BAN\n\nGruppo: ${ctx.chat.title}\nUser: ${user.first_name} (@${user.username || 'N/A'})\nUser ID: ${user.id}\nResult: ${reason}\nAction: BAN`;
+            await superAdmin.forwardMediaToParliament('image_spam', ctx, caption);
+        }
+
         await safeDelete(ctx, 'nsfw-monitor');
         const banned = await safeBan(ctx, user.id, 'nsfw-monitor');
 

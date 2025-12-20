@@ -1003,9 +1003,76 @@ async function cleanupPendingDeletions() {
     }
 }
 
-module.exports = { 
-    register, 
-    forwardBanToParliament, 
+/**
+ * Forward media (photo/video/animation) to Parliament topic with caption
+ * @param {string} topicKey - Key in global_topics (e.g. 'image_spam')
+ * @param {object} ctx - grammY context with the media message
+ * @param {string} caption - Caption text (will be sent WITHOUT parse_mode to avoid markdown errors)
+ */
+async function forwardMediaToParliament(topicKey, ctx, caption) {
+    if (!db || !_botInstance) return;
+    try {
+        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        let threadId = null;
+        if (globalConfig.global_topics) {
+            try {
+                const topics = JSON.parse(globalConfig.global_topics);
+                threadId = topics[topicKey];
+            } catch (e) { }
+        }
+
+        const msg = ctx.message;
+        let sent;
+
+        // Forward based on media type - use copyMessage to copy with new caption
+        if (msg.photo) {
+            const fileId = msg.photo[msg.photo.length - 1].file_id;
+            sent = await _botInstance.api.sendPhoto(globalConfig.parliament_group_id, fileId, {
+                message_thread_id: threadId,
+                caption: caption
+            });
+        } else if (msg.video) {
+            sent = await _botInstance.api.sendVideo(globalConfig.parliament_group_id, msg.video.file_id, {
+                message_thread_id: threadId,
+                caption: caption
+            });
+        } else if (msg.animation) {
+            sent = await _botInstance.api.sendAnimation(globalConfig.parliament_group_id, msg.animation.file_id, {
+                message_thread_id: threadId,
+                caption: caption
+            });
+        } else if (msg.document) {
+            sent = await _botInstance.api.sendDocument(globalConfig.parliament_group_id, msg.document.file_id, {
+                message_thread_id: threadId,
+                caption: caption
+            });
+        } else {
+            // Fallback: just send text
+            sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, caption, {
+                message_thread_id: threadId
+            });
+        }
+
+        // Schedule auto-delete 24h
+        if (sent) {
+            const deleteAfter = new Date(Date.now() + 86400000).toISOString();
+            db.getDb().prepare('INSERT INTO pending_deletions (message_id, chat_id, delete_after) VALUES (?, ?, ?)')
+                .run(sent.message_id, sent.chat.id, deleteAfter);
+        }
+
+        logger.info(`[super-admin] Forwarded media to Parliament (${topicKey})`);
+
+    } catch (e) {
+        logger.error(`[super-admin] Failed to forward media (${topicKey}): ${e.message}`);
+    }
+}
+
+module.exports = {
+    register,
+    forwardBanToParliament,
     sendGlobalLog,
-    forwardLinkCheck
+    forwardLinkCheck,
+    forwardMediaToParliament
 };

@@ -56,6 +56,10 @@ bot.use(async (ctx, next) => {
 // Global i18n middleware
 bot.use(i18n.middleware());
 
+// Global admin-only callbacks middleware (restrict inline menus to admins)
+const { adminOnlyCallbacks } = require("./src/middlewares/menu-ownership");
+bot.use(adminOnlyCallbacks());
+
 // ============================================================================
 // FEATURE MODULES - Register
 // ============================================================================
