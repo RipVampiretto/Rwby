@@ -1,5 +1,6 @@
 const commands = require('./commands');
 const actions = require('./actions');
+const ui = require('./ui');
 const logger = require('../../middlewares/logger');
 
 let db = null;
@@ -16,6 +17,11 @@ function register(bot, database) {
     logger.info('[vote-ban] Module registered');
 }
 
+function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
+    return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
+}
+
 module.exports = {
-    register
+    register,
+    sendConfigUI
 };

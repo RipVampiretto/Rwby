@@ -1,5 +1,5 @@
 // ============================================================================
-// CAS BAN MODULE - Combot Anti-Spam Integration
+// CAS BAN MODULE - Global User Blacklist (Combot Anti-Spam Integration)
 // ============================================================================
 // SCOPO: Sincronizza lista ban CAS e verifica ogni messaggio contro di essa.
 // ============================================================================
@@ -7,6 +7,7 @@
 const sync = require('./sync');
 const detection = require('./detection');
 const actions = require('./actions');
+const ui = require('./ui');
 const logger = require('../../middlewares/logger');
 
 let db = null;
@@ -28,6 +29,10 @@ function register(bot, database) {
     bot.on('message', async (ctx, next) => {
         // Skip private chats
         if (ctx.chat.type === 'private') return next();
+
+        // Check if enabled for this guild
+        const config = db.getGuildConfig(ctx.chat.id);
+        if (config.casban_enabled === 0) return next();
 
         // Check if user is CAS banned
         const isBanned = detection.isCasBanned(ctx.from.id);
@@ -64,6 +69,30 @@ function register(bot, database) {
         await ctx.reply(result.message);
     });
 
+    // Register callback handlers
+    bot.on('callback_query:data', async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+        if (!data.startsWith('cas_')) return next();
+
+        const config = db.getGuildConfig(ctx.chat.id);
+        const fromSettings = ctx.callbackQuery.message?.reply_markup?.inline_keyboard?.some(
+            row => row.some(btn => btn.callback_data === 'settings_main')
+        );
+
+        if (data === 'cas_close') {
+            await ctx.deleteMessage();
+            return;
+        }
+
+        if (data === 'cas_toggle') {
+            db.updateGuildConfig(ctx.chat.id, { casban_enabled: config.casban_enabled === 0 ? 1 : 0 });
+            await ui.sendConfigUI(ctx, db, true, fromSettings);
+            return;
+        }
+
+        await next();
+    });
+
     // Schedule daily sync
     scheduleSync();
 
@@ -86,8 +115,13 @@ function scheduleSync() {
     logger.info('[cas-ban] Scheduled daily sync');
 }
 
+function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
+    return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
+}
+
 module.exports = {
     register,
+    sendConfigUI,
     // Expose for testing
     forceSync: () => sync.syncCasBans()
 };

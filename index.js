@@ -79,10 +79,10 @@ casBan.register(bot, db);
 adminLogger.register(bot, db);
 staffCoordination.register(bot, db);
 superAdmin.register(bot, db);
-intelNetwork.register(bot, db);
+// intelNetwork.register(bot, db); // DISABLED
 
 // Detection: Text-based
-antiSpam.register(bot, db);
+// antiSpam.register(bot, db); // DISABLED
 keywordMonitor.register(bot, db);
 languageMonitor.register(bot, db);
 modalPatterns.register(bot, db);
@@ -93,7 +93,7 @@ aiModeration.register(bot, db);
 antiEditAbuse.register(bot, db);
 
 // Detection: New user profiling
-intelligentProfiler.register(bot, db);
+// intelligentProfiler.register(bot, db); // DISABLED
 
 // Detection: Media
 nsfwMonitor.register(bot, db);

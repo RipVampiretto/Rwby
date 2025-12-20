@@ -15,6 +15,7 @@ const adminLogger = require('../admin-logger');
 const staffCoordination = require('../staff-coordination');
 const intelNetwork = require('../intel-network');
 const modalPatterns = require('../modal-patterns');
+const casBan = require('../cas-ban');
 
 async function routeToFeature(ctx, feature) {
     // Call the feature's sendConfigUI with fromSettings=true
@@ -22,7 +23,7 @@ async function routeToFeature(ctx, feature) {
 
     switch (feature) {
         case 'antispam':
-            // if (antiSpam.sendConfigUI) await antiSpam.sendConfigUI(ctx, true, true);
+            // DISABLED
             await ctx.answerCallbackQuery("Anti-Spam module is disabled.");
             break;
         case 'aimod':
@@ -32,7 +33,7 @@ async function routeToFeature(ctx, feature) {
             if (antiEditAbuse.sendConfigUI) await antiEditAbuse.sendConfigUI(ctx, true, true);
             break;
         case 'profiler':
-            // if (intelligentProfiler.sendConfigUI) await intelligentProfiler.sendConfigUI(ctx, true, true);
+            // DISABLED
             await ctx.answerCallbackQuery("Profiler module is disabled.");
             break;
         case 'badwords':
@@ -51,7 +52,6 @@ async function routeToFeature(ctx, feature) {
         case 'visual':
             // DISABLED TEMPORARILY
             await ctx.answerCallbackQuery("⚠️ Visual Immune System è temporaneamente disabilitato.");
-            // if (visualImmuneSystem.sendConfigUI) await visualImmuneSystem.sendConfigUI(ctx, true, true);
             break;
         case 'voteban':
             if (voteBan.sendConfigUI) await voteBan.sendConfigUI(ctx, true, true);
@@ -60,17 +60,19 @@ async function routeToFeature(ctx, feature) {
             if (adminLogger.sendConfigUI) await adminLogger.sendConfigUI(ctx, true, true);
             break;
         case 'staff':
-            // staffCoordination usually just commands. Does it have UI? created reviewQueue.
-            // /setstaff logic? Maybe we add a simple status UI
             if (staffCoordination.sendConfigUI) await staffCoordination.sendConfigUI(ctx, true, true);
             else await ctx.answerCallbackQuery("Configurazione Staff via comandi (/setstaff)");
             break;
         case 'intel':
-            if (intelNetwork.sendConfigUI) await intelNetwork.sendConfigUI(ctx, true, true);
-            else await ctx.answerCallbackQuery("Status Intel via /intel");
+            // DISABLED
+            await ctx.answerCallbackQuery("Intel Network module is disabled.");
             break;
         case 'modals':
             if (modalPatterns.sendConfigUI) await modalPatterns.sendConfigUI(ctx, true, true);
+            break;
+        case 'casban':
+            if (casBan.sendConfigUI) await casBan.sendConfigUI(ctx, true, true);
+            else await ctx.answerCallbackQuery("CAS Ban attivo. Usa /cassync per sync manuale.");
             break;
         case 'ui_lang':
             await ui.sendLanguageUI(ctx);

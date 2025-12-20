@@ -27,7 +27,7 @@ function init(database) {
     db = database;
 
     // Pre-load all locale files
-    const localesDir = path.join('locales');
+    const localesDir = path.join(__dirname, 'locales');
 
     for (const langCode of Object.keys(AVAILABLE_LANGUAGES)) {
         const filePath = path.join(localesDir, `${langCode}.json`);

@@ -17,8 +17,12 @@ function reviewQueue(params) {
     return logic.reviewQueue(_botInstance, db, params);
 }
 
+function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
+    return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
+}
+
 module.exports = {
     register,
     reviewQueue,
-    sendConfigUI: ui.sendConfigUI
+    sendConfigUI
 };

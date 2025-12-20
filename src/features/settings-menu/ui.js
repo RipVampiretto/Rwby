@@ -22,10 +22,14 @@ async function sendMainMenu(ctx, isEdit = false) {
                 { text: `${t('settings.buttons.links')}`, callback_data: "set_goto:links" },
                 { text: `${t('settings.buttons.modals')}`, callback_data: "set_goto:modals" }
             ],
+            // === SECURITY ===
+            [
+                { text: `${t('settings.buttons.casban')}`, callback_data: "set_goto:casban" },
+                { text: `${t('settings.buttons.antiedit')}`, callback_data: "set_goto:antiedit" }
+            ],
             // === COMMUNITY ===
             [
-                { text: `${t('settings.buttons.voteban')}`, callback_data: "set_goto:voteban" },
-                { text: `${t('settings.buttons.antiedit')}`, callback_data: "set_goto:antiedit" }
+                { text: `${t('settings.buttons.voteban')}`, callback_data: "set_goto:voteban" }
             ],
             // === ADMIN ===
             [
