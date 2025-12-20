@@ -38,6 +38,8 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'voteban_initiator_tier', 'voteban_voter_tier',
     // Modal Pattern System
     'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass',
+    // CAS Ban / Global Blacklist
+    'casban_enabled',
     // UI Language
     'ui_language'
 ]);

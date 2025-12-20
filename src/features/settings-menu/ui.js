@@ -6,32 +6,34 @@ async function sendMainMenu(ctx, isEdit = false) {
 
     const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
 
-    // Layout: 2 columns, logically grouped
+    // Layout: 2 columns, ordered by checking flow (first to last)
+    // Flow: Blacklist → Link → Language → Keyword → Modals → NSFW → Anti-Edit → Vote Ban → AI (last)
     const keyboard = {
         inline_keyboard: [
-            // === MODERATION ===
+            // === FIRST LINE OF DEFENSE ===
             [
-                { text: `${t('settings.buttons.aimod')}`, callback_data: "set_goto:aimod" },
-                { text: `${t('settings.buttons.nsfw')}`, callback_data: "set_goto:nsfw" }
+                { text: `${t('settings.buttons.casban')}`, callback_data: "set_goto:casban" },
+                { text: `${t('settings.buttons.links')}`, callback_data: "set_goto:links" }
             ],
             [
                 { text: `${t('settings.buttons.lang')}`, callback_data: "set_goto:lang" },
                 { text: `${t('settings.buttons.badwords')}`, callback_data: "set_goto:badwords" }
             ],
+            // === PATTERN DETECTION ===
             [
-                { text: `${t('settings.buttons.links')}`, callback_data: "set_goto:links" },
-                { text: `${t('settings.buttons.modals')}`, callback_data: "set_goto:modals" }
+                { text: `${t('settings.buttons.modals')}`, callback_data: "set_goto:modals" },
+                { text: `${t('settings.buttons.nsfw')}`, callback_data: "set_goto:nsfw" }
             ],
-            // === SECURITY ===
+            // === BEHAVIOR DETECTION ===
             [
-                { text: `${t('settings.buttons.casban')}`, callback_data: "set_goto:casban" },
-                { text: `${t('settings.buttons.antiedit')}`, callback_data: "set_goto:antiedit" }
-            ],
-            // === COMMUNITY ===
-            [
+                { text: `${t('settings.buttons.antiedit')}`, callback_data: "set_goto:antiedit" },
                 { text: `${t('settings.buttons.voteban')}`, callback_data: "set_goto:voteban" }
             ],
-            // === ADMIN ===
+            // === AI (LAST LINE) ===
+            [
+                { text: `${t('settings.buttons.aimod')}`, callback_data: "set_goto:aimod" }
+            ],
+            // === ADMIN TOOLS ===
             [
                 { text: `${t('settings.buttons.staff')}`, callback_data: "set_goto:staff" },
                 { text: `${t('settings.buttons.logger')}`, callback_data: "set_goto:logger" }
@@ -46,7 +48,6 @@ async function sendMainMenu(ctx, isEdit = false) {
         ]
     };
 
-    // settings_close handler is simple delete
     if (isEdit) {
         try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
     } else {

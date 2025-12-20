@@ -1,12 +1,16 @@
 const { safeEdit } = require('../../utils/error-handlers');
 const loggerUtil = require('../../middlewares/logger');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    loggerUtil.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${ctx.chat?.id}`);
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    loggerUtil.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`);
 
     try {
-        const config = db.getGuildConfig(ctx.chat.id);
-        const enabled = config.nsfw_enabled ? '✅ ON' : '❌ OFF';
+        const config = db.getGuildConfig(guildId);
+        const enabled = config.nsfw_enabled ? t('common.on') : t('common.off');
         const action = (config.nsfw_action || 'delete').toUpperCase();
         const thr = (config.nsfw_threshold || 0.7) * 100;
         const tierBypass = config.nsfw_tier_bypass ?? 2;
@@ -17,28 +21,27 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         const g = config.nsfw_check_gifs ? '✅' : '❌';
         const s = config.nsfw_check_stickers ? '✅' : '❌';
 
-        const text = `🔞 <b>FILTRO NSFW</b>\n\n` +
-            `Analizza immagini e video per trovare contenuti non adatti (Nudo, Violenza).\n` +
-            `Protegge il gruppo da contenuti scioccanti.\n\n` +
-            `ℹ️ <b>Info:</b>\n` +
-            `• Funziona su Foto, Video, GIF e Sticker\n` +
-            `• Blocca pornografia e immagini violente\n` +
-            `• Richiede un po' di tempo per analizzare i video\n\n` +
-            `Stato: ${enabled}\n` +
-            `Bypass da Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
-            `Azione: ${action}\n` +
-            `Sensibilità: ${thr}%\n` +
-            `Controlla: Foto ${p} | Video ${v} | GIF ${g} | Sticker ${s}`;
+        const text = `${t('nsfw.title')}\n\n` +
+            `${t('nsfw.description')}\n\n` +
+            `ℹ️ <b>${t('nsfw.info_title')}:</b>\n` +
+            `• ${t('nsfw.info_1')}\n` +
+            `• ${t('nsfw.info_2')}\n` +
+            `• ${t('nsfw.info_3')}\n\n` +
+            `${t('nsfw.status')}: ${enabled}\n` +
+            `${t('nsfw.tier_bypass')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
+            `${t('nsfw.action')}: ${action}\n` +
+            `${t('nsfw.threshold')}: ${thr}%\n` +
+            `${t('nsfw.check_types')}: Foto ${p} | Video ${v} | GIF ${g} | Sticker ${s}`;
 
         const closeBtn = fromSettings
-            ? { text: "🔙 Back", callback_data: "settings_main" }
-            : { text: "❌ Chiudi", callback_data: "nsf_close" };
+            ? { text: t('common.back'), callback_data: "settings_main" }
+            : { text: t('common.close'), callback_data: "nsf_close" };
 
         const keyboard = {
             inline_keyboard: [
-                [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }],
-                [{ text: `👤 Bypass Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "nsf_tier" }],
-                [{ text: `👮 Azione: ${action}`, callback_data: "nsf_act" }, { text: `📊 Soglia: ${thr}%`, callback_data: "nsf_thr" }],
+                [{ text: `${t('nsfw.buttons.monitor')}: ${enabled}`, callback_data: "nsf_toggle" }],
+                [{ text: `${t('nsfw.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "nsf_tier" }],
+                [{ text: `${t('nsfw.buttons.action')}: ${action}`, callback_data: "nsf_act" }, { text: `${t('nsfw.buttons.threshold')}: ${thr}%`, callback_data: "nsf_thr" }],
                 [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }],
                 [{ text: `🎬 ${g}`, callback_data: "nsf_tog_gif" }, { text: `🪙 ${s}`, callback_data: "nsf_tog_sticker" }],
                 [closeBtn]
@@ -52,9 +55,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         }
     } catch (e) {
         loggerUtil.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
-        // Try to answer callback to prevent loading forever
         try {
-            await ctx.answerCallbackQuery(`Errore: ${e.message.substring(0, 50)}`);
+            await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
         } catch (e2) { }
     }
 }

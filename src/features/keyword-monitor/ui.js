@@ -1,23 +1,26 @@
 const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const syncGlobal = config.keyword_sync_global ? '✅ ON' : '❌ OFF';
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
 
-    const text = `🔤 **PAROLE VIETATE**\n\n` +
-        `Blocca messaggi che contengono parole o frasi specifiche proibite a livello globale.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Usa le liste condivise di parole pericolose dall'IntelNetwork\n\n` +
-        `Sync Globale: ${syncGlobal}`;
+    const config = db.getGuildConfig(guildId);
+    const syncGlobal = config.keyword_sync_global ? t('common.on') : t('common.off');
+
+    const text = `${t('keyword.title')}\n\n` +
+        `${t('keyword.description')}\n\n` +
+        `ℹ️ **${t('keyword.info_title')}:**\n` +
+        `• ${t('keyword.info_1')}\n\n` +
+        `${t('keyword.global_sync')}: ${syncGlobal}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "wrd_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "wrd_close" };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `➕ Aggiungi Parola`, callback_data: "wrd_add" }, { text: `📜 Lista`, callback_data: "wrd_list" }],
-            [{ text: `🌐 Sync Globale: ${syncGlobal}`, callback_data: "wrd_sync" }],
+            [{ text: `${t('keyword.buttons.sync')}: ${syncGlobal}`, callback_data: "wrd_sync" }],
             [closeBtn]
         ]
     };

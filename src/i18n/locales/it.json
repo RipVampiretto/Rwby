@@ -1,8 +1,23 @@
 {
+    "common": {
+        "on": "✅ ON",
+        "off": "❌ OFF",
+        "back": "🔙 Indietro",
+        "close": "❌ Chiudi",
+        "enabled": "Attivo",
+        "disabled": "Disattivato",
+        "status": "Stato",
+        "action": "Azione",
+        "tier_bypass": "Bypass da Tier",
+        "threshold": "Sensibilità",
+        "delete": "ELIMINA",
+        "ban": "BANNA",
+        "report_only": "SEGNALA"
+    },
     "settings": {
         "main": {
             "title": "⚙️ **PANNELLO DI CONTROLLO**",
-            "subtitle": "Seleziona un modulo da configurare:",
+            "subtitle": "Scegli cosa vuoi configurare:",
             "close": "❌ Chiudi"
         },
         "buttons": {
@@ -12,100 +27,285 @@
             "profiler": "🔍 Profiler",
             "badwords": "🤬 Parole Vietate",
             "lang": "🌐 Lingua",
-            "links": "🔗 Link Mon",
+            "links": "🔗 Link",
             "nsfw": "🔞 NSFW",
-            "visual": "🖼️ Visual Sys",
+            "visual": "🖼️ Visual",
             "voteban": "🗳️ Vote Ban",
             "logger": "📜 Logger",
             "staff": "👮 Staff",
-            "intel": "🧠 Intel Net",
+            "intel": "🧠 Intel",
             "modals": "📋 Modals",
             "casban": "🚫 Blacklist",
             "ui_language": "🌍 Lingua UI"
         },
         "language": {
-            "title": "🌍 **LINGUA UI**",
-            "subtitle": "Seleziona la lingua di visualizzazione:",
-            "current": "Corrente: {lang}",
+            "title": "🌍 **LINGUA INTERFACCIA**",
+            "subtitle": "Scegli la lingua del bot per questo gruppo:",
+            "current": "Attuale: {lang}",
             "changed": "✅ Lingua cambiata in {lang}",
             "back": "⬅️ Indietro"
         }
     },
+    "voteban": {
+        "title": "⚖️ **VOTAZIONE BAN**",
+        "description": "Permette ai membri del gruppo di votare se bannare qualcuno che crea problemi.",
+        "how_to_use": "Come si usa",
+        "usage_info": "Rispondi al messaggio di chi disturba scrivendo @admin, !admin, .admin oppure /admin",
+        "status": "Stato",
+        "votes_required": "Voti necessari",
+        "timer": "Tempo per votare",
+        "tier_initiator": "Chi può avviare",
+        "disabled_timer": "Nessun limite",
+        "vote_message": {
+            "title": "⚖️ **VOTAZIONE IN CORSO**",
+            "votes": "📊 **Voti:** {current}/{required}",
+            "expires": "⏱️ **Tempo rimasto:** {time}",
+            "description": "La community sta decidendo se bannare questo utente. Vota!",
+            "btn_ban": "✅ Banna ({count})",
+            "btn_save": "🛡️ Salva ({count})"
+        },
+        "buttons": {
+            "system": "⚖️ Sistema",
+            "threshold": "📊 Soglia",
+            "duration": "⏱️ Durata",
+            "tier": "🏷️ Chi può avviare"
+        }
+    },
+    "logger": {
+        "title": "📋 **REGISTRO AZIONI**",
+        "description": "Tiene traccia di tutto quello che fa il bot automaticamente. Utile per capire cosa succede.",
+        "channel": "Canale",
+        "channel_set": "✅ Impostato",
+        "channel_not_set": "❌ Non impostato",
+        "enable_logs": "Attiva i log per modulo/azione:",
+        "set_channel": "📢 Imposta Canale",
+        "header_module": "Modulo",
+        "header_delete": "🗑️",
+        "header_ban": "🚷"
+    },
+    "antiedit": {
+        "title": "✏️ **CONTROLLO MODIFICHE**",
+        "description": "Controlla se qualcuno modifica i messaggi vecchi per inserire link o truffe. Protegge lo storico della chat.",
+        "info_title": "Come funziona",
+        "info_1": "Se qualcuno invia un messaggio normale e poi lo modifica aggiungendo link sospetti, il bot lo blocca",
+        "info_2": "Impedisce anche di cambiare completamente il senso di una frase",
+        "status": "Stato",
+        "tier_bypass": "Bypass da Tier",
+        "threshold": "Sensibilità",
+        "action_injection": "Azione (Link nascosti)",
+        "action_other": "Azione (Altro)",
+        "buttons": {
+            "monitor": "✏️ Monitor",
+            "tier": "👤 Bypass Tier",
+            "threshold": "📊 Soglia",
+            "action_inj": "🔗 Link Inj",
+            "action_gen": "👮 Altro"
+        }
+    },
+    "modals": {
+        "title": "📋 **PATTERN DI SPAM**",
+        "description": "Riconosce automaticamente messaggi di spam usando pattern predefiniti. Pensalo come un filtro anti-spam intelligente che impara dai tentativi passati.",
+        "info_title": "Come funziona",
+        "info_1": "Pattern caricati per le tue lingue: {count}",
+        "info_2": "Lingue del gruppo: {languages}",
+        "info_3": "Solo i SuperAdmin possono gestire i pattern globali",
+        "status": "Stato",
+        "action": "Azione",
+        "tier_bypass": "Bypass Tier",
+        "buttons": {
+            "system": "📋 Sistema",
+            "action": "👮 Azione",
+            "tier": "🎖️ Bypass Tier",
+            "manage": "📝 Gestisci Pattern"
+        },
+        "list": {
+            "title": "📋 PATTERN DISPONIBILI",
+            "empty": "Nessun pattern disponibile per le tue lingue.",
+            "toggle_info": "Attiva/disattiva i pattern per questo gruppo:"
+        }
+    },
+    "link": {
+        "title": "🔗 **CONTROLLO LINK**",
+        "description": "Controlla tutti i link inviati per proteggere il gruppo da siti pericolosi, truffe e phishing.",
+        "info_title": "Come funziona",
+        "info_1": "Blocca automaticamente siti di phishing e truffe conosciute",
+        "info_2": "I link sconosciuti vengono segnalati per una verifica",
+        "status": "Stato",
+        "tier_bypass": "Bypass da Tier",
+        "global_sync": "Sync Globale",
+        "buttons": {
+            "monitor": "🔗 Monitor",
+            "tier": "👤 Bypass Tier",
+            "sync": "🌐 Sync Globale"
+        }
+    },
+    "language": {
+        "title": "🌐 **FILTRO LINGUA**",
+        "description": "Blocca i messaggi scritti in lingue non permesse. Utile per gruppi che vogliono mantenere una sola lingua.",
+        "info_title": "Come funziona",
+        "info_1": "Ignora automaticamente messaggi molto corti (emoji, ok, ecc.)",
+        "info_2": "Manda un avviso gentile all'utente prima di eliminare",
+        "status": "Stato",
+        "tier_bypass": "Bypass da Tier",
+        "action": "Azione",
+        "allowed": "Lingue permesse",
+        "warning": "{user}, in questo gruppo sono permesse solo: {languages}. Per favore, usa una di queste lingue.",
+        "buttons": {
+            "filter": "🌐 Filtro",
+            "tier": "👤 Bypass Tier",
+            "action": "👮 Azione"
+        }
+    },
+    "keyword": {
+        "title": "🔤 **PAROLE VIETATE**",
+        "description": "Blocca i messaggi che contengono parole o frasi specifiche vietate. Usa liste globali sempre aggiornate.",
+        "info_title": "Come funziona",
+        "info_1": "Usa le liste condivise di parole pericolose",
+        "global_sync": "Sync Globale",
+        "buttons": {
+            "add": "➕ Aggiungi Parola",
+            "list": "📜 Lista",
+            "sync": "🌐 Sync Globale"
+        }
+    },
+    "nsfw": {
+        "title": "🔞 **FILTRO CONTENUTI ADULTI**",
+        "description": "Analizza foto, video e immagini per trovare contenuti non adatti come nudità o violenza. Protegge il gruppo da contenuti scioccanti.",
+        "info_title": "Come funziona",
+        "info_1": "Funziona su Foto, Video, GIF e Sticker",
+        "info_2": "Blocca pornografia e immagini violente",
+        "info_3": "I video richiedono qualche secondo per essere analizzati",
+        "status": "Stato",
+        "tier_bypass": "Bypass da Tier",
+        "action": "Azione",
+        "threshold": "Sensibilità",
+        "check_types": "Controlla",
+        "buttons": {
+            "monitor": "🔞 Monitor",
+            "tier": "👤 Bypass Tier",
+            "action": "👮 Azione",
+            "threshold": "📊 Soglia"
+        }
+    },
+    "ai": {
+        "title": "🤖 **MODERAZIONE INTELLIGENTE**",
+        "description": "Un assistente che legge e capisce il significato dei messaggi. Riesce a bloccare truffe e contenuti tossici anche quando usano parole normali.",
+        "info_title": "Come funziona",
+        "info_1": "Funziona come ultima linea di difesa dopo gli altri filtri",
+        "info_2": "Capisce il contesto della conversazione",
+        "info_3": "Blocca Truffe, Contenuti Adulti e Spam",
+        "status": "Stato",
+        "tier_bypass": "Bypass da Tier",
+        "threshold": "Soglia Confidenza",
+        "buttons": {
+            "system": "🤖 AI",
+            "context": "🎭 Contesto",
+            "tier": "👤 Bypass Tier",
+            "categories": "⚙️ Configura Azioni Categoria",
+            "threshold": "📊 Soglia"
+        },
+        "categories": {
+            "title": "⚙️ **AZIONI PER CATEGORIA**",
+            "subtitle": "Scegli cosa fare per ogni tipo di violazione (Elimina/Banna/Segnala)"
+        }
+    },
+    "blacklist": {
+        "title": "🚫 **LISTA NERA GLOBALE**",
+        "description": "Lista globale di utenti malevoli conosciuti. Banna automaticamente spammer e truffatori già segnalati.",
+        "info_title": "Come funziona",
+        "info_1": "Banna automaticamente gli utenti nella lista nera",
+        "info_2": "La lista viene aggiornata automaticamente ogni 24 ore",
+        "info_3": "Protegge da spammer e truffatori conosciuti",
+        "status": "Stato",
+        "buttons": {
+            "system": "🚫 Sistema"
+        }
+    },
+    "staff": {
+        "title": "👮 **COORDINAMENTO STAFF**",
+        "description": "Strumenti per coordinare lo staff del gruppo.",
+        "staff_group": "Gruppo Staff",
+        "commands_title": "Comandi disponibili",
+        "cmd_setstaff": "/setstaff <id> - Imposta il gruppo staff",
+        "cmd_notes": "/notes <id> - Vedi le note su un utente",
+        "cmd_notes_add": "/notes add <id> <testo> - Aggiungi una nota",
+        "notes": {
+            "title": "📝 Note per utente {id}",
+            "empty": "ℹ️ Nessuna nota trovata per questo utente."
+        }
+    },
     "tier_system": {
         "menu": {
-            "title": "🏛️ **SISTEMA TIER**",
-            "your_rank": "Il tuo rango: {emoji} **{name}**",
-            "select_tier": "Seleziona un Tier per i dettagli:",
+            "title": "🏛️ **SISTEMA DI FIDUCIA**",
+            "your_rank": "Il tuo livello: {emoji} **{name}**",
+            "select_tier": "Scegli un livello per vedere i dettagli:",
             "buttons": {
                 "view_details": "📖 Vedi Dettagli",
-                "flux_works": "📊 Come Funziona Flux",
+                "flux_works": "📊 Come Funziona",
                 "close": "❌ Chiudi",
                 "back": "⬅️ Indietro"
             }
         },
         "tiers": {
             "0": {
-                "name": "Tier 0"
+                "name": "Nuovo Arrivato"
             },
             "1": {
-                "name": "Tier 1"
+                "name": "Membro"
             },
             "2": {
-                "name": "Tier 2"
+                "name": "Fidato"
             },
             "3": {
-                "name": "Tier 3"
+                "name": "Veterano"
             }
         },
         "details": {
-            "flux_required": "Flux Richiesto: **{range}**",
+            "flux_required": "Punti richiesti: **{range}**",
             "restrictions_title": "🚫 **RESTRIZIONI:**",
-            "bypasses_title": "✅ **BYPASS:**",
+            "bypasses_title": "✅ **PRIVILEGI:**",
             "bypasses_none": "Nessuno",
-            "how_to_advance": "💡 **CONSIGLIO:** Partecipa attivamente per guadagnare Flux.",
+            "how_to_advance": "💡 **CONSIGLIO:** Partecipa attivamente alle discussioni per guadagnare punti!",
             "items": {
-                "all_security": "Tutti i moduli di sicurezza attivi",
-                "links_deleted": "Link eliminati automaticamente",
-                "forwards_deleted": "Forward eliminati automaticamente",
-                "no_edit": "Impossibile modificare messaggi",
-                "scam_checked": "Controllo pattern scam",
-                "max_ai": "Massimo scrutinio AI",
-                "strict_rate": "Rate limit più severo",
-                "links_flagged": "Link sconosciuti segnalati",
-                "ai_active": "AI Moderation attiva",
-                "modals_active": "Modal patterns attivi",
-                "nsfw_active": "NSFW monitor attivo",
-                "vote_ban": "Può avviare vote-ban",
-                "ai_severe": "AI Moderation (solo gravi)",
+                "all_security": "Tutti i controlli di sicurezza attivi",
+                "links_deleted": "I link vengono eliminati",
+                "forwards_deleted": "I messaggi inoltrati vengono eliminati",
+                "no_edit": "Non puoi modificare i messaggi",
+                "scam_checked": "Controllo anti-truffa attivo",
+                "max_ai": "Massimo controllo dell'AI",
+                "strict_rate": "Limite messaggi più severo",
+                "links_flagged": "I link sconosciuti vengono segnalati",
+                "ai_active": "Moderazione AI attiva",
+                "modals_active": "Pattern anti-spam attivi",
+                "nsfw_active": "Controllo contenuti adulti attivo",
+                "vote_ban": "Puoi avviare votazioni di ban",
+                "ai_severe": "Solo AI per casi gravi",
                 "ai_critical": "Solo AI per minacce critiche",
-                "profiler_bypass": "Profiler bypassato",
-                "edit_allowed": "Può modificare messaggi",
-                "lang_bypass": "Language monitor bypassato",
-                "forwards_allowed": "Forward permessi",
-                "spam_bypass": "Anti-Spam bypassato",
-                "keyword_bypass": "Keyword Monitor bypassato",
-                "link_bypass": "Link Monitor bypassato",
-                "modal_bypass": "Modal Patterns bypassato",
-                "antiedit_bypass": "Anti-Edit Abuse bypassato",
+                "profiler_bypass": "Controllo nuovi utenti disattivato",
+                "edit_allowed": "Puoi modificare i messaggi",
+                "lang_bypass": "Filtro lingua disattivato",
+                "forwards_allowed": "Puoi inoltrare messaggi",
+                "spam_bypass": "Anti-Spam disattivato",
+                "keyword_bypass": "Filtro parole disattivato",
+                "link_bypass": "Controllo link disattivato",
+                "modal_bypass": "Pattern anti-spam disattivato",
+                "antiedit_bypass": "Controllo modifiche disattivato",
                 "profiler_disabled": "Profiler completamente disattivato",
-                "all_bypass": "Quasi tutti i filtri bypassati",
-                "nsfw_bypass": "NSFW Monitor bypassato",
-                "visual_bypass": "Visual Immune System bypassato"
+                "all_bypass": "Quasi tutti i filtri disattivati",
+                "nsfw_bypass": "Controllo contenuti adulti disattivato",
+                "visual_bypass": "Sistema visivo disattivato"
             }
         },
         "flux_calc": {
-            "title": "📊 **COME FUNZIONA FLUX**",
-            "earning": "**Guadagnare Flux:**\n• +1 per messaggio (max 1/6min)\n• +1 al giorno passivo",
-            "losing": "**Perdere Flux:**\n• -50 per ban spam\n• -50 per violazione link\n• -100 per ban NSFW/edit",
-            "thresholds": "**Soglie Tier:**\n• Tier 0: 0 - 99\n• Tier 1: 100 - 299\n• Tier 2: 300 - 499\n• Tier 3: 500+",
-            "cap": "Flux è limitato a ±1000."
+            "title": "📊 **COME FUNZIONANO I PUNTI**",
+            "earning": "**Guadagnare punti:**\n• +1 per ogni messaggio (massimo 1 ogni 6 minuti)\n• +1 al giorno come bonus passivo",
+            "losing": "**Perdere punti:**\n• -50 per spam\n• -50 per link pericolosi\n• -100 per contenuti vietati",
+            "thresholds": "**Livelli:**\n• Nuovo Arrivato: 0 - 99\n• Membro: 100 - 299\n• Fidato: 300 - 499\n• Veterano: 500+",
+            "cap": "I punti sono limitati a ±1000."
         },
         "my_flux": {
-            "title": "📊 **IL TUO FLUX**",
-            "local_global": "🏠 Locale: {local} | 🌍 Globale: {global}"
+            "title": "📊 **I TUOI PUNTI**",
+            "local_global": "🏠 In questo gruppo: {local} | 🌍 Totale: {global}"
         }
-    },
-    "language_monitor": {
-        "warning": "{user}, in questo gruppo sono permesse solo: {languages}. Per favore, usa una di queste lingue."
     }
 }

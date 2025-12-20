@@ -1,17 +1,23 @@
-async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : "❌ Not Set";
+const i18n = require('../../i18n');
 
-    const text = `👮 **STAFF COORDINATION**\n` +
-        `Staff Group: ${staffGroup}\n\n` +
-        `**Comandi:**\n` +
-        `/setstaff <id> - Imposta Staff Group\n` +
-        `/notes <id> - Vedi note utente\n` +
-        `/notes add <id> <testo> - Aggiungi nota`;
+async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = db.getGuildConfig(guildId);
+    const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : t('logger.channel_not_set');
+
+    const text = `${t('staff.title')}\n\n` +
+        `${t('staff.description')}\n\n` +
+        `${t('staff.staff_group')}: ${staffGroup}\n\n` +
+        `**${t('staff.commands_title')}:**\n` +
+        `${t('staff.cmd_setstaff')}\n` +
+        `${t('staff.cmd_notes')}\n` +
+        `${t('staff.cmd_notes_add')}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "stf_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "stf_close" };
 
     const keyboard = {
         inline_keyboard: [
@@ -26,12 +32,14 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
 }
 
-function formatNoteList(targetId, notes) {
+function formatNoteList(guildId, targetId, notes) {
+    const t = (key, params) => i18n.t(guildId, key, params);
+
     if (notes.length === 0) {
-        return `ℹ️ Nessuna nota trovata per utente \`${targetId}\`.`;
+        return t('staff.notes.empty');
     }
 
-    let text = `📝 <b>Note per utente ${targetId}:</b>\n\n`;
+    let text = `${t('staff.notes.title', { id: targetId })}\n\n`;
     notes.forEach(note => {
         const icon = note.severity === 'critical' ? '🔴' : (note.severity === 'warning' ? '🟠' : '🔵');
         text += `${icon} <b>[${note.severity.toUpperCase()}]</b> ${note.created_at.substring(0, 10)}\n`;

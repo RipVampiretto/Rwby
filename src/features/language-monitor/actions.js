@@ -26,7 +26,7 @@ async function executeAction(ctx, config, detected, allowed) {
     const userName = user.username
         ? `@${user.username}`
         : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
-    const warningMsg = i18n.t(ctx.chat.id, 'language_monitor.warning', {
+    const warningMsg = i18n.t(ctx.chat.id, 'language.warning', {
         languages: allowed.join(', ').toUpperCase(),
         user: userName
     });

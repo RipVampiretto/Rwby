@@ -1,38 +1,39 @@
-/**
- * Send configuration UI
- */
+const i18n = require('../../i18n');
+
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const enabled = config.edit_monitor_enabled ? '✅ ON' : '❌ OFF';
-    const lockT0 = config.edit_lock_tier0 ? '✅ ON' : '❌ OFF';
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = db.getGuildConfig(guildId);
+    const enabled = config.edit_monitor_enabled ? t('common.on') : t('common.off');
+    const lockT0 = config.edit_lock_tier0 ? t('common.on') : t('common.off');
     const thr = (config.edit_similarity_threshold || 0.5) * 100;
     const actInj = (config.edit_link_injection_action || 'report_only').toUpperCase().replace('_', ' ');
     const actGen = (config.edit_abuse_action || 'report_only').toUpperCase().replace('_', ' ');
     const tierBypass = config.edit_tier_bypass ?? 2;
 
-    const text = `✏️ **ANTI-EDIT**\n\n` +
-        `Controlla se qualcuno modifica i messaggi vecchi per inserire link o truffe.\n` +
-        `Protegge lo storico della chat.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Blocca l'inserimento di link nascosti dopo l'invio\n` +
-        `• Impedisce di cambiare completamente il senso di una frase\n\n` +
-        `Stato: ${enabled}\n` +
-        `Bypass da Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
-        `Sensibilità: ${thr}%\n` +
-        `Azione (Link Inj): ${actInj}\n` +
-        `Azione (Altro): ${actGen}`;
+    const text = `${t('antiedit.title')}\n\n` +
+        `${t('antiedit.description')}\n\n` +
+        `ℹ️ **${t('antiedit.info_title')}:**\n` +
+        `• ${t('antiedit.info_1')}\n` +
+        `• ${t('antiedit.info_2')}\n\n` +
+        `${t('antiedit.status')}: ${enabled}\n` +
+        `${t('antiedit.tier_bypass')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
+        `${t('antiedit.threshold')}: ${thr}%\n` +
+        `${t('antiedit.action_injection')}: ${actInj}\n` +
+        `${t('antiedit.action_other')}: ${actGen}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "edt_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "edt_close" };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `✏️ Monitor: ${enabled}`, callback_data: "edt_toggle" }],
-            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "edt_tier" }],
-            [{ text: `📊 Soglia: ${thr}%`, callback_data: "edt_thr" }],
-            [{ text: `🔗 Link Inj: ${actInj}`, callback_data: "edt_act_inj" }],
-            [{ text: `👮 Altro: ${actGen}`, callback_data: "edt_act_gen" }],
+            [{ text: `${t('antiedit.buttons.monitor')}: ${enabled}`, callback_data: "edt_toggle" }],
+            [{ text: `${t('antiedit.buttons.tier')}: ${tierBypass}+`, callback_data: "edt_tier" }],
+            [{ text: `${t('antiedit.buttons.threshold')}: ${thr}%`, callback_data: "edt_thr" }],
+            [{ text: `${t('antiedit.buttons.action_inj')}: ${actInj}`, callback_data: "edt_act_inj" }],
+            [{ text: `${t('antiedit.buttons.action_gen')}: ${actGen}`, callback_data: "edt_act_gen" }],
             [closeBtn]
         ]
     };

@@ -1,24 +1,28 @@
 const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const enabled = config.casban_enabled !== 0 ? '✅ ON' : '❌ OFF';
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
 
-    const text = `🚫 **GLOBAL BLACKLIST**\n\n` +
-        `Lista globale di utenti malevoli conosciuti.\n\n` +
-        `ℹ️ **Come funziona:**\n` +
-        `• Banna automaticamente utenti in blacklist\n` +
-        `• Lista aggiornata automaticamente ogni 24h\n` +
-        `• Protegge da spammer e scammer conosciuti\n\n` +
-        `Stato: ${enabled}`;
+    const config = db.getGuildConfig(guildId);
+    const enabled = config.casban_enabled !== 0 ? t('common.on') : t('common.off');
+
+    const text = `${t('blacklist.title')}\n\n` +
+        `${t('blacklist.description')}\n\n` +
+        `ℹ️ **${t('blacklist.info_title')}:**\n` +
+        `• ${t('blacklist.info_1')}\n` +
+        `• ${t('blacklist.info_2')}\n` +
+        `• ${t('blacklist.info_3')}\n\n` +
+        `${t('common.status')}: ${enabled}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "cas_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "cas_close" };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🚫 Sistema: ${enabled}`, callback_data: "cas_toggle" }],
+            [{ text: `${t('blacklist.buttons.system')}: ${enabled}`, callback_data: "cas_toggle" }],
             [closeBtn]
         ]
     };

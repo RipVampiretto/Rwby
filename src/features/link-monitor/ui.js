@@ -1,30 +1,33 @@
 const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const enabled = config.link_enabled ? '✅ ON' : '❌ OFF';
-    const sync = config.link_sync_global ? '✅ ON' : '❌ OFF';
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = db.getGuildConfig(guildId);
+    const enabled = config.link_enabled ? t('common.on') : t('common.off');
+    const sync = config.link_sync_global ? t('common.on') : t('common.off');
     const tierBypass = config.link_tier_bypass ?? 2;
 
-    const text = `🔗 **CONTROLLO LINK**\n\n` +
-        `Controlla i link inviati per proteggere da scam e siti pericolosi.\n` +
-        `Usa una lista globale di siti malevoli sempre aggiornata.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Blocca siti di phishing e truffe note\n` +
-        `• Link sconosciuti vengono segnalati ai SuperAdmin\n\n` +
-        `Stato: ${enabled}\n` +
-        `Bypass da Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
-        `Sync Globale: ${sync}`;
+    const text = `${t('link.title')}\n\n` +
+        `${t('link.description')}\n\n` +
+        `ℹ️ **${t('link.info_title')}:**\n` +
+        `• ${t('link.info_1')}\n` +
+        `• ${t('link.info_2')}\n\n` +
+        `${t('link.status')}: ${enabled}\n` +
+        `${t('link.tier_bypass')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
+        `${t('link.global_sync')}: ${sync}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "lnk_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "lnk_close" };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🔗 Monitor: ${enabled}`, callback_data: "lnk_toggle" }],
-            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "lnk_tier" }],
-            [{ text: `🌐 Sync Globale: ${sync}`, callback_data: "lnk_sync" }],
+            [{ text: `${t('link.buttons.monitor')}: ${enabled}`, callback_data: "lnk_toggle" }],
+            [{ text: `${t('link.buttons.tier')}: ${tierBypass}+`, callback_data: "lnk_tier" }],
+            [{ text: `${t('link.buttons.sync')}: ${sync}`, callback_data: "lnk_sync" }],
             [closeBtn]
         ]
     };

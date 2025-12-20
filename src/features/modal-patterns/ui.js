@@ -1,10 +1,14 @@
 const logic = require('./logic');
 const manage = require('./manage');
 const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const enabled = config.modal_enabled ? '✅ ON' : '❌ OFF';
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = db.getGuildConfig(guildId);
+    const enabled = config.modal_enabled ? t('common.on') : t('common.off');
     const action = (config.modal_action || 'report_only').toUpperCase().replace(/_/g, ' ');
     const tierBypass = config.modal_tier_bypass ?? 2;
 
@@ -18,27 +22,26 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const modals = logic.getModalsForLanguages(allowedLangs);
     const activeCount = modals.filter(m => m.enabled).length;
 
-    const text = `📋 **MODAL PATTERNS**\n\n` +
-        `Sistema di rilevamento spam basato su pattern globali.\n` +
-        `I pattern sono organizzati per lingua e categoria.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Pattern caricati per le tue lingue: ${activeCount}\n` +
-        `• Lingue gruppo: ${allowedLangs.join(', ').toUpperCase()}\n` +
-        `• Solo SuperAdmin possono gestire i pattern\n\n` +
-        `Stato: ${enabled}\n` +
-        `Azione: ${action}\n` +
-        `Bypass Tier: ${tierBypass}+`;
+    const text = `${t('modals.title')}\n\n` +
+        `${t('modals.description')}\n\n` +
+        `ℹ️ **${t('modals.info_title')}:**\n` +
+        `• ${t('modals.info_1', { count: activeCount })}\n` +
+        `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n` +
+        `• ${t('modals.info_3')}\n\n` +
+        `${t('modals.status')}: ${enabled}\n` +
+        `${t('modals.action')}: ${action}\n` +
+        `${t('modals.tier_bypass')}: ${tierBypass}+`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "mdl_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "mdl_close" };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `📋 Modals: ${enabled}`, callback_data: "mdl_toggle" }],
-            [{ text: `👮 Azione: ${action}`, callback_data: "mdl_act" }],
-            [{ text: `🎖️ Bypass Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "mdl_tier" }],
-            [{ text: `📝 Gestisci Modali (${activeCount})`, callback_data: "mdl_list" }],
+            [{ text: `${t('modals.buttons.system')}: ${enabled}`, callback_data: "mdl_toggle" }],
+            [{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: "mdl_act" }],
+            [{ text: `${t('modals.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "mdl_tier" }],
+            [{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: "mdl_list" }],
             [closeBtn]
         ]
     };
@@ -51,8 +54,10 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 }
 
 async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
     const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = db.getGuildConfig(guildId);
 
     // Get group's allowed languages
     let allowedLangs = ['it', 'en'];
@@ -64,10 +69,10 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
     const modals = logic.getModalsForLanguages(allowedLangs);
 
     if (modals.length === 0) {
-        const text = "📋 MODALI DISPONIBILI\n\nNessun modal disponibile per le tue lingue.\nI SuperAdmin devono crearli con /gmodal add";
+        const text = `${t('modals.list.title')}\n\n${t('modals.list.empty')}`;
         const keyboard = {
             inline_keyboard: [
-                [{ text: "🔙 Indietro", callback_data: "mdl_back" }]
+                [{ text: t('common.back'), callback_data: "mdl_back" }]
             ]
         };
         if (isEdit) {
@@ -78,7 +83,7 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
         return;
     }
 
-    let text = "📋 MODALI DISPONIBILI\n\nAttiva/disattiva i modali per questo gruppo:\n";
+    let text = `${t('modals.list.title')}\n\n${t('modals.list.toggle_info')}\n`;
 
     // Build toggle buttons for each modal
     const buttons = modals.map(m => {
@@ -96,7 +101,7 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
     for (let i = 0; i < buttons.length; i += 2) {
         rows.push(buttons.slice(i, i + 2));
     }
-    rows.push([{ text: "🔙 Indietro", callback_data: "mdl_back" }]);
+    rows.push([{ text: t('common.back'), callback_data: "mdl_back" }]);
 
     const keyboard = { inline_keyboard: rows };
 

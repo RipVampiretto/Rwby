@@ -38,7 +38,7 @@ function createTables(db) {
             log_format TEXT DEFAULT 'standard',
             
             -- Anti-Spam
-            spam_enabled INTEGER DEFAULT 1,
+            spam_enabled INTEGER DEFAULT 0,
             spam_sensitivity TEXT DEFAULT 'medium',
             spam_action_volume TEXT DEFAULT 'delete',
             spam_action_repetition TEXT DEFAULT 'delete',
@@ -47,7 +47,7 @@ function createTables(db) {
             spam_duplicate_limit INTEGER DEFAULT 3,
             
             -- AI Moderation
-            ai_enabled INTEGER DEFAULT 1,
+            ai_enabled INTEGER DEFAULT 0,
             ai_action_scam TEXT DEFAULT 'ban',
             ai_action_hate TEXT DEFAULT 'report_only',
             ai_action_nsfw TEXT DEFAULT 'delete',
@@ -59,14 +59,14 @@ function createTables(db) {
             ai_context_messages INTEGER DEFAULT 3,
             
             -- Anti-Edit Abuse
-            edit_monitor_enabled INTEGER DEFAULT 1,
+            edit_monitor_enabled INTEGER DEFAULT 0,
             edit_abuse_action TEXT DEFAULT 'delete',
             edit_lock_tier0 INTEGER DEFAULT 1,
             edit_similarity_threshold REAL DEFAULT 0.5,
             edit_link_injection_action TEXT DEFAULT 'ban',
             
             -- Intelligent Profiler
-            profiler_enabled INTEGER DEFAULT 1,
+            profiler_enabled INTEGER DEFAULT 0,
             profiler_action_link TEXT DEFAULT 'delete',
             profiler_action_forward TEXT DEFAULT 'delete',
             profiler_action_pattern TEXT DEFAULT 'report_only',
@@ -83,13 +83,13 @@ function createTables(db) {
             lang_tier_bypass INTEGER DEFAULT 2,
             
             -- Link Monitor
-            link_enabled INTEGER DEFAULT 1,
+            link_enabled INTEGER DEFAULT 0,
             link_action_unknown TEXT DEFAULT 'report_only',
             link_sync_global INTEGER DEFAULT 1,
             link_tier_bypass INTEGER DEFAULT 2,
             
             -- NSFW Monitor
-            nsfw_enabled INTEGER DEFAULT 1,
+            nsfw_enabled INTEGER DEFAULT 0,
             nsfw_action TEXT DEFAULT 'delete',
             nsfw_threshold REAL DEFAULT 0.7,
             nsfw_check_photos INTEGER DEFAULT 1,
@@ -100,7 +100,7 @@ function createTables(db) {
             nsfw_tier_bypass INTEGER DEFAULT 2,
             
             -- Visual Immune System
-            visual_enabled INTEGER DEFAULT 1,
+            visual_enabled INTEGER DEFAULT 0,
             visual_action TEXT DEFAULT 'delete',
             visual_sync_global INTEGER DEFAULT 1,
             visual_hamming_threshold INTEGER DEFAULT 5,
@@ -113,10 +113,13 @@ function createTables(db) {
             voteban_voter_tier INTEGER DEFAULT 0,
             
             -- Modal Pattern System
-            modal_enabled INTEGER DEFAULT 1,
+            modal_enabled INTEGER DEFAULT 0,
             modal_action TEXT DEFAULT 'report_only',
             modal_sync_global INTEGER DEFAULT 1,
             modal_tier_bypass INTEGER DEFAULT 2,
+            
+            -- CAS Ban / Global Blacklist
+            casban_enabled INTEGER DEFAULT 0,
             
             -- UI Language
             ui_language TEXT DEFAULT 'en',

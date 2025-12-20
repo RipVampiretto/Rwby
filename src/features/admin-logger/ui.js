@@ -1,14 +1,11 @@
 const logger = require('../../middlewares/logger');
+const i18n = require('../../i18n');
 
-/**
- * Send or edit the configuration UI
- * @param {object} ctx - Telegram context
- * @param {object} db - Database instance
- * @param {boolean} isEdit - Whether to edit the message
- * @param {boolean} fromSettings - Whether it was opened from settings
- */
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = db.getGuildConfig(guildId);
 
     let logEvents = {};
     if (config.log_events) {
@@ -18,22 +15,22 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     const has = (key) => logEvents[key] ? '✅' : '❌';
 
-    const channelInfo = config.log_channel_id ? `✅ Attivo` : "❌ Non impostato";
-    const text = `📋 <b>CONFIGURAZIONE LOG</b>\n\n` +
-        `Registra le azioni automatiche del bot.\n\n` +
-        `Canale: ${channelInfo}\n\n` +
-        `Attiva i log per modulo/azione:`;
+    const channelInfo = config.log_channel_id ? t('logger.channel_set') : t('logger.channel_not_set');
+    const text = `${t('logger.title')}\n\n` +
+        `${t('logger.description')}\n\n` +
+        `${t('logger.channel')}: ${channelInfo}\n\n` +
+        `${t('logger.enable_logs')}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "log_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "log_close" };
 
     // Matrix layout: each row = module with delete/ban toggles
     const keyboard = {
         inline_keyboard: [
-            [{ text: "📢 Imposta Canale", callback_data: "log_set_channel" }],
+            [{ text: t('logger.set_channel'), callback_data: "log_set_channel" }],
             // Header row
-            [{ text: "Modulo", callback_data: "log_noop" }, { text: "🗑️", callback_data: "log_noop" }, { text: "🚷", callback_data: "log_noop" }],
+            [{ text: t('logger.header_module'), callback_data: "log_noop" }, { text: t('logger.header_delete'), callback_data: "log_noop" }, { text: t('logger.header_ban'), callback_data: "log_noop" }],
             // Lang
             [{ text: "🌐 Lang", callback_data: "log_noop" }, { text: has('lang_delete'), callback_data: "log_t:lang_delete" }, { text: has('lang_ban'), callback_data: "log_t:lang_ban" }],
             // NSFW
@@ -54,12 +51,12 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     if (isEdit) {
         try {
-            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
         } catch (e) {
             logger.error(`[admin-logger] sendConfigUI error: ${e.message}`);
         }
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
 }
 
