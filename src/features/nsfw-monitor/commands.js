@@ -79,14 +79,6 @@ function registerCommands(bot, db) {
         await next();
     });
 
-    // Command: /nsfwconfig
-    bot.command("nsfwconfig", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'nsfw-monitor')) return;
-
-        await ui.sendConfigUI(ctx, db);
-    });
-
     // UI Handlers
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;

@@ -65,12 +65,6 @@ function registerCommands(bot, db) {
         logic.setPollMessageId(db, voteId, msg.message_id);
     });
 
-    bot.command("voteconfig", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'vote-ban')) return;
-        await ui.sendConfigUI(ctx, db);
-    });
-
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;
 

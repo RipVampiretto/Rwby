@@ -60,13 +60,6 @@ function registerCommands(bot, db) {
         await next();
     });
 
-    // Command: /spamconfig
-    bot.command("spamconfig", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'anti-spam')) return;
-        await ui.sendConfigUI(ctx, db);
-    });
-
     // Action Handlers
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;

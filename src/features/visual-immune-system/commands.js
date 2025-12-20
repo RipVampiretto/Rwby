@@ -29,19 +29,6 @@ function registerCommands(bot, db) {
         */
     });
 
-    bot.command("visualconfig", async (ctx) => {
-        return ctx.reply("⚠️ Visual Immune System è temporaneamente disabilitato.");
-        /*
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'visual-immune-system')) return;
-        await ui.sendConfigUI(ctx, db);
-        */
-    });
-
-    bot.command("visualban", async (ctx) => {
-        return ctx.reply("⚠️ Visual Immune System è temporaneamente disabilitato.");
-    });
-
     // UI Callback
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;

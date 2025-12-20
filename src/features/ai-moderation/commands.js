@@ -15,14 +15,6 @@ async function isAdmin(ctx, source) {
 }
 
 function registerCommands(bot, db) {
-    // Command: /aiconfig
-    bot.command("aiconfig", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'ai-moderation')) return;
-
-        await sendConfigUI(ctx, db);
-    });
-
     // Command: /testai <message> - Admin only, test AI analysis
     bot.command("testai", async (ctx) => {
         if (ctx.chat.type === 'private') return;

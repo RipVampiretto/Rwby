@@ -8,14 +8,6 @@ const { isFromSettingsMenu } = require('../../utils/error-handlers');
  * @param {object} db - Database instance
  */
 function registerCommands(bot, db) {
-    // Command: /logconfig
-    bot.command("logconfig", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx)) return ctx.reply("⚠️ Admin only.");
-
-        await sendConfigUI(ctx, db);
-    });
-
     // Action Handlers for Config
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;
