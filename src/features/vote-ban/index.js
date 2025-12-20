@@ -154,14 +154,16 @@ function register(bot, database) {
             const member = await ctx.getChatMember(ctx.from.id);
             const isAdmin = ['creator', 'administrator'].includes(member.status);
 
-            // Admin Overrides
-            if (action === "ban" && isAdmin) {
-                await finalizeVote(ctx, vote, "forced_ban", ctx.from);
-                return;
-            }
-            if (action === "pardon" && isAdmin) {
-                await finalizeVote(ctx, vote, "pardon", ctx.from);
-                return;
+            // Admin Logic: Implicit Force
+            if (isAdmin) {
+                if (action === "yes" || action === "ban") {
+                    await finalizeVote(ctx, vote, "forced_ban", ctx.from);
+                    return;
+                }
+                if (action === "no" || action === "pardon") {
+                    await finalizeVote(ctx, vote, "pardon", ctx.from);
+                    return;
+                }
             }
 
             // Voting Logic
@@ -259,11 +261,32 @@ async function finalizeVote(ctx, vote, status, admin) {
 }
 
 async function cleanupVotes() {
-    if (!db) return;
-    const expired = db.getDb().prepare("SELECT * FROM active_votes WHERE status = 'active' AND expires_at < ?").all(new Date().toISOString());
+    if (!db || !_botInstance) return;
 
-    for (const vote of expired) {
-        db.getDb().prepare("UPDATE active_votes SET status = 'expired' WHERE vote_id = ?").run(vote.vote_id);
+    const now = new Date();
+    const votes = db.getDb().prepare("SELECT * FROM active_votes WHERE status = 'active'").all();
+
+    for (const vote of votes) {
+        // Check expire
+        const expires = new Date(vote.expires_at);
+        if (expires < now) {
+            db.getDb().prepare("UPDATE active_votes SET status = 'expired' WHERE vote_id = ?").run(vote.vote_id);
+            try {
+                await _botInstance.api.editMessageText(vote.chat_id, vote.poll_message_id, "⚖️ **VOTAZIONE SCADUTA**\nTempo terminato.", { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
+            } catch (e) { }
+            continue;
+        }
+
+        // Update Timer UI
+        try {
+            const { text, keyboard } = getVoteMessage(
+                { id: vote.target_user_id, username: vote.target_username },
+                null, vote.reason, vote.votes_yes, vote.votes_no, vote.required_votes, vote.expires_at, vote.vote_id, false
+            );
+            await _botInstance.api.editMessageText(vote.chat_id, vote.poll_message_id, text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {
+            // Ignore "message is not modified" errors
+        }
     }
 }
 

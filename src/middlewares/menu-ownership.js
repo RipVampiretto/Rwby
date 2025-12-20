@@ -76,6 +76,12 @@ function adminOnlyCallbacks() {
         // Check if user is admin
         const isAdmin = await isAdminCached(ctx);
 
+        // Check whitelist first
+        const allowedPrefixes = ['vote_'];
+        if (allowedPrefixes.some(p => ctx.callbackQuery.data && ctx.callbackQuery.data.startsWith(p))) {
+            return next();
+        }
+
         if (!isAdmin) {
             logger.debug(`[menu-ownership] Blocked callback from non-admin ${ctx.from?.id} in ${ctx.chat?.id}`);
             await ctx.answerCallbackQuery({
