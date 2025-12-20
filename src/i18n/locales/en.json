@@ -103,5 +103,8 @@
             "title": "📊 **YOUR FLUX**",
             "local_global": "🏠 Local: {local} | 🌍 Global: {global}"
         }
+    },
+    "language_monitor": {
+        "warning": "{user}, this group only allows {languages}. Please use one of those languages."
     }
 }

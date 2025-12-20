@@ -3,7 +3,7 @@
 // ============================================================================
 // SCOPO: Rilevamento lingua messaggi e enforcement lingue permesse.
 // Usa libreria 'franc' per detection.
-// Azioni semplificate: solo DELETE o BAN (con forward a SuperAdmin).
+// Azioni semplificate: DELETE, BAN, o REPORT_ONLY.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
@@ -17,52 +17,7 @@
 // │   └── Valori SOLO: 'delete', 'ban', 'report_only'
 // ├── lang_min_chars: INTEGER (DEFAULT 20)
 // ├── lang_confidence_threshold: REAL (DEFAULT 0.8)
-// └── lang_tier_bypass: INTEGER (DEFAULT 1)
-
-// ----------------------------------------------------------------------------
-// 2. DETECTION LOGIC - Analisi Lingua
-// ----------------------------------------------------------------------------
-//
-// LIBRERIA: franc
-// OUTPUT: ISO 639-3 → convertire a ISO 639-1
-//
-// STEP 1: Pre-filtering (skip < min_chars, skip Tier bypass)
-// STEP 2: franc(text) → lingua rilevata
-// STEP 3: Se confidence >= threshold e lingua NOT in allowed → VIOLATION
-
-// ----------------------------------------------------------------------------
-// 3. ACTION HANDLER - Solo Delete/Ban/Report
-// ----------------------------------------------------------------------------
-//
-// action === 'delete':
-// └── ctx.deleteMessage() silenzioso
-//
-// action === 'ban':
-// ├── ctx.deleteMessage()
-// ├── ctx.banChatMember(userId)
-// ├── **FORWARD A SUPERADMIN** (per pattern abuso ripetuto)
-// └── Auto-delete forward dopo 24h
-//
-// action === 'report_only':
-// └── Invia a staff locale:
-//     "Lingua rilevata: RU (94%)"
-//     [ 🗑️ Delete ] [ ✅ Ignora ]
-
-// ----------------------------------------------------------------------------
-// 4. CONFIGURATION UI - /langconfig
-// ----------------------------------------------------------------------------
-//
-// MESSAGGIO:
-// ┌────────────────────────────────────────────┐
-// │ 🌐 **CONFIGURAZIONE LINGUA**               │
-// │ Lingue permesse: IT, EN                   │
-// └────────────────────────────────────────────┘
-//
-// KEYBOARD:
-// [ 🌐 Filtro: OFF ]
-// [ 🏳️ Lingue: IT, EN ] → multi-select
-// [ 👮 Azione: Delete ▼ ] → [ Delete | Ban | Report ]
-// [ 💾 Salva ] [ ❌ Chiudi ]
+// └── lang_tier_bypass: INTEGER (DEFAULT 2)
 
 // ============================================================================
 // MODULE EXPORTS
@@ -76,6 +31,7 @@ const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 const { safeDelete, safeEdit, safeBan, isAdmin, handleCriticalError, isFromSettingsMenu } = require('../../utils/error-handlers');
 const loggerUtil = require('../../middlewares/logger');
+const i18n = require('../../i18n');
 
 let _botInstance = null;
 let franc = null;
@@ -111,8 +67,9 @@ function register(bot, database) {
         const config = db.getGuildConfig(ctx.chat.id);
         if (!config.lang_enabled) return next();
 
-        // Tier check
-        if (ctx.userTier !== undefined && ctx.userTier >= (config.lang_tier_bypass || 1)) return next();
+        // Tier bypass check
+        const tierBypass = config.lang_tier_bypass ?? 2;
+        if (ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
 
         // Min length check
         if (ctx.message.text.length < (config.lang_min_chars || 20)) return next();
@@ -135,29 +92,6 @@ function register(bot, database) {
         if (!data.startsWith("lng_")) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
-        if (data === "lng_close") return ctx.deleteMessage();
-
-        if (data === "lng_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { lang_enabled: config.lang_enabled ? 0 : 1 });
-        } else if (data === "lng_act") {
-            const acts = ['delete', 'ban', 'report_only'];
-            let cur = config.lang_action || 'delete';
-            if (!acts.includes(cur)) cur = 'delete';
-            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
-        } else if (data.startsWith("lng_set:")) {
-            const lang = data.split(':')[1];
-            let allowed = [];
-            try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }
-
-            if (allowed.includes(lang)) {
-                allowed = allowed.filter(l => l !== lang);
-            } else {
-                allowed.push(lang);
-            }
-            db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
-        }
-
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === "lng_close") return ctx.deleteMessage();
@@ -170,6 +104,11 @@ function register(bot, database) {
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
+        } else if (data === "lng_tier") {
+            // Cycle through 0, 1, 2, 3
+            const current = config.lang_tier_bypass ?? 2;
+            const next = (current + 1) % 4;
+            db.updateGuildConfig(ctx.chat.id, { lang_tier_bypass: next });
         } else if (data.startsWith("lng_set:")) {
             const lang = data.split(':')[1];
             let allowed = [];
@@ -199,32 +138,57 @@ function getIso1(iso3) {
     return map[iso3] || iso3;
 }
 
+/**
+ * Check if text contains non-Latin scripts (Chinese, Arabic, Cyrillic, etc.)
+ * This catches foreign text even in very short messages
+ */
+function detectNonLatinScript(text) {
+    // Chinese/Japanese/Korean
+    if (/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(text)) return 'zh';
+    // Arabic
+    if (/[\u0600-\u06ff]/.test(text)) return 'ar';
+    // Cyrillic (Russian, etc.)
+    if (/[\u0400-\u04ff]/.test(text)) return 'ru';
+    // Hebrew
+    if (/[\u0590-\u05ff]/.test(text)) return 'he';
+    // Thai
+    if (/[\u0e00-\u0e7f]/.test(text)) return 'th';
+    // Hindi/Devanagari
+    if (/[\u0900-\u097f]/.test(text)) return 'hi';
+
+    return null; // Latin or unknown
+}
+
 async function processLanguage(ctx, config) {
-    if (!franc) return; // Library not ready
-
     const text = ctx.message.text;
-    const detectedIso3 = franc(text);
 
-    if (detectedIso3 === 'und') return; // Undetermined
-
-    const detected = getIso1(detectedIso3);
     let allowed = ['it', 'en']; // Default
     try {
         const parsed = JSON.parse(config.allowed_languages || '[]');
         if (parsed.length > 0) allowed = parsed;
     } catch (e) { }
 
-    // Check strict enforcement?
-    // Usually if detected is strictly NOT in allowed.
-    // However, franc is not 100% accurate on short texts. config.lang_min_chars helps.
+    // First check: Non-Latin script detection (works on any length)
+    const scriptLang = detectNonLatinScript(text);
+    if (scriptLang && !allowed.includes(scriptLang)) {
+        await executeAction(ctx, config, scriptLang, allowed);
+        return;
+    }
 
+    // Second check: franc for longer texts (needs min_chars)
+    if (!franc || text.length < (config.lang_min_chars || 20)) return;
+
+    const detectedIso3 = franc(text);
+    if (detectedIso3 === 'und') return; // Undetermined
+
+    const detected = getIso1(detectedIso3);
     if (!allowed.includes(detected)) {
-        // Violation
-        await executeAction(ctx, config.lang_action || 'delete', detected, allowed);
+        await executeAction(ctx, config, detected, allowed);
     }
 }
 
-async function executeAction(ctx, action, detected, allowed) {
+async function executeAction(ctx, config, detected, allowed) {
+    const action = config.lang_action || 'delete';
     const user = ctx.from;
     const logParams = {
         guildId: ctx.chat.id,
@@ -235,8 +199,22 @@ async function executeAction(ctx, action, detected, allowed) {
         isGlobal: (action === 'ban')
     };
 
+    // Get translation for this guild's UI language
+    const userName = user.username ? `@${user.username}` : `[${user.first_name}](tg://user?id=${user.id})`;
+    const warningMsg = i18n.t(ctx.chat.id, 'language_monitor.warning', {
+        languages: allowed.join(', ').toUpperCase(),
+        user: userName
+    });
+
     if (action === 'delete') {
         await safeDelete(ctx, 'language-monitor');
+        // Send warning and auto-delete after 1 minute
+        try {
+            const warning = await ctx.reply(warningMsg);
+            setTimeout(async () => {
+                try { await ctx.api.deleteMessage(ctx.chat.id, warning.message_id); } catch (e) { }
+            }, 60000); // 1 minute
+        } catch (e) { }
     }
     else if (action === 'ban') {
         await safeDelete(ctx, 'language-monitor');
@@ -276,6 +254,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
     const enabled = config.lang_enabled ? '✅ ON' : '❌ OFF';
     const action = (config.lang_action || 'delete').toUpperCase().replace(/_/g, ' ');
+    const tierBypass = config.lang_tier_bypass ?? 2;
 
     let allowed = [];
     try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }
@@ -286,17 +265,23 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         `Utile per mantenere il gruppo focalizzato.\n\n` +
         `ℹ️ **Info:**\n` +
         `• Ignora messaggi molto brevi\n` +
-        `• Non controlla Admin e Utenti fidati\n\n` +
+        `• Invia avviso auto-eliminante all'utente\n\n` +
         `Stato: ${enabled}\n` +
+        `Bypass da Tier: ${tierBypass}+\n` +
         `Azione: ${action}\n` +
         `Permesse: ${allowed.join(', ').toUpperCase()}`;
 
-    // Language toggles (Common ones)
+    // Language toggles (Common ones) - max 3 per row
     const common = ['it', 'en', 'ru', 'es', 'fr', 'de'];
-    const langRow = common.map(l => {
+    const langButtons = common.map(l => {
         const isAllowed = allowed.includes(l);
         return { text: `${isAllowed ? '✅' : '⬜'} ${l.toUpperCase()}`, callback_data: `lng_set:${l}` };
     });
+    // Split into rows of 3
+    const langRows = [];
+    for (let i = 0; i < langButtons.length; i += 3) {
+        langRows.push(langButtons.slice(i, i + 3));
+    }
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -305,7 +290,8 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const keyboard = {
         inline_keyboard: [
             [{ text: `🌐 Filtro: ${enabled}`, callback_data: "lng_toggle" }],
-            langRow,
+            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "lng_tier" }],
+            ...langRows,
             [{ text: `👮 Azione: ${action}`, callback_data: "lng_act" }],
             [closeBtn]
         ]
