@@ -224,6 +224,11 @@ function register(bot, database) {
                 // Return to appropriate menu using saved state
                 await sendConfigUI(ctx, false, session.fromSettings || false);
             }
+        } else if (data === "wrd_sync") {
+            const config = db.getGuildConfig(ctx.chat.id);
+            const newValue = config.keyword_sync_global ? 0 : 1;
+            db.updateGuildConfig(ctx.chat.id, { keyword_sync_global: newValue });
+            return sendConfigUI(ctx, true, fromSettings);
         }
     });
 }
@@ -329,16 +334,14 @@ async function executeAction(ctx, action, keyword, fullText) {
 }
 
 async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
-    const count = db.getDb().prepare('SELECT COUNT(*) as c FROM word_filters WHERE guild_id = ?').get(ctx.chat.id).c;
+    const config = db.getGuildConfig(ctx.chat.id);
+    const syncGlobal = config.keyword_sync_global ? '✅ ON' : '❌ OFF';
 
     const text = `🔤 **PAROLE VIETATE**\n\n` +
-        `Blocca messaggi che contengono parole o frasi specifiche che non vuoi nel gruppo.\n` +
-        `Puoi scegliere se cancellare o bannare chi le usa.\n\n` +
+        `Blocca messaggi che contengono parole o frasi specifiche proibite a livello globale.\n\n` +
         `ℹ️ **Info:**\n` +
-        `• Puoi bloccare parole esatte o parziali\n` +
-        `• Supporta regole avanzate per utenti esperti\n` +
-        `• Può usare liste condivise di parole pericolose\n\n` +
-        `Filtri attivi: ${count} locali`;
+        `• Usa le liste condivise di parole pericolose dall'IntelNetwork\n\n` +
+        `Sync Globale: ${syncGlobal}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -346,8 +349,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: "➕ Aggiungi Parola", callback_data: "wrd_add" }, { text: "📜 Lista", callback_data: "wrd_list" }],
-            [{ text: "🌐 Sync Globale: ON", callback_data: "wrd_noop" }],
+            [{ text: `🌐 Sync Globale: ${syncGlobal}`, callback_data: "wrd_sync" }],
             [closeBtn]
         ]
     };
