@@ -939,9 +939,11 @@ async function forwardLinkCheck(info) {
             domain = new URL(link).hostname.replace(/^www\./, '');
         } catch (e) { }
 
+        const userName = user.username ? `@${user.username}` : user.first_name;
+
         const text = `🔗 **LINK CHECK**\n\n` +
             `🏛️ Gruppo: ${guildName}\n` +
-            `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
+            `👤 Utente: ${user.first_name} (${userName}) (ID: \`${user.id}\`)\n` +
             `🔗 Link: \`${link}\`\n\n` +
             `⚠️ Dominio sconosciuto o sospetto.`;
 
@@ -952,11 +954,14 @@ async function forwardLinkCheck(info) {
             ]
         };
 
-        const sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
+        // Fallback to general chat if threadId is invalid or not set
+        const options = {
             reply_markup: keyboard,
-            parse_mode: 'Markdown',
-            message_thread_id: threadId
-        });
+            parse_mode: 'Markdown'
+        };
+        if (threadId) options.message_thread_id = threadId;
+
+        const sent = await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, options);
 
         // Schedule delete
         const deleteAfter = new Date(Date.now() + 86400000).toISOString();
@@ -968,12 +973,6 @@ async function forwardLinkCheck(info) {
     }
 }
 
-module.exports = {
-    register,
-    sendGlobalLog,
-    forwardBanToParliament,
-    forwardLinkCheck
-};
 
 async function executeGlobalBan(ctx, userId) {
     // 1. Mark user as global banned in DB
@@ -1004,4 +1003,9 @@ async function cleanupPendingDeletions() {
     }
 }
 
-module.exports = { register, forwardBanToParliament, sendGlobalLog };
+module.exports = { 
+    register, 
+    forwardBanToParliament, 
+    sendGlobalLog,
+    forwardLinkCheck
+};
