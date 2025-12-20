@@ -10,7 +10,7 @@ fluentFfmpeg.setFfprobePath(ffprobePath);
 const loggerUtil = require('../../middlewares/logger');
 const actions = require('./actions');
 
-const TEMP_DIR = path.join(__dirname, '../../temp_nsfw');
+const TEMP_DIR = path.join(__dirname, 'temp_nsfw');
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });

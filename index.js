@@ -12,6 +12,7 @@ const bot = new Bot(process.env.BOT_TOKEN);
 // ============================================================================
 // Core modules (ordine importante: prima i moduli base, poi quelli che dipendono)
 const userReputation = require("./src/features/user-reputation");
+const casBan = require("./src/features/cas-ban");
 const adminLogger = require("./src/features/admin-logger");
 const staffCoordination = require("./src/features/staff-coordination");
 const superAdmin = require("./src/features/super-admin");
@@ -70,6 +71,9 @@ bot.use(adminOnlyCallbacks());
 
 // Core: Reputation (deve essere primo per calcolare tier)
 userReputation.register(bot, db);
+
+// Core: CAS Ban (early intercept for banned users)
+casBan.register(bot, db);
 
 // Core: Staff & Admin
 adminLogger.register(bot, db);

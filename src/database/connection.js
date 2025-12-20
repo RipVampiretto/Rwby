@@ -10,7 +10,7 @@ let db = null;
  * @returns {Promise<object>} Database instance
  */
 async function init() {
-    const dbPath = process.env.DB_PATH || path.join(__dirname, '../../../data/bot.db');
+    const dbPath = process.env.DB_PATH || path.join('data/bot.db');
 
     // Ensure data directory exists
     const dir = path.dirname(dbPath);

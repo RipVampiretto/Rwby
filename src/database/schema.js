@@ -383,6 +383,21 @@ function createTables(db) {
             PRIMARY KEY (guild_id, modal_id)
         )
     `);
+
+    // ========================================================================
+    // CAS BANS - Combot Anti-Spam banned users
+    // ========================================================================
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS cas_bans (
+            user_id INTEGER PRIMARY KEY,
+            offenses INTEGER DEFAULT 1,
+            time_added TEXT,
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Index for fast lookups (PRIMARY KEY already provides this, but explicit for clarity)
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_cas_bans_user_id ON cas_bans(user_id)`);
 }
 
 module.exports = {
