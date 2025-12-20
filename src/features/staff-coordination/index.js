@@ -93,7 +93,7 @@ function register(bot, database) {
     db = database;
     _botInstance = bot;
 
-    // Command: /setstaff
+    // Command: /setstaff <id>
     bot.command("setstaff", async (ctx) => {
         if (ctx.chat.type === 'private') {
             return ctx.reply("⚠️ Questo comando deve essere usato in un gruppo.");
@@ -103,121 +103,95 @@ function register(bot, database) {
             return ctx.reply("⚠️ Non hai i permessi necessari.");
         }
 
-        // Se siamo in un forum, configuriamo i topic
-        if (ctx.chat.is_forum) {
-            try {
-                // Crea topic per Reports
-                const reportsTopic = await ctx.createForumTopic("🚨 Reports & Review");
-                // Crea topic per Logs
-                const logsTopic = await ctx.createForumTopic("📜 Audit Logs");
-                // Crea topic per Discussione Staff
-                const discussionTopic = await ctx.createForumTopic("🛡️ Staff Discussion");
+        const args = ctx.message.text.split(' ').slice(1);
 
-                const staffTopics = {
-                    reports: reportsTopic.message_thread_id,
-                    logs: logsTopic.message_thread_id,
-                    discussion: discussionTopic.message_thread_id
-                };
+        if (!args[0]) {
+            return ctx.reply("❌ Specifica l'ID del gruppo staff.\nUso: `/setstaff -100123456789`", { parse_mode: 'Markdown' });
+        }
 
-                db.updateGuildConfig(ctx.chat.id, {
-                    staff_group_id: ctx.chat.id,
-                    staff_topics: JSON.stringify(staffTopics)
-                });
+        const staffId = parseInt(args[0]);
+        if (isNaN(staffId)) {
+            return ctx.reply("❌ ID non valido. Usa: /setstaff -100123456789");
+        }
 
-                await ctx.reply(
-                    "✅ **Staff Group Configurato (Forum Mode)**\n\n" +
-                    `🔹 Reports: ${reportsTopic.name}\n` +
-                    `🔹 Logs: ${logsTopic.name}\n` +
-                    `🔹 Discussione: ${discussionTopic.name}`,
-                    { message_thread_id: discussionTopic.message_thread_id }
-                );
+        // Test permission by sending a message
+        try {
+            const testMsg = await _botInstance.api.sendMessage(staffId, "✅ Test connessione Staff Group riuscito.");
+            await _botInstance.api.deleteMessage(staffId, testMsg.message_id);
 
-                // Configura anche il logger automaticamente
-                db.updateGuildConfig(ctx.chat.id, {
-                    log_channel_id: ctx.chat.id
-                });
-
-            } catch (e) {
-                logger.error(`[staff-coordination] Error creating topics: ${e.message}`);
-                return ctx.reply("❌ Errore nella creazione dei topic. Assicurati che io sia Admin.");
-            }
-        } else {
-            // Gruppo normale
-            db.updateGuildConfig(ctx.chat.id, {
-                staff_group_id: ctx.chat.id
-            });
-            await ctx.reply("✅ Questo gruppo è stato impostato come **Staff Group**.");
+            db.updateGuildConfig(ctx.chat.id, { staff_group_id: staffId });
+            await ctx.reply(`✅ Staff Group impostato: \`${staffId}\``, { parse_mode: 'Markdown' });
+        } catch (e) {
+            await ctx.reply(`❌ Impossibile inviare messaggi nel gruppo \`${staffId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`, { parse_mode: 'Markdown' });
         }
     });
 
-    // Command: /gnote
-    bot.command("gnote", async (ctx) => {
+    // Command: /notes - View or add notes (staff-group scoped)
+    // Usage: /notes <user_id> - View notes
+    //        /notes add <user_id> <text> - Add note
+    bot.command("notes", async (ctx) => {
         if (ctx.chat.type === 'private') return;
 
-        const args = ctx.message.text.split(' ');
-        if (args.length < 4) {
-            return ctx.reply("❌ Uso: `/gnote @user [info|warning|critical] [testo]`", { parse_mode: 'Markdown' });
+        const config = db.getGuildConfig(ctx.chat.id);
+        const staffGroupId = config.staff_group_id || ctx.chat.id;
+
+        const args = ctx.message.text.split(' ').slice(1);
+
+        // /notes add <id> <text>
+        if (args[0] === 'add') {
+            if (args.length < 3) {
+                return ctx.reply("❌ Uso: `/notes add <user_id> <testo>`", { parse_mode: 'Markdown' });
+            }
+
+            const targetId = parseInt(args[1]);
+            if (isNaN(targetId)) {
+                return ctx.reply("❌ ID utente non valido.");
+            }
+
+            const noteText = args.slice(2).join(' ');
+
+            const sqlite = db.getDb();
+            sqlite.prepare(`
+                INSERT INTO staff_notes (user_id, staff_group_id, note_text, created_by)
+                VALUES (?, ?, ?, ?)
+            `).run(targetId, staffGroupId, noteText, ctx.from.id);
+
+            await ctx.reply(`✅ Nota aggiunta per utente \`${targetId}\``, { parse_mode: 'Markdown' });
+            return;
         }
 
-        // Get target user
-        let targetUser = ctx.message.reply_to_message?.from;
-        if (!targetUser && ctx.message.entities) {
-            const entity = ctx.message.entities.find(e => e.type === 'text_mention');
-            if (entity) targetUser = entity.user;
+        // /notes <id> - View notes
+        let targetId = parseInt(args[0]);
+
+        // Also support reply-to-message
+        if (!targetId && ctx.message.reply_to_message?.from) {
+            targetId = ctx.message.reply_to_message.from.id;
         }
 
-        if (!targetUser) {
-            return ctx.reply("❌ Devi menzionare un utente (via menu) o rispondere a un suo messaggio.");
-        }
-
-        const severity = args[2].toLowerCase();
-        if (!['info', 'warning', 'critical'].includes(severity)) {
-            return ctx.reply("❌ Severity valida: info, warning, critical");
-        }
-
-        const noteText = args.slice(3).join(' ');
-
-        const sqlite = db.getDb();
-        sqlite.prepare(`
-            INSERT INTO global_notes (user_id, guild_id, note_text, severity, created_by, is_global)
-            VALUES (?, ?, ?, ?, ?, 1)
-        `).run(targetUser.id, ctx.chat.id, noteText, severity, ctx.from.id);
-
-        await ctx.reply(`✅ Nota aggiunta per ${targetUser.first_name} (${severity})`);
-    });
-
-    // Command: /notes
-    bot.command("notes", async (ctx) => {
-        let targetUser = ctx.message.reply_to_message?.from;
-        if (!targetUser && ctx.message.entities) {
-            const entity = ctx.message.entities.find(e => e.type === 'text_mention');
-            if (entity) targetUser = entity.user;
-        }
-
-        if (!targetUser) {
-            return ctx.reply("❌ Menziona un utente per vedere le sue note.");
+        if (!targetId) {
+            return ctx.reply("❌ Uso:\n`/notes <user_id>` - Visualizza note\n`/notes add <user_id> <severity> <testo>` - Aggiungi nota", { parse_mode: 'Markdown' });
         }
 
         const sqlite = db.getDb();
         const notes = sqlite.prepare(`
-            SELECT * FROM global_notes 
-            WHERE user_id = ? 
+            SELECT * FROM staff_notes 
+            WHERE user_id = ? AND staff_group_id = ?
             ORDER BY created_at DESC 
             LIMIT 10
-        `).all(targetUser.id);
+        `).all(targetId, staffGroupId);
 
         if (notes.length === 0) {
-            return ctx.reply(`ℹ️ Nessuna nota trovata per ${targetUser.first_name}.`);
+            return ctx.reply(`ℹ️ Nessuna nota trovata per utente \`${targetId}\`.`, { parse_mode: 'Markdown' });
         }
 
-        let text = `📝 **Note per ${targetUser.first_name}:**\n\n`;
+        let text = `📝 <b>Note per utente ${targetId}:</b>\n\n`;
         notes.forEach(note => {
             const icon = note.severity === 'critical' ? '🔴' : (note.severity === 'warning' ? '🟠' : '🔵');
-            text += `${icon} **[${note.severity.toUpperCase()}]** ${note.created_at.substring(0, 10)}\n`;
+            text += `${icon} <b>[${note.severity.toUpperCase()}]</b> ${note.created_at.substring(0, 10)}\n`;
             text += `└ ${note.note_text}\n\n`;
         });
 
-        await ctx.reply(text, { parse_mode: 'Markdown' });
+        await ctx.reply(text, { parse_mode: 'HTML' });
     });
 
     // Action Handlers
@@ -225,18 +199,30 @@ function register(bot, database) {
         const data = ctx.callbackQuery.data;
 
         if (data.startsWith("staff_ban:")) {
+            // Format: staff_ban:userId:guildId
             const parts = data.split(":");
             const targetUserId = parts[1];
+            const originalGuildId = parts[2];
 
             await ctx.answerCallbackQuery("🚫 Eseguendo Ban...");
-            await ctx.editMessageCaption({
-                caption: ctx.callbackQuery.message.caption + "\n\n✅ **BANNED by Staff**"
-            });
+
+            // Actually ban the user in the original group
+            try {
+                await _botInstance.api.banChatMember(originalGuildId, targetUserId);
+                await ctx.editMessageCaption({
+                    caption: ctx.callbackQuery.message.caption + "\n\n✅ **BANNED by " + ctx.from.first_name + "**"
+                });
+            } catch (e) {
+                logger.error(`[staff-coordination] Ban failed: ${e.message}`);
+                await ctx.editMessageCaption({
+                    caption: ctx.callbackQuery.message.caption + "\n\n❌ **Ban fallito: " + e.message + "**"
+                });
+            }
 
             // Log staff action
             if (adminLogger.getLogEvent()) {
                 adminLogger.getLogEvent()({
-                    guildId: ctx.chat.id,
+                    guildId: originalGuildId,
                     eventType: 'staff_ban',
                     targetUser: { id: targetUserId, first_name: 'User' },
                     executorModule: `Staff: ${ctx.from.first_name}`,
@@ -311,9 +297,9 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const text = `👮 **STAFF COORDINATION**\n` +
         `Staff Group: ${staffGroup}\n\n` +
         `**Comandi:**\n` +
-        `/setstaff - Imposta questo gruppo come Staff Group\n` +
-        `/gnote @user type text - Aggiungi nota globale\n` +
-        `/notes @user - Vedi note`;
+        `/setstaff <id> - Imposta Staff Group\n` +
+        `/notes <id> - Vedi note utente\n` +
+        `/notes add <id> <testo> - Aggiungi nota`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -353,7 +339,7 @@ async function reviewQueue(params) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: "🔨 Ban", callback_data: `staff_ban:${user.id}` },
+                { text: "🔨 Ban", callback_data: `staff_ban:${user.id}:${params.guildId}` },
                 { text: "🗑️ Delete", callback_data: `staff_del:${params.guildId}:${messageId}` }
             ],
             [

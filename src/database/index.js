@@ -293,18 +293,17 @@ function createTables() {
     `);
 
     // ========================================================================
-    // GLOBAL NOTES - Notes on users
+    // STAFF NOTES - Notes on users (staff-group scoped)
     // ========================================================================
     db.exec(`
-        CREATE TABLE IF NOT EXISTS global_notes (
+        CREATE TABLE IF NOT EXISTS staff_notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            guild_id INTEGER,
+            staff_group_id INTEGER,
             note_text TEXT,
             severity TEXT DEFAULT 'info',
             created_by INTEGER,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            is_global INTEGER DEFAULT 0
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
