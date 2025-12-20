@@ -127,7 +127,7 @@ function register(bot, database) {
             } else if (data === "vb_tier") {
                 // Cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0
                 let val = config.voteban_initiator_tier || 0;
-                val = val >= 4 ? 0 : val + 1;
+                val = val >= 3 ? 0 : val + 1;
                 db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: val });
             }
             await sendConfigUI(ctx, true, fromSettings);

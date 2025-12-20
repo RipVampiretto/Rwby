@@ -110,7 +110,7 @@ function register(bot, database) {
         } else if (data === "mdl_tier") {
             const tiers = [0, 1, 2, 3];
             let cur = config.modal_tier_bypass ?? 2;
-            const nextTier = tiers[(tiers.indexOf(cur) + 1) % 4];
+            const nextTier = tiers[(tiers.indexOf(cur) + 1) % tiers.length];
             db.updateGuildConfig(ctx.chat.id, { modal_tier_bypass: nextTier });
         } else if (data === "mdl_list") {
             // Show modal list sub-menu
