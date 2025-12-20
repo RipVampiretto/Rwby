@@ -29,8 +29,8 @@ function register(bot, database) {
     _botInstance = bot;
     loggerUtil.info('[nsfw-monitor] Module registered and ready');
 
-    // Handler: photos, videos, animations
-    bot.on(["message:photo", "message:video", "message:animation", "message:document"], async (ctx, next) => {
+    // Handler: photos, videos, animations, stickers
+    bot.on(["message:photo", "message:video", "message:animation", "message:document", "message:sticker"], async (ctx, next) => {
         const chatId = ctx.chat.id;
         const userId = ctx.from?.id;
         const msgId = ctx.message?.message_id;
@@ -56,18 +56,25 @@ function register(bot, database) {
         }
 
         // Tier bypass
-        if (ctx.userTier !== undefined && ctx.userTier >= (config.nsfw_tier_bypass || 3)) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${config.nsfw_tier_bypass || 3})`);
+        if (ctx.userTier !== undefined && ctx.userTier >= (config.nsfw_tier_bypass || 2)) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${config.nsfw_tier_bypass || 2})`);
             return next();
         }
 
         // Check types enabled
-        const isVideo = ctx.message.video || (ctx.message.document && ctx.message.document.mime_type.startsWith('video'));
+        const isVideo = ctx.message.video || (ctx.message.document && ctx.message.document.mime_type?.startsWith('video'));
         const isGif = ctx.message.animation || (ctx.message.document && ctx.message.document.mime_type === 'image/gif');
         const isPhoto = ctx.message.photo;
+        const isSticker = ctx.message.sticker;
 
-        const mediaType = isVideo ? 'VIDEO' : (isGif ? 'GIF' : (isPhoto ? 'PHOTO' : 'UNKNOWN'));
+        const mediaType = isVideo ? 'VIDEO' : (isGif ? 'GIF' : (isPhoto ? 'PHOTO' : (isSticker ? 'STICKER' : 'UNKNOWN')));
         loggerUtil.info(`[nsfw-monitor] 🎬 Media type detected: ${mediaType} - Chat: ${chatId}, User: ${userId}`);
+
+        // Skip animated stickers (they're Lottie files, not images)
+        if (isSticker && ctx.message.sticker.is_animated) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: animated sticker (not analyzable)`);
+            return next();
+        }
 
         if (isVideo && !config.nsfw_check_videos) {
             loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: video check disabled`);
@@ -79,6 +86,11 @@ function register(bot, database) {
         }
         if (isPhoto && !config.nsfw_check_photos) {
             loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: photo check disabled`);
+            return next();
+        }
+        // Stickers have their own check
+        if (isSticker && !config.nsfw_check_stickers) {
+            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: sticker check disabled`);
             return next();
         }
 
@@ -125,7 +137,7 @@ function register(bot, database) {
             thr = thr >= 0.9 ? 0.5 : thr + 0.1;
             db.updateGuildConfig(ctx.chat.id, { nsfw_threshold: parseFloat(thr.toFixed(1)) });
         } else if (data.startsWith("nsf_tog_")) {
-            const type = data.split('_')[2]; // photo, video, gif
+            const type = data.split('_')[2]; // photo, video, gif, sticker
             const key = `nsfw_check_${type}s`;
             if (config[key] !== undefined) {
                 db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
@@ -166,12 +178,19 @@ async function processMedia(ctx, config) {
         fileId = ctx.message.document.file_id;
         fileSize = ctx.message.document.file_size || 0;
         loggerUtil.debug(`[nsfw-monitor] 📄 Document detected - MIME: ${ctx.message.document.mime_type}, Size: ${fileSize} bytes`);
-        if (ctx.message.document.mime_type.startsWith('video')) type = 'video';
-        else if (ctx.message.document.mime_type.startsWith('image')) type = 'photo';
+        if (ctx.message.document.mime_type?.startsWith('video')) type = 'video';
+        else if (ctx.message.document.mime_type?.startsWith('image')) type = 'photo';
         else {
             loggerUtil.debug(`[nsfw-monitor] ⏭️ Document is not image/video, skipping`);
             return;
         }
+    } else if (ctx.message.sticker) {
+        // Static stickers are webp images, video stickers are webm
+        const sticker = ctx.message.sticker;
+        fileId = sticker.file_id;
+        fileSize = sticker.file_size || 0;
+        loggerUtil.debug(`[nsfw-monitor] 🪙 Sticker detected - Size: ${fileSize} bytes, is_video: ${sticker.is_video}`);
+        type = sticker.is_video ? 'gif' : 'photo';
     }
 
     loggerUtil.info(`[nsfw-monitor] 📁 Getting file info from Telegram - FileId: ${fileId?.substring(0, 20)}...`);
@@ -504,45 +523,61 @@ async function testConnection(ctx) {
 }
 
 async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
-    const enabled = config.nsfw_enabled ? '✅ ON' : '❌ OFF';
-    const action = (config.nsfw_action || 'delete').toUpperCase();
-    const thr = (config.nsfw_threshold || 0.7) * 100;
+    loggerUtil.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${ctx.chat?.id}`);
 
-    // Toggles
-    const p = config.nsfw_check_photos ? '✅' : '❌';
-    const v = config.nsfw_check_videos ? '✅' : '❌';
-    const g = config.nsfw_check_gifs ? '✅' : '❌';
+    try {
+        const config = db.getGuildConfig(ctx.chat.id);
+        const enabled = config.nsfw_enabled ? '✅ ON' : '❌ OFF';
+        const action = (config.nsfw_action || 'delete').toUpperCase();
+        const thr = (config.nsfw_threshold || 0.7) * 100;
 
-    const text = `🔞 **FILTRO NSFW**\n\n` +
-        `Analizza immagini e video per trovare contenuti non adatti (Nudo, Violenza).\n` +
-        `Protegge il gruppo da contenuti scioccanti.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Funziona su Foto, Video e GIF\n` +
-        `• Blocca pornografia e immagini violente\n` +
-        `• Richiede un po' di tempo per analizzare i video\n\n` +
-        `Stato: ${enabled}\n` +
-        `Azione: ${action}\n` +
-        `Sensibilità: ${thr}%\n` +
-        `Controlla: Foto ${p} | Vid ${v} | Gif ${g}`;
+        // Toggles
+        const p = config.nsfw_check_photos ? '✅' : '❌';
+        const v = config.nsfw_check_videos ? '✅' : '❌';
+        const g = config.nsfw_check_gifs ? '✅' : '❌';
+        const s = config.nsfw_check_stickers ? '✅' : '❌';
 
-    const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "nsf_close" };
+        const text = `🔞 <b>FILTRO NSFW</b>\n\n` +
+            `Analizza immagini e video per trovare contenuti non adatti (Nudo, Violenza).\n` +
+            `Protegge il gruppo da contenuti scioccanti.\n\n` +
+            `ℹ️ <b>Info:</b>\n` +
+            `• Funziona su Foto, Video, GIF e Sticker\n` +
+            `• Blocca pornografia e immagini violente\n` +
+            `• Richiede un po' di tempo per analizzare i video\n\n` +
+            `Stato: ${enabled}\n` +
+            `Azione: ${action}\n` +
+            `Sensibilità: ${thr}%\n` +
+            `Controlla: Foto ${p} | Video ${v} | GIF ${g} | Sticker ${s}`;
 
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }],
-            [{ text: `👮 Azione: ${action}`, callback_data: "nsf_act" }, { text: `📊 Soglia: ${thr}%`, callback_data: "nsf_thr" }],
-            [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }, { text: `🎞️ ${g}`, callback_data: "nsf_tog_gif" }],
-            [closeBtn]
-        ]
-    };
+        const closeBtn = fromSettings
+            ? { text: "🔙 Back", callback_data: "settings_main" }
+            : { text: "❌ Chiudi", callback_data: "nsf_close" };
 
-    if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
-    } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        const keyboard = {
+            inline_keyboard: [
+                [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }],
+                [{ text: `👮 Azione: ${action}`, callback_data: "nsf_act" }, { text: `📊 Soglia: ${thr}%`, callback_data: "nsf_thr" }],
+                [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }],
+                [{ text: `🎬 ${g}`, callback_data: "nsf_tog_gif" }, { text: `🪙 ${s}`, callback_data: "nsf_tog_sticker" }],
+                [closeBtn]
+            ]
+        };
+
+        loggerUtil.debug(`[nsfw-monitor] sendConfigUI prepared, isEdit: ${isEdit}`);
+
+        if (isEdit) {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+            loggerUtil.debug(`[nsfw-monitor] sendConfigUI editMessageText completed`);
+        } else {
+            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+            loggerUtil.debug(`[nsfw-monitor] sendConfigUI reply completed`);
+        }
+    } catch (e) {
+        loggerUtil.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
+        // Try to answer callback to prevent loading forever
+        try {
+            await ctx.answerCallbackQuery(`Errore: ${e.message.substring(0, 50)}`);
+        } catch (e2) { }
     }
 }
 
