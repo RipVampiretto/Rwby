@@ -1,106 +1,26 @@
 // ============================================================================
 // ADMIN LOGGER MODULE
 // ============================================================================
-// SCOPO: Sistema centralizzato di logging per tutte le azioni di moderazione.
-// Registra ban, delete, e azioni automatiche. Dual scope: locale e globale.
+// SCOPO: Sistema centralizzato di logging per azioni del BOT.
+// Registra SOLO azioni automatiche del bot (ban, delete, ecc).
+// Template unico per tutti gli eventi.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// 1. DATA MODEL - Struttura Database SQLite
+// EVENTI SUPPORTATI:
+// - ban: Ban eseguito dal bot
+// - delete: Messaggio eliminato dal bot  
+// - ai_action: Azione AI moderation
+// - lang_violation: Violazione lingua
+// - link_block: Link bloccato
+// - nsfw: Contenuto NSFW
+// - keyword: Keyword detection
 // ----------------------------------------------------------------------------
-//
-// TABELLA: guild_config (campi logger)
-// ├── log_channel_id: INTEGER (nullable)
-// │   └── ID topic o chat dove inviare log locali
-// ├── log_events: TEXT (JSON Array)
-// │   └── Eventi da loggare: ['ban', 'delete', 'ai_action', 'spam', 'config']
-// └── log_format: TEXT ('minimal', 'standard', 'extended')
-//     └── minimal: solo essenziale
-//     └── standard: info complete
-//     └── extended: debug/evidence allegata
-
-// ----------------------------------------------------------------------------
-// 2. LOGGING ENGINE - Funzione Centrale
-// ----------------------------------------------------------------------------
-//
-// FUNZIONE: logEvent(params)
-//
-// PARAMETRI:
-// ├── guildId: INTEGER
-// ├── eventType: TEXT ('ban', 'delete', 'config_change', ...)
-// ├── targetUser: Object ({ id, name, username })
-// ├── executorAdmin: Object ({ id, name, username }) - o 'SYSTEM' se auto
-// ├── reason: TEXT
-// ├── proof: Object (nullable, allegati)
-// ├── metadata: Object (dati extra modulo-specifici)
-// └── isGlobal: BOOLEAN (se true, invia anche a SuperAdmin log)
-//
-// FLUSSO:
-// 1. Lookup log_channel_id da guild_config
-// 2. Check se eventType è in log_events
-// 3. Format messaggio secondo log_format
-// 4. Invia a log_channel_id locale
-// 5. IF isGlobal: invia anche a global_log_channel
-
-// ----------------------------------------------------------------------------
-// 3. DUAL SCOPE ROUTING - Locale vs Globale
-// ----------------------------------------------------------------------------
-//
-// EVENTI LOCALI:
-// ├── Azioni admin manuali nel gruppo
-// ├── Eliminazioni spam automatiche
-// └── Cambio configurazione feature
-//
-// EVENTI GLOBALI (inviati anche a Parliament):
-// ├── Tutti i BAN (automatici e manuali)
-// ├── Rilevamenti AI critici (SCAM, THREAT)
-// └── Cambi configurazione globale
-
-// ----------------------------------------------------------------------------
-// 4. CONFIGURATION UI - /logconfig
-// ----------------------------------------------------------------------------
-//
-// MESSAGGIO:
-// ┌────────────────────────────────────────────┐
-// │ 📋 **CONFIGURAZIONE LOG**                  │
-// │ Canale: #moderazione-log                   │
-// │ Eventi attivi: 5/6                         │
-// └────────────────────────────────────────────┘
-//
-// KEYBOARD:
-// [ 📢 Canale ] → "Forwarda un messaggio dal canale"
-// [ 📝 Formato: Standard ▼ ]
-// [ ✅ Ban ] [ ✅ Delete ] [ ✅ AI ]
-// [ ✅ Spam ] [ ❌ Config ] [ ✅ Flux ]
-// [ 💾 Salva ] [ ❌ Chiudi ]
-
-// ----------------------------------------------------------------------------
-// 5. INTEGRATION
-// ----------------------------------------------------------------------------
-//
-// DIPENDENZE IN INGRESSO (riceve da):
-// ├── anti-spam → Ban/delete events
-// ├── ai-moderation → AI detection events
-// ├── anti-edit-abuse → Edit abuse events
-// ├── link-monitor → Link ban events
-// ├── keyword-monitor → Keyword ban events
-// ├── language-monitor → Language events
-// ├── nsfw-monitor → NSFW events
-// ├── visual-immune-system → Visual match events
-// ├── vote-ban → Community ban events
-// └── super-admin → Global events
-//
-// FUNZIONE ESPOSTA:
-// └── logEvent(params) → void
-
-// ============================================================================
-// MODULE EXPORTS
-// ============================================================================
 
 let db = null;
 let logEvent = null;
 let _botInstance = null;
-const { safeEdit, handleCriticalError, handleTelegramError, isFromSettingsMenu } = require('../../utils/error-handlers');
+const { safeEdit, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 function register(bot, database) {
@@ -111,55 +31,40 @@ function register(bot, database) {
     logEvent = async function (params) {
         if (!db || !_botInstance) return;
 
-        const { guildId, eventType, targetUser, executorAdmin, reason, proof, severity, isGlobal } = params;
+        const { guildId, eventType, targetUser, executorModule, reason, messageLink, isGlobal } = params;
 
-        // 1. Get Config
+        // Get Config
         const config = db.getGuildConfig(guildId);
         if (!config) return;
 
-        const logEvents = config.log_events ? JSON.parse(config.log_events) : ['ban', 'delete', 'ai_action'];
+        const logEvents = config.log_events ? JSON.parse(config.log_events) : ['ban', 'delete'];
 
-        // 2. Check filters
-        if (!logEvents.includes(eventType) && eventType !== 'force') {
-            return;
+        // Check if event is enabled
+        if (!logEvents.includes(eventType)) return;
+
+        // Format Message - Unified Template
+        const emoji = getEventEmoji(eventType);
+        const tag = eventType.toUpperCase().replace('_', '');
+
+        let text = `${emoji} #${tag}\n`;
+        text += `• Modulo: ${executorModule || 'System'}\n`;
+        text += `• Utente: ${targetUser?.first_name || 'Unknown'}`;
+        if (targetUser?.username) text += ` (@${targetUser.username})`;
+        text += ` [${targetUser?.id}]\n`;
+        text += `• Gruppo: ${config.guild_name || 'Unknown'} [${guildId}]\n`;
+        text += `• Motivo: ${reason}\n`;
+        if (messageLink) {
+            text += `• 👀 Vai al messaggio (${messageLink})\n`;
         }
+        text += `#id${targetUser?.id}`;
 
-        // 3. Format Message
-        const format = config.log_format || 'standard';
-        let text = "";
-
-        if (format === 'minimal') {
-            text = `#LOG #${eventType.toUpperCase()}\n` +
-                `👤 ${targetUser?.username || targetUser?.id}\n` +
-                `🔧 ${executorAdmin?.username || executorAdmin?.name || 'System'}\n` +
-                `📝 ${reason}`;
-        } else {
-            // Standard / Extended
-            const emoji = getEventEmoji(eventType);
-            text = `${emoji} **LOG: ${eventType.toUpperCase()}**\n\n` +
-                `📍 Group: ${config.guild_name || guildId}\n` +
-                `👤 Target: [${targetUser?.first_name}](tg://user?id=${targetUser?.id}) (\`${targetUser?.id}\`)\n` +
-                `🛠 Exec: ${executorAdmin?.username || 'System'}\n` +
-                `📝 Reason: ${reason}\n`;
-
-            if (proof && format === 'extended') {
-                text += `\nPROOF: ${proof}`; // Simplified proof handling
-            }
-        }
-
-        // 4. Send Local Log
+        // Send Local Log
         if (config.log_channel_id) {
             try {
-                // If log channel is same as chat (e.g. forum topic? no, config typically separates)
-                // If it's a forum topic, we need thread_id. 
-                // Assumption: log_channel_id is the CHAT ID. If it is a topic, it should be handled.
-                // Current schema: log_channel_id is simple integer.
-                // If we use topics, we likely stored topic ID in 'staff_topics'.
-                // Let's use logic: if staff_topics has 'logs', use that thread in staff_group_id.
-
                 let targetChatId = config.log_channel_id;
                 let messageThreadId = null;
 
+                // Check for staff topics
                 if (config.staff_group_id && config.staff_topics) {
                     try {
                         const topics = JSON.parse(config.staff_topics);
@@ -171,21 +76,21 @@ function register(bot, database) {
                 }
 
                 await _botInstance.api.sendMessage(targetChatId, text, {
-                    parse_mode: 'Markdown',
-                    message_thread_id: messageThreadId
+                    message_thread_id: messageThreadId,
+                    disable_web_page_preview: true
                 });
             } catch (e) {
                 logger.error(`[admin-logger] Failed to send local log: ${e.message}`);
             }
         }
 
-        // 5. Send Global Log
+        // Send Global Log (Parliament)
         if (isGlobal) {
             try {
                 const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
                 if (globalConfig && globalConfig.global_log_channel) {
                     await _botInstance.api.sendMessage(globalConfig.global_log_channel, text + "\n#GLOBAL", {
-                        parse_mode: 'Markdown'
+                        disable_web_page_preview: true
                     });
                 }
             } catch (e) {
@@ -215,14 +120,7 @@ function register(bot, database) {
             await ctx.deleteMessage();
         }
         else if (data === "log_set_channel") {
-            await ctx.answerCallbackQuery("Sii nel canale e usa /setlogchannel"); // Short simplified feedback
-            await ctx.reply("ℹ️ Usa /setlogchannel nel canale desiderato.", { ephemeral: true });
-        }
-        else if (data === "log_toggle_format") {
-            const current = config.log_format || 'standard';
-            const nextFmt = current === 'minimal' ? 'standard' : (current === 'standard' ? 'extended' : 'minimal');
-            db.updateGuildConfig(ctx.chat.id, { log_format: nextFmt });
-            await sendConfigUI(ctx, true, fromSettings);
+            await ctx.answerCallbackQuery("Usa /setlogchannel nel canale desiderato");
         }
         else if (data.startsWith("log_toggle:")) {
             const event = data.split(":")[1];
@@ -240,10 +138,27 @@ function register(bot, database) {
         if (ctx.chat.type === 'private') return;
         if (!await isAdmin(ctx, 'admin-logger')) return;
 
-        db.updateGuildConfig(ctx.chat.id, { log_channel_id: ctx.chat.id }); // If in forum, maybe we want current thread? 
-        // If forum, 'log_channel_id' usually refers to the main chat ID, and 'staff_topics' handles routing.
-        // But if user wants a SPECIFIC channel (non forum setup), this works.
-        await ctx.reply(`✅ Canale log impostato: ${ctx.chat.title}`);
+        const args = ctx.message.text.split(' ').slice(1);
+
+        if (!args[0]) {
+            return ctx.reply("❌ Specifica l'ID del canale.\\nUso: `/setlogchannel -100123456789`", { parse_mode: 'Markdown' });
+        }
+
+        const targetId = parseInt(args[0]);
+        if (isNaN(targetId)) {
+            return ctx.reply("❌ ID non valido. Usa: /setlogchannel -100123456789");
+        }
+
+        // Test permission by sending a message
+        try {
+            const testMsg = await _botInstance.api.sendMessage(targetId, "✅ Test connessione log channel riuscito.");
+            await _botInstance.api.deleteMessage(targetId, testMsg.message_id);
+
+            db.updateGuildConfig(ctx.chat.id, { log_channel_id: targetId });
+            await ctx.reply(`✅ Canale log impostato: \`${targetId}\``, { parse_mode: 'Markdown' });
+        } catch (e) {
+            await ctx.reply(`❌ Impossibile inviare messaggi nel canale \`${targetId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`, { parse_mode: 'Markdown' });
+        }
     });
 }
 
@@ -252,16 +167,11 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const logEvents = config.log_events ? JSON.parse(config.log_events) : [];
     function has(ev) { return logEvents.includes(ev) ? '✅' : '❌'; }
 
-    const channelInfo = config.log_channel_id ? `Active (${config.log_channel_id})` : "Not set";
-    const text = `📋 **CONFIGURAZIONE LOG**\n\n` +
-        `Registra automaticamente tutto quello che succede nel gruppo.\n` +
-        `Utile per vedere chi è stato bannato e perché.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Scegli quali eventi registrare (Ban, Delete, ecc)\n` +
-        `• Puoi inviare i log in un canale privato\n` +
-        `• Supporta diversi livelli di dettaglio\n\n` +
+    const channelInfo = config.log_channel_id ? `✅ Attivo` : "❌ Non impostato";
+    const text = `📋 <b>CONFIGURAZIONE LOG</b>\n\n` +
+        `Registra le azioni automatiche del bot.\n\n` +
         `Canale: ${channelInfo}\n` +
-        `Eventi attivi: ${logEvents.length}/6`;
+        `Eventi attivi: ${logEvents.length}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -270,33 +180,53 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const keyboard = {
         inline_keyboard: [
             [{ text: "📢 Imposta Canale", callback_data: "log_set_channel" }],
-            [{ text: `Formato: ${config.log_format || 'standard'}`, callback_data: "log_toggle_format" }],
             [
                 { text: `${has('ban')} Ban`, callback_data: `log_toggle:ban` },
-                { text: `${has('delete')} Delete`, callback_data: `log_toggle:delete` },
-                { text: `${has('ai_action')} AI`, callback_data: `log_toggle:ai_action` }
+                { text: `${has('delete')} Delete`, callback_data: `log_toggle:delete` }
             ],
             [
-                { text: `${has('spam')} Spam`, callback_data: `log_toggle:spam` },
-                { text: `${has('config')} Config`, callback_data: `log_toggle:config` },
-                { text: `${has('flux')} Flux`, callback_data: `log_toggle:flux` }
+                { text: `${has('ai_action')} AI`, callback_data: `log_toggle:ai_action` },
+                { text: `${has('nsfw')} NSFW`, callback_data: `log_toggle:nsfw` }
+            ],
+            [
+                { text: `${has('lang_violation')} Lingua`, callback_data: `log_toggle:lang_violation` },
+                { text: `${has('link_block')} Link`, callback_data: `log_toggle:link_block` }
             ],
             [closeBtn]
         ]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+        } catch (e) {
+            logger.error(`[admin-logger] sendConfigUI error: ${e.message}`);
+        }
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
 function getEventEmoji(type) {
     const map = {
-        ban: '🔨', delete: '🗑️', ai_action: '🤖', spam: '🧹', config: '⚙️', flux: '📉'
+        ban: '🚷',
+        delete: '🗑️',
+        ai_action: '🤖',
+        nsfw: '🔞',
+        lang_violation: '🌐',
+        link_block: '🔗',
+        keyword: '🔤'
     };
     return map[type] || 'ℹ️';
+}
+
+async function isAdmin(ctx, source) {
+    try {
+        const member = await ctx.getChatMember(ctx.from.id);
+        return ['creator', 'administrator'].includes(member.status);
+    } catch (e) {
+        return false;
+    }
 }
 
 module.exports = { register, getLogEvent: () => logEvent, sendConfigUI };
