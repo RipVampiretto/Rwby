@@ -1,25 +1,16 @@
 const loggerUtil = require('../../middlewares/logger');
 
-let franc = null;
-let francReady = false;
+let eld = null;
+let eldReady = false;
 
-// Load franc dynamically (ESM) - block until ready
-const francPromise = import('franc').then(m => {
-    franc = m.franc;
-    francReady = true;
-    loggerUtil.info('[language-monitor] Franc library loaded successfully');
+// Load ELD dynamically (ESM) - block until ready
+const eldPromise = import('eld').then(m => {
+    eld = m.eld;
+    eldReady = true;
+    loggerUtil.info('[language-monitor] ELD library loaded successfully');
 }).catch(e => {
-    loggerUtil.error(`[language-monitor] Failed to load franc: ${e.message}`);
+    loggerUtil.error(`[language-monitor] Failed to load ELD: ${e.message}`);
 });
-
-function getIso1(iso3) {
-    // Simple mapping for common checks. franc returns ISO-639-3
-    const map = {
-        'ita': 'it', 'eng': 'en', 'rus': 'ru', 'spa': 'es', 'fra': 'fr', 'deu': 'de',
-        'por': 'pt', 'zho': 'zh', 'jpn': 'ja', 'ara': 'ar', 'hin': 'hi'
-    };
-    return map[iso3] || iso3;
-}
 
 /**
  * Check if text contains non-Latin scripts (Chinese, Arabic, Cyrillic, etc.)
@@ -43,21 +34,25 @@ function detectNonLatinScript(text) {
 }
 
 async function detectLanguage(text) {
-    if (!francReady) {
-        await francPromise;
+    if (!eldReady) {
+        await eldPromise;
     }
 
     // Fallback if still not ready
-    if (!franc) return null;
+    if (!eld) return null;
 
-    const detectedIso3 = franc(text);
-    if (detectedIso3 === 'und') return null;
-    return getIso1(detectedIso3);
+    const result = eld.detect(text);
+
+    // ELD returns { language: 'es', getScores(), isReliable() }
+    // Empty string means undetermined
+    if (!result.language) return null;
+
+    return result.language; // Already ISO 639-1!
 }
 
 module.exports = {
     detectNonLatinScript,
     detectLanguage,
-    isReady: () => francReady,
-    waitForReady: () => francPromise
+    isReady: () => eldReady,
+    waitForReady: () => eldPromise
 };
