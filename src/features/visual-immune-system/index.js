@@ -23,7 +23,10 @@ function register(bot, database) {
     _botInstance = bot;
 
     // Handler: photos and stickers
+    // VISUAL IMMUNE SYSTEM DISABLED TEMPORARILY
     bot.on(["message:photo", "message:sticker"], async (ctx, next) => {
+        return next(); // DISABLED
+
         if (ctx.chat.type === 'private') return next();
 
         // Skip admins
@@ -34,44 +37,29 @@ function register(bot, database) {
         if (!config.visual_enabled) return next();
 
         // Tier bypass
-        if (ctx.userTier !== undefined && ctx.userTier >= 3) return next();
+        const tierBypass = config.visual_tier_bypass ?? 2;
+        if (ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
 
         await processVisual(ctx, config);
         await next();
     });
 
     // Command: /visualconfig
+    // DISABLED TEMPORARILY
     bot.command("visualconfig", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'visual-immune-system')) return;
-
-        await sendConfigUI(ctx);
+        return ctx.reply("⚠️ Visual Immune System è temporaneamente disabilitato.");
+        // if (ctx.chat.type === 'private') return;
+        // if (!await isAdmin(ctx, 'visual-immune-system')) return;
+        // await sendConfigUI(ctx);
     });
 
     // Command: /visualban
+    // DISABLED TEMPORARILY
     bot.command("visualban", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'visual-immune-system')) return;
-
-        if (!ctx.message.reply_to_message || !ctx.message.reply_to_message.photo) {
-            return ctx.reply("❌ Rispondi a un'immagine.");
-        }
-
-        const category = ctx.message.text.split(' ')[1] || 'spam';
-        await addToDb(ctx, ctx.message.reply_to_message, 'ban', category);
+        return ctx.reply("⚠️ Visual Immune System è temporaneamente disabilitato.");
     });
 
-    // Command: /visualsafe
-    bot.command("visualsafe", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'visual-immune-system')) return;
-
-        if (!ctx.message.reply_to_message || !ctx.message.reply_to_message.photo) {
-            return ctx.reply("❌ Rispondi a un'immagine.");
-        }
-
-        await addToDb(ctx, ctx.message.reply_to_message, 'safe', 'safe');
-    });
+    // Command: /visualsafe - REMOVED (not needed, ban list is tiny compared to safe images)
 
     // UI Callback
     bot.on("callback_query:data", async (ctx, next) => {

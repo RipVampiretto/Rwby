@@ -83,7 +83,7 @@ async function sendMainMenu(ctx, isEdit = false) {
                 { text: t('settings.buttons.nsfw'), callback_data: "set_goto:nsfw" }
             ],
             [
-                { text: t('settings.buttons.visual'), callback_data: "set_goto:visual" },
+                // { text: t('settings.buttons.visual'), callback_data: "set_goto:visual" }, // DISABLED TEMPORARILY
                 { text: t('settings.buttons.voteban'), callback_data: "set_goto:voteban" }
             ],
             [
@@ -193,7 +193,9 @@ async function routeToFeature(ctx, feature) {
             if (nsfwMonitor.sendConfigUI) await nsfwMonitor.sendConfigUI(ctx, true, true);
             break;
         case 'visual':
-            if (visualImmuneSystem.sendConfigUI) await visualImmuneSystem.sendConfigUI(ctx, true, true);
+            // DISABLED TEMPORARILY
+            await ctx.answerCallbackQuery("⚠️ Visual Immune System è temporaneamente disabilitato.");
+            // if (visualImmuneSystem.sendConfigUI) await visualImmuneSystem.sendConfigUI(ctx, true, true);
             break;
         case 'voteban':
             if (voteBan.sendConfigUI) await voteBan.sendConfigUI(ctx, true, true);
