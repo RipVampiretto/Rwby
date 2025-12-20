@@ -142,6 +142,11 @@ function register(bot, database) {
             if (config[key] !== undefined) {
                 db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
             }
+        } else if (data === "nsf_tier") {
+            // Cycle through 0, 1, 2, 3
+            const current = config.nsfw_tier_bypass ?? 2;
+            const next = (current + 1) % 4;
+            db.updateGuildConfig(ctx.chat.id, { nsfw_tier_bypass: next });
         }
 
         await sendConfigUI(ctx, true, fromSettings);
@@ -530,6 +535,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         const enabled = config.nsfw_enabled ? '✅ ON' : '❌ OFF';
         const action = (config.nsfw_action || 'delete').toUpperCase();
         const thr = (config.nsfw_threshold || 0.7) * 100;
+        const tierBypass = config.nsfw_tier_bypass ?? 2;
 
         // Toggles
         const p = config.nsfw_check_photos ? '✅' : '❌';
@@ -545,6 +551,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
             `• Blocca pornografia e immagini violente\n` +
             `• Richiede un po' di tempo per analizzare i video\n\n` +
             `Stato: ${enabled}\n` +
+            `Bypass da Tier: ${tierBypass}+\n` +
             `Azione: ${action}\n` +
             `Sensibilità: ${thr}%\n` +
             `Controlla: Foto ${p} | Video ${v} | GIF ${g} | Sticker ${s}`;
@@ -556,6 +563,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         const keyboard = {
             inline_keyboard: [
                 [{ text: `🔞 Monitor: ${enabled}`, callback_data: "nsf_toggle" }],
+                [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "nsf_tier" }],
                 [{ text: `👮 Azione: ${action}`, callback_data: "nsf_act" }, { text: `📊 Soglia: ${thr}%`, callback_data: "nsf_thr" }],
                 [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }],
                 [{ text: `🎬 ${g}`, callback_data: "nsf_tog_gif" }, { text: `🪙 ${s}`, callback_data: "nsf_tog_sticker" }],
