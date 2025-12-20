@@ -197,11 +197,15 @@ async function processLanguage(ctx, config) {
 async function executeAction(ctx, config, detected, allowed) {
     const action = config.lang_action || 'delete';
     const user = ctx.from;
+
+    // Determine eventType based on action
+    const eventType = action === 'ban' ? 'lang_ban' : 'lang_delete';
+
     const logParams = {
         guildId: ctx.chat.id,
-        eventType: 'lang_violation',
+        guildName: ctx.chat.title,
+        eventType: eventType,
         targetUser: user,
-        executorAdmin: null,
         reason: `Language: ${detected} (Allowed: ${allowed.join(', ')})`,
         isGlobal: (action === 'ban')
     };
@@ -218,6 +222,8 @@ async function executeAction(ctx, config, detected, allowed) {
 
     if (action === 'delete') {
         await safeDelete(ctx, 'language-monitor');
+        if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+
         // Send warning and auto-delete after 1 minute
         try {
             const warning = await ctx.reply(warningMsg, { parse_mode: 'HTML' });

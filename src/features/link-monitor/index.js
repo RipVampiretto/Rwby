@@ -126,6 +126,17 @@ async function processLinks(ctx, config, links) {
                 // Blacklisted domain - delete message
                 await safeDelete(ctx, 'link-monitor');
 
+                // Log the action
+                if (adminLogger.getLogEvent()) {
+                    adminLogger.getLogEvent()({
+                        guildId: ctx.chat.id,
+                        eventType: 'link_delete',
+                        targetUser: ctx.from,
+                        reason: `Blacklisted domain: ${domain}`,
+                        isGlobal: false
+                    });
+                }
+
                 // Log to super admin
                 if (superAdmin.sendGlobalLog) {
                     superAdmin.sendGlobalLog('link_checks', `🚫 **Link Blacklist**\nGruppo: ${ctx.chat.title}\nUser: @${ctx.from.username || ctx.from.first_name}\nLink: ${link}\nDominio: ${domain}`);

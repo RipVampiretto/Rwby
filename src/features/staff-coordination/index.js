@@ -87,6 +87,7 @@ let db = null;
 let _botInstance = null;
 const { safeEdit, safeDelete, handleCriticalError, handleTelegramError, isAdmin } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
+const adminLogger = require('../admin-logger');
 
 function register(bot, database) {
     db = database;
@@ -224,14 +225,41 @@ function register(bot, database) {
         const data = ctx.callbackQuery.data;
 
         if (data.startsWith("staff_ban:")) {
+            const parts = data.split(":");
+            const targetUserId = parts[1];
+
             await ctx.answerCallbackQuery("🚫 Eseguendo Ban...");
             await ctx.editMessageCaption({
                 caption: ctx.callbackQuery.message.caption + "\n\n✅ **BANNED by Staff**"
             });
+
+            // Log staff action
+            if (adminLogger.getLogEvent()) {
+                adminLogger.getLogEvent()({
+                    guildId: ctx.chat.id,
+                    eventType: 'staff_ban',
+                    targetUser: { id: targetUserId, first_name: 'User' },
+                    executorModule: `Staff: ${ctx.from.first_name}`,
+                    reason: 'Approved from review queue',
+                    isGlobal: true
+                });
+            }
         }
         else if (data.startsWith("staff_ign")) {
             await ctx.answerCallbackQuery("✅ Ignorato");
             await ctx.deleteMessage();
+
+            // Log staff dismiss
+            if (adminLogger.getLogEvent()) {
+                adminLogger.getLogEvent()({
+                    guildId: ctx.chat.id,
+                    eventType: 'staff_dismiss',
+                    targetUser: { id: 0, first_name: 'Unknown' },
+                    executorModule: `Staff: ${ctx.from.first_name}`,
+                    reason: 'Dismissed from review queue',
+                    isGlobal: false
+                });
+            }
         }
         else if (data.startsWith("staff_del:")) {
             const parts = data.split(":");
@@ -244,6 +272,18 @@ function register(bot, database) {
                     await ctx.editMessageCaption({
                         caption: ctx.callbackQuery.message.caption + "\n\n✅ **DELETED by Staff**"
                     });
+
+                    // Log staff delete
+                    if (adminLogger.getLogEvent()) {
+                        adminLogger.getLogEvent()({
+                            guildId: origChatId,
+                            eventType: 'staff_delete',
+                            targetUser: { id: 0, first_name: 'Unknown' },
+                            executorModule: `Staff: ${ctx.from.first_name}`,
+                            reason: 'Deleted from review queue',
+                            isGlobal: false
+                        });
+                    }
                 } catch (e) {
                     await ctx.answerCallbackQuery("❌ Errore eliminazione: " + e.message);
                 }

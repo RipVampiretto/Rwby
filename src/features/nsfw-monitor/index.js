@@ -456,11 +456,14 @@ Categories:
 
 async function executeAction(ctx, action, reason, type) {
     const user = ctx.from;
+
+    // Determine eventType based on action
+    const eventType = action === 'ban' ? 'nsfw_ban' : 'nsfw_delete';
+
     const logParams = {
         guildId: ctx.chat.id,
-        eventType: 'nsfw_detect',
+        eventType: eventType,
         targetUser: user,
-        executorAdmin: null,
         reason: `NSFW (${type}): ${reason}`,
         isGlobal: (action === 'ban')
     };
@@ -473,6 +476,7 @@ async function executeAction(ctx, action, reason, type) {
         }
 
         await safeDelete(ctx, 'nsfw-monitor');
+        if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
     }
     else if (action === 'ban') {
         // Forward original media to Parliament BEFORE deleting

@@ -443,12 +443,14 @@ async function handleViolation(ctx, config, result) {
     const user = ctx.from;
     const trigger = `AI: ${category.toUpperCase()} (${Math.round(result.confidence * 100)}%)`;
 
+    // Determine eventType based on action
+    const eventType = action === 'ban' ? 'ai_ban' : 'ai_delete';
+
     // Log intent
     const logParams = {
         guildId: ctx.chat.id,
-        eventType: 'ai_action',
+        eventType: eventType,
         targetUser: user,
-        executorAdmin: null,
         reason: `${trigger} - ${result.reason}`,
         isGlobal: (action === 'ban')
     };

@@ -286,17 +286,21 @@ function escapeRegExp(string) {
 
 async function executeAction(ctx, action, keyword, fullText) {
     const user = ctx.from;
+
+    // Determine eventType based on action
+    const eventType = action === 'ban' ? 'keyword_ban' : 'keyword_delete';
+
     const logParams = {
         guildId: ctx.chat.id,
-        eventType: 'word_filter',
+        eventType: eventType,
         targetUser: user,
-        executorAdmin: null,
         reason: `Keyword: ${keyword}`,
         isGlobal: (action === 'ban')
     };
 
     if (action === 'delete') {
         await safeDelete(ctx, 'keyword-monitor');
+        if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
     }
     else if (action === 'ban') {
         await safeDelete(ctx, 'keyword-monitor');
@@ -317,7 +321,6 @@ async function executeAction(ctx, action, keyword, fullText) {
                 });
             }
 
-            logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
     }
