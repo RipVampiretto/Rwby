@@ -152,6 +152,11 @@ function register(bot, database) {
         const config = db.getGuildConfig(ctx.chat.id);
         if (!config.edit_monitor_enabled) return next();
 
+        // Tier bypass check
+        const tierBypass = config.edit_tier_bypass ?? 2;
+        const userTier = userReputation.getUserTier(ctx.from.id, ctx.chat.id);
+        if (userTier >= tierBypass) return next();
+
         await processEdit(ctx, config);
         await next();
     });
@@ -176,8 +181,6 @@ function register(bot, database) {
 
         if (data === "edt_toggle") {
             db.updateGuildConfig(ctx.chat.id, { edit_monitor_enabled: config.edit_monitor_enabled ? 0 : 1 });
-        } else if (data === "edt_lock") {
-            db.updateGuildConfig(ctx.chat.id, { edit_lock_tier0: config.edit_lock_tier0 ? 0 : 1 });
         } else if (data === "edt_thr") {
             let thr = config.edit_similarity_threshold || 0.5;
             thr = thr >= 0.9 ? 0.1 : thr + 0.1;
@@ -190,10 +193,15 @@ function register(bot, database) {
             db.updateGuildConfig(ctx.chat.id, { edit_link_injection_action: nextAct });
         } else if (data === "edt_act_gen") {
             const acts = ['delete', 'ban', 'report_only'];
-            let cur = config.edit_abuse_action || 'delete';
-            if (!acts.includes(cur)) cur = 'delete';
+            let cur = config.edit_abuse_action || 'report_only';
+            if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             db.updateGuildConfig(ctx.chat.id, { edit_abuse_action: nextAct });
+        } else if (data === "edt_tier") {
+            // Cycle through 0, 1, 2, 3
+            const current = config.edit_tier_bypass ?? 2;
+            const next = (current + 1) % 4;
+            db.updateGuildConfig(ctx.chat.id, { edit_tier_bypass: next });
         }
 
         await sendConfigUI(ctx, true, fromSettings);
@@ -220,22 +228,6 @@ function saveSnapshot(message) {
 
 async function processEdit(ctx, config) {
     const editedMsg = ctx.editedMessage;
-
-    // Tier 0 Lock Check
-    if (config.edit_lock_tier0) {
-        // We need current tier. Middleware only runs on new messages? 
-        // edited_message updates usually don't run regular middleware stack in some setups or are separate.
-        // Assuming we need to fetch tier.
-        const tier = userReputation.getUserTier(editedMsg.from.id, editedMsg.chat.id);
-        if (tier === 0) {
-            // Delete and warn
-            try {
-                await ctx.deleteMessage();
-                // Maybe warn?
-            } catch (e) { }
-            return;
-        }
-    }
 
     // Retrieve snapshot
     const snapshot = db.getDb().prepare('SELECT * FROM message_snapshots WHERE message_id = ? AND chat_id = ?').get(editedMsg.message_id, editedMsg.chat.id);
@@ -366,21 +358,21 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const enabled = config.edit_monitor_enabled ? '✅ ON' : '❌ OFF';
     const lockT0 = config.edit_lock_tier0 ? '✅ ON' : '❌ OFF';
     const thr = (config.edit_similarity_threshold || 0.5) * 100;
-    const actInj = (config.edit_link_injection_action || 'ban').toUpperCase();
-    const actGen = (config.edit_abuse_action || 'delete').toUpperCase();
+    const actInj = (config.edit_link_injection_action || 'report_only').toUpperCase().replace('_', ' ');
+    const actGen = (config.edit_abuse_action || 'report_only').toUpperCase().replace('_', ' ');
+    const tierBypass = config.edit_tier_bypass ?? 2;
 
     const text = `✏️ **ANTI-EDIT**\n\n` +
         `Controlla se qualcuno modifica i messaggi vecchi per inserire link o truffe.\n` +
         `Protegge lo storico della chat.\n\n` +
         `ℹ️ **Info:**\n` +
         `• Blocca l'inserimento di link nascosti dopo l'invio\n` +
-        `• Impedisce di cambiare completamente il senso di una frase\n` +
-        `• I nuovi utenti non possono modificare per sicurezza\n\n` +
+        `• Impedisce di cambiare completamente il senso di una frase\n\n` +
         `Stato: ${enabled}\n` +
-        `Novizi Bloccati: ${lockT0}\n` +
+        `Bypass da Tier: ${tierBypass}+\n` +
         `Sensibilità: ${thr}%\n` +
-        `Azione (Link): ${actInj}\n` +
-        `Azione (Abuso): ${actGen}`;
+        `Azione (Link Inj): ${actInj}\n` +
+        `Azione (Altro): ${actGen}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -388,10 +380,11 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `✏️ Monitor: ${enabled}`, callback_data: "edt_toggle" }, { text: `🔒 Lock T0: ${lockT0}`, callback_data: "edt_lock" }],
+            [{ text: `✏️ Monitor: ${enabled}`, callback_data: "edt_toggle" }],
+            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "edt_tier" }],
             [{ text: `📊 Soglia: ${thr}%`, callback_data: "edt_thr" }],
-            [{ text: `🔗 Inj Act: ${actInj}`, callback_data: "edt_act_inj" }],
-            [{ text: `👮 Abuse Act: ${actGen}`, callback_data: "edt_act_gen" }],
+            [{ text: `🔗 Link Inj: ${actInj}`, callback_data: "edt_act_inj" }],
+            [{ text: `👮 Altro: ${actGen}`, callback_data: "edt_act_gen" }],
             [closeBtn]
         ]
     };
