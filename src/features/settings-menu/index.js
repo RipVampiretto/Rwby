@@ -63,42 +63,38 @@ async function sendMainMenu(ctx, isEdit = false) {
 
     const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
 
-    // Layout: 2 columns
+    // Layout: 2 columns, logically grouped
     const keyboard = {
         inline_keyboard: [
+            // === MODERATION ===
             [
-                // { text: t('settings.buttons.antispam'), callback_data: "set_goto:antispam" }, // DISABLED
-                { text: t('settings.buttons.aimod'), callback_data: "set_goto:aimod" }
+                { text: `${t('settings.buttons.aimod')}`, callback_data: "set_goto:aimod" },
+                { text: `${t('settings.buttons.nsfw')}`, callback_data: "set_goto:nsfw" }
             ],
             [
-                { text: t('settings.buttons.antiedit'), callback_data: "set_goto:antiedit" },
-                // { text: t('settings.buttons.profiler'), callback_data: "set_goto:profiler" } // DISABLED
+                { text: `${t('settings.buttons.lang')}`, callback_data: "set_goto:lang" },
+                { text: `${t('settings.buttons.badwords')}`, callback_data: "set_goto:badwords" }
             ],
             [
-                { text: t('settings.buttons.badwords'), callback_data: "set_goto:badwords" },
-                { text: t('settings.buttons.lang'), callback_data: "set_goto:lang" }
+                { text: `${t('settings.buttons.links')}`, callback_data: "set_goto:links" },
+                { text: `${t('settings.buttons.modals')}`, callback_data: "set_goto:modals" }
+            ],
+            // === COMMUNITY ===
+            [
+                { text: `${t('settings.buttons.voteban')}`, callback_data: "set_goto:voteban" },
+                { text: `${t('settings.buttons.antiedit')}`, callback_data: "set_goto:antiedit" }
+            ],
+            // === ADMIN ===
+            [
+                { text: `${t('settings.buttons.staff')}`, callback_data: "set_goto:staff" },
+                { text: `${t('settings.buttons.logger')}`, callback_data: "set_goto:logger" }
+            ],
+            // === SETTINGS ===
+            [
+                { text: `${t('settings.buttons.ui_language')}`, callback_data: "set_goto:ui_lang" }
             ],
             [
-                { text: t('settings.buttons.links'), callback_data: "set_goto:links" },
-                { text: t('settings.buttons.nsfw'), callback_data: "set_goto:nsfw" }
-            ],
-            [
-                // { text: t('settings.buttons.visual'), callback_data: "set_goto:visual" }, // DISABLED TEMPORARILY
-                { text: t('settings.buttons.voteban'), callback_data: "set_goto:voteban" }
-            ],
-            [
-                { text: t('settings.buttons.logger'), callback_data: "set_goto:logger" },
-                { text: t('settings.buttons.staff'), callback_data: "set_goto:staff" }
-            ],
-            [
-                // { text: t('settings.buttons.intel'), callback_data: "set_goto:intel" }, // DISABLED TEMPORARILY
-                { text: t('settings.buttons.modals'), callback_data: "set_goto:modals" }
-            ],
-            [
-                { text: t('settings.buttons.ui_language'), callback_data: "set_goto:ui_lang" }
-            ],
-            [
-                { text: t('settings.main.close'), callback_data: "settings_close" }
+                { text: `${t('settings.main.close')}`, callback_data: "settings_close" }
             ]
         ]
     };
