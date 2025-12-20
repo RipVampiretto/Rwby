@@ -91,7 +91,7 @@ async function sendMainMenu(ctx, isEdit = false) {
                 { text: t('settings.buttons.staff'), callback_data: "set_goto:staff" }
             ],
             [
-                { text: t('settings.buttons.intel'), callback_data: "set_goto:intel" },
+                // { text: t('settings.buttons.intel'), callback_data: "set_goto:intel" }, // DISABLED TEMPORARILY
                 { text: t('settings.buttons.modals'), callback_data: "set_goto:modals" }
             ],
             [
