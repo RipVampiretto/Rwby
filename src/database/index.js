@@ -112,13 +112,13 @@ function createTables() {
             lang_action TEXT DEFAULT 'delete',
             lang_min_chars INTEGER DEFAULT 20,
             lang_confidence_threshold REAL DEFAULT 0.8,
-            lang_tier_bypass INTEGER DEFAULT 1,
+            lang_tier_bypass INTEGER DEFAULT 2,
             
             -- Link Monitor
             link_enabled INTEGER DEFAULT 1,
             link_action_unknown TEXT DEFAULT 'report_only',
             link_sync_global INTEGER DEFAULT 1,
-            link_tier_bypass INTEGER DEFAULT 1,
+            link_tier_bypass INTEGER DEFAULT 2,
             
             -- NSFW Monitor
             nsfw_enabled INTEGER DEFAULT 1,
@@ -129,7 +129,7 @@ function createTables() {
             nsfw_check_gifs INTEGER DEFAULT 1,
             nsfw_check_stickers INTEGER DEFAULT 0,
             nsfw_frame_interval_percent INTEGER DEFAULT 5,
-            nsfw_tier_bypass INTEGER DEFAULT 3,
+            nsfw_tier_bypass INTEGER DEFAULT 2,
             
             -- Visual Immune System
             visual_enabled INTEGER DEFAULT 1,

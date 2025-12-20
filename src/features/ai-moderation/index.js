@@ -254,9 +254,11 @@ function register(bot, database) {
         } else if (data === "ai_ctx") {
             db.updateGuildConfig(ctx.chat.id, { ai_context_aware: config.ai_context_aware ? 0 : 1 });
         } else if (data === "ai_tier_bypass") {
-            // Cycle through 0, 1, 2, 3
+            // Cycle through 0, 1, 2, 3, -1 (OFF)
             const current = config.ai_tier_bypass ?? 2;
-            const next = (current + 1) % 4;
+            const tiers = [0, 1, 2, 3, -1];
+            const idx = tiers.indexOf(current);
+            const next = tiers[(idx + 1) % tiers.length];
             db.updateGuildConfig(ctx.chat.id, { ai_tier_bypass: next });
         } else if (data === "ai_threshold") {
             let thr = config.ai_confidence_threshold || 0.75;
@@ -312,7 +314,7 @@ async function analyzeMessage(ctx) {
 
     // Check tier bypass
     const tierBypass = config.ai_tier_bypass ?? 2;
-    if (ctx.userTier !== undefined && ctx.userTier >= tierBypass) {
+    if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) {
         return { triggered: false, result: null };
     }
 
@@ -519,7 +521,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         inline_keyboard: [
             [{ text: `🤖 AI: ${enabled}`, callback_data: "ai_toggle" }],
             [{ text: `🎭 Contesto: ${config.ai_context_aware ? 'ON' : 'OFF'}`, callback_data: "ai_ctx" }],
-            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "ai_tier_bypass" }],
+            [{ text: `👤 Bypass Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "ai_tier_bypass" }],
             [{ text: "⚙️ Configura Azioni Categoria", callback_data: "ai_config_cats" }],
             [{ text: `📊 Soglia: ${thr}%`, callback_data: "ai_threshold" }],
             [closeBtn]

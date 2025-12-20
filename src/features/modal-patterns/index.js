@@ -69,8 +69,9 @@ function register(bot, database) {
         const config = db.getGuildConfig(ctx.chat.id);
         if (!config.modal_enabled) return next();
 
-        // Tier bypass
-        if (ctx.userTier !== undefined && ctx.userTier >= (config.modal_tier_bypass || 2)) return next();
+        // Tier bypass (-1 = OFF, no bypass)
+        const tierBypass = config.modal_tier_bypass ?? 2;
+        if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
 
         // Check against modals
         const match = await checkMessageAgainstModals(ctx, config);
@@ -108,9 +109,11 @@ function register(bot, database) {
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
         } else if (data === "mdl_tier") {
-            const tiers = [0, 1, 2, 3];
+            // Cycle through 0, 1, 2, 3, -1 (OFF)
+            const tiers = [0, 1, 2, 3, -1];
             let cur = config.modal_tier_bypass ?? 2;
-            const nextTier = tiers[(tiers.indexOf(cur) + 1) % tiers.length];
+            const idx = tiers.indexOf(cur);
+            const nextTier = tiers[(idx + 1) % tiers.length];
             db.updateGuildConfig(ctx.chat.id, { modal_tier_bypass: nextTier });
         } else if (data === "mdl_list") {
             // Show modal list sub-menu
@@ -375,7 +378,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         inline_keyboard: [
             [{ text: `📋 Modals: ${enabled}`, callback_data: "mdl_toggle" }],
             [{ text: `👮 Azione: ${action}`, callback_data: "mdl_act" }],
-            [{ text: `🎖️ Bypass Tier: ${tierBypass}+`, callback_data: "mdl_tier" }],
+            [{ text: `🎖️ Bypass Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "mdl_tier" }],
             [{ text: `📝 Gestisci Modali (${activeCount})`, callback_data: "mdl_list" }],
             [closeBtn]
         ]

@@ -155,7 +155,7 @@ function register(bot, database) {
         // Tier bypass check
         const tierBypass = config.edit_tier_bypass ?? 2;
         const userTier = userReputation.getUserTier(ctx.from.id, ctx.chat.id);
-        if (userTier >= tierBypass) return next();
+        if (tierBypass !== -1 && userTier >= tierBypass) return next();
 
         await processEdit(ctx, config);
         await next();
@@ -198,9 +198,11 @@ function register(bot, database) {
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             db.updateGuildConfig(ctx.chat.id, { edit_abuse_action: nextAct });
         } else if (data === "edt_tier") {
-            // Cycle through 0, 1, 2, 3
+            // Cycle through 0, 1, 2, 3, -1 (OFF)
             const current = config.edit_tier_bypass ?? 2;
-            const next = (current + 1) % 4;
+            const tiers = [0, 1, 2, 3, -1];
+            const idx = tiers.indexOf(current);
+            const next = tiers[(idx + 1) % tiers.length];
             db.updateGuildConfig(ctx.chat.id, { edit_tier_bypass: next });
         }
 
@@ -369,7 +371,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         `• Blocca l'inserimento di link nascosti dopo l'invio\n` +
         `• Impedisce di cambiare completamente il senso di una frase\n\n` +
         `Stato: ${enabled}\n` +
-        `Bypass da Tier: ${tierBypass}+\n` +
+        `Bypass da Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
         `Sensibilità: ${thr}%\n` +
         `Azione (Link Inj): ${actInj}\n` +
         `Azione (Altro): ${actGen}`;

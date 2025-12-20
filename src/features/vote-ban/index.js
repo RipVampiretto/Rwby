@@ -44,8 +44,10 @@ function register(bot, database) {
         if (!config.voteban_enabled) return; // Silently ignore if disabled
 
         // Check tiers
-        if (ctx.userTier < (config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 0)) {
-            return ctx.reply(`❌ Devi essere almeno T${config.voteban_initiator_tier || 0} per segnalare.`);
+        // Check tiers
+        const reqTier = config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 0;
+        if (reqTier !== -1 && ctx.userTier < reqTier) {
+            return ctx.reply(`❌ Devi essere almeno T${reqTier} per segnalare.`);
         }
 
         // Check if target is admin (immune)
@@ -125,10 +127,12 @@ function register(bot, database) {
                 const next = durations[(idx + 1) % durations.length];
                 db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: next });
             } else if (data === "vb_tier") {
-                // Cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0
+                // Cycle: 0 -> 1 -> 2 -> 3 -> -1 (OFF) -> 0
                 let val = config.voteban_initiator_tier || 0;
-                val = val >= 3 ? 0 : val + 1;
-                db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: val });
+                const tiers = [0, 1, 2, 3, -1];
+                const idx = tiers.indexOf(val);
+                const next = tiers[(idx + 1) % tiers.length];
+                db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: next });
             }
             await sendConfigUI(ctx, true, fromSettings);
             return;
@@ -203,18 +207,15 @@ function register(bot, database) {
 
 function getVoteMessage(target, initiator, reason, yes, no, required, expires, voteId, noExpiry = false) {
     const minLeft = Math.max(0, Math.ceil((new Date(expires) - Date.now()) / 60000));
-    const timeDisplay = noExpiry ? '♾️ Illimitato' : `${minLeft} min`;
+    const timeDisplay = noExpiry ? '♾️' : `${minLeft} min`;
     const text = `⚖️ **TRIBUNALE DELLA COMMUNITY**\n\n` +
-        `👤 **Accusato:** @${target.username || target.first_name}\n` +
-        `📝 **Motivo:** ${reason}\n\n` +
-        `📊 **Voti:** ${yes}/${required} (N: ${no})\n` +
+        ` **Voti:** ${yes}/${required} (N: ${no})\n` +
         `⏱️ **Scade:** ${timeDisplay}\n\n` +
         `_La community decide se bannare questo utente._`;
 
     const k = {
         inline_keyboard: [
-            [{ text: `✅ Banna (${yes})`, callback_data: `vote_yes_${voteId}` }, { text: `🛡️ Salva (${no})`, callback_data: `vote_no_${voteId}` }],
-            [{ text: "🔨 FORZA BAN", callback_data: `vote_ban_${voteId}` }, { text: "🕊️ PERDONA", callback_data: `vote_pardon_${voteId}` }]
+            [{ text: `✅ Banna (${yes})`, callback_data: `vote_yes_${voteId}` }, { text: `🛡️ Salva (${no})`, callback_data: `vote_no_${voteId}` }]
         ]
     };
     return { text, keyboard: k };
@@ -272,7 +273,8 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const thr = config.voteban_threshold || 5;
     const dur = config.voteban_duration_minutes;
     const durDisplay = dur === 0 ? '❌ Disattivato' : `${dur} min`;
-    const tier = config.voteban_initiator_tier || 0;
+    const tier = config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 0;
+    const tierDisplay = tier === -1 ? 'OFF' : `T${tier}`;
 
     const text = `⚖️ **VOTE BAN**\n\n` +
         `Permette alla community di decidere se bannare un utente.\n` +
@@ -282,7 +284,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         `Stato: ${enabled}\n` +
         `Voti Richiesti: ${thr}\n` +
         `Timer: ${durDisplay}\n` +
-        `Tier Initiator: T${tier}`;
+        `Tier Initiator: ${tierDisplay}`;
 
     const closeBtn = fromSettings
         ? { text: "🔙 Back", callback_data: "settings_main" }
@@ -293,7 +295,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
             [{ text: `⚖️ Sys: ${enabled}`, callback_data: "vb_toggle" }],
             [{ text: `📊 Soglia: ${thr}`, callback_data: "vb_thr" }],
             [{ text: `⏱️ Durata: ${durDisplay}`, callback_data: "vb_dur" }],
-            [{ text: `🏷️ Tier: T${tier}`, callback_data: "vb_tier" }],
+            [{ text: `🏷️ Tier: ${tierDisplay}`, callback_data: "vb_tier" }],
             [closeBtn]
         ]
     };

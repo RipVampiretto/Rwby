@@ -69,7 +69,7 @@ function register(bot, database) {
 
         // Tier bypass check
         const tierBypass = config.lang_tier_bypass ?? 2;
-        if (ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
+        if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
 
         // Min length check
         if (ctx.message.text.length < (config.lang_min_chars || 20)) return next();
@@ -105,9 +105,11 @@ function register(bot, database) {
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
         } else if (data === "lng_tier") {
-            // Cycle through 0, 1, 2, 3
+            // Cycle through 0, 1, 2, 3, -1 (OFF)
             const current = config.lang_tier_bypass ?? 2;
-            const next = (current + 1) % 4;
+            const tiers = [0, 1, 2, 3, -1];
+            const idx = tiers.indexOf(current);
+            const next = tiers[(idx + 1) % tiers.length];
             db.updateGuildConfig(ctx.chat.id, { lang_tier_bypass: next });
         } else if (data.startsWith("lng_set:")) {
             const lang = data.split(':')[1];
@@ -271,6 +273,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const enabled = config.lang_enabled ? '✅ ON' : '❌ OFF';
     const action = (config.lang_action || 'delete').toUpperCase().replace(/_/g, ' ');
     const tierBypass = config.lang_tier_bypass ?? 2;
+    const tierDisplay = tierBypass === -1 ? 'OFF' : `${tierBypass}+`;
 
     let allowed = [];
     try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }
@@ -283,7 +286,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         `• Ignora messaggi molto brevi\n` +
         `• Invia avviso auto-eliminante all'utente\n\n` +
         `Stato: ${enabled}\n` +
-        `Bypass da Tier: ${tierBypass}+\n` +
+        `Bypass da Tier: ${tierDisplay}\n` +
         `Azione: ${action}\n` +
         `Permesse: ${allowed.join(', ').toUpperCase()}`;
 
@@ -306,7 +309,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     const keyboard = {
         inline_keyboard: [
             [{ text: `🌐 Filtro: ${enabled}`, callback_data: "lng_toggle" }],
-            [{ text: `👤 Bypass Tier: ${tierBypass}+`, callback_data: "lng_tier" }],
+            [{ text: `👤 Bypass Tier: ${tierDisplay}`, callback_data: "lng_tier" }],
             ...langRows,
             [{ text: `👮 Azione: ${action}`, callback_data: "lng_act" }],
             [closeBtn]

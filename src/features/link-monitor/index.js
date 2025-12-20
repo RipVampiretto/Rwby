@@ -53,7 +53,7 @@ function register(bot, database) {
 
         // Tier bypass check
         const tierBypass = config.link_tier_bypass ?? 2;
-        if (ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
+        if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
 
         const links = extractLinks(ctx.message.text);
         if (links.length === 0) return next();
@@ -85,9 +85,11 @@ function register(bot, database) {
         } else if (data === "lnk_sync") {
             db.updateGuildConfig(ctx.chat.id, { link_sync_global: config.link_sync_global ? 0 : 1 });
         } else if (data === "lnk_tier") {
-            // Cycle through 0, 1, 2, 3
+            // Cycle through 0, 1, 2, 3, -1 (OFF)
             const current = config.link_tier_bypass ?? 2;
-            const next = (current + 1) % 4;
+            const tiers = [0, 1, 2, 3, -1];
+            const idx = tiers.indexOf(current);
+            const next = tiers[(idx + 1) % tiers.length];
             db.updateGuildConfig(ctx.chat.id, { link_tier_bypass: next });
         }
 
@@ -193,7 +195,7 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
         `• Blocca siti di phishing e truffe note\n` +
         `• Link sconosciuti vengono segnalati ai SuperAdmin\n\n` +
         `Stato: ${enabled}\n` +
-        `Bypass da Tier: ${tierBypass}+\n` +
+        `Bypass da Tier: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
         `Sync Globale: ${sync}`;
 
     const closeBtn = fromSettings
