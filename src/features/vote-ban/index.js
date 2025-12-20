@@ -76,15 +76,19 @@ function register(bot, database) {
             ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year 
             : new Date(Date.now() + duration * 60000).toISOString();
 
+        // Initial state: Initiator votes "yes" automatically
+        const voters = [{ id: ctx.from.id, name: ctx.from.first_name, vote: 'yes' }];
+
         // Insert vote first to get vote_id
-        const insertResult = db.getDb().prepare(`INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
-            target.id, target.username || target.first_name, ctx.chat.id, ctx.from.id, reason, required, expires, new Date().toISOString()
+        const insertResult = db.getDb().prepare(`INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at, votes_yes, voters)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+            target.id, target.username || target.first_name, ctx.chat.id, ctx.from.id, reason, required, expires, new Date().toISOString(),
+            1, JSON.stringify(voters)
         );
         const voteId = insertResult.lastInsertRowid;
 
-        // Create Vote Message with the actual voteId
-        const { text: msgText, keyboard } = getVoteMessage(target, ctx.from, reason, 0, 0, required, expires, voteId, duration === 0);
+        // Create Vote Message with the actual voteId (starts with 1 yes)
+        const { text: msgText, keyboard } = getVoteMessage(target, ctx.from, reason, 1, 0, required, expires, voteId, duration === 0);
         const msg = await ctx.reply(msgText, { reply_markup: keyboard, parse_mode: 'Markdown' });
 
         // Update the vote with the poll_message_id
@@ -172,12 +176,17 @@ function register(bot, database) {
                 return ctx.answerCallbackQuery("Tier insufficiente per votare.");
             }
 
-            let voters = JSON.parse(vote.voters || '[]');
-            if (voters.includes(ctx.from.id)) {
+            let voters = [];
+            try { voters = JSON.parse(vote.voters || '[]'); } catch (e) { }
+
+            // Handle legacy format (array of IDs) or new format (array of objects)
+            const hasVoted = voters.some(v => (typeof v === 'object' ? v.id : v) === ctx.from.id);
+
+            if (hasVoted) {
                 return ctx.answerCallbackQuery("Hai già votato!");
             }
 
-            voters.push(ctx.from.id);
+            voters.push({ id: ctx.from.id, name: ctx.from.first_name, vote: action });
             let yes = vote.votes_yes;
             let no = vote.votes_no;
 
@@ -189,14 +198,21 @@ function register(bot, database) {
 
             await ctx.answerCallbackQuery("Voto registrato.");
 
-            // Check threshold
-            if (yes >= vote.required_votes) {
-                await finalizeVote(ctx, vote, "passed", null);
+            // Check threshold (Quorum: Total Votes >= Required)
+            if ((yes + no) >= vote.required_votes) {
+                // Update vote object with latest state for logging
+                vote.votes_yes = yes;
+                vote.votes_no = no;
+                vote.voters = JSON.stringify(voters);
+
+                // Determine outcome: Majority wins (Tie = Save)
+                const outcome = yes > no ? 'passed' : 'failed';
+                await finalizeVote(ctx, vote, outcome, null);
             } else {
                 // Update UI
                 const { text, keyboard } = getVoteMessage(
                     { id: vote.target_user_id, username: vote.target_username },
-                    { id: vote.initiated_by, username: "..." }, // initiator info not critical for update
+                    { id: vote.initiated_by, username: "..." },
                     vote.reason, yes, no, vote.required_votes, vote.expires_at, voteId, false
                 );
                 try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
@@ -211,7 +227,7 @@ function getVoteMessage(target, initiator, reason, yes, no, required, expires, v
     const minLeft = Math.max(0, Math.ceil((new Date(expires) - Date.now()) / 60000));
     const timeDisplay = noExpiry ? '♾️' : `${minLeft} min`;
     const text = `⚖️ **TRIBUNALE DELLA COMMUNITY**\n\n` +
-        ` **Voti:** ${yes}/${required} (N: ${no})\n` +
+        `📊 **Voti:** ${yes + no}/${required}\n` +
         `⏱️ **Scade:** ${timeDisplay}\n\n` +
         `_La community decide se bannare questo utente._`;
 
@@ -226,9 +242,22 @@ function getVoteMessage(target, initiator, reason, yes, no, required, expires, v
 async function finalizeVote(ctx, vote, status, admin) {
     db.getDb().prepare("UPDATE active_votes SET status = ? WHERE vote_id = ?").run(status, vote.vote_id);
 
+    // Prepare log details
+    let details = '';
+    try {
+        const voters = JSON.parse(vote.voters || '[]');
+        const fmt = (v) => `<a href="tg://user?id=${v.id}">${v.name}</a>`;
+        const yes = voters.filter(v => typeof v === 'object' && v.vote === 'yes').map(fmt).join(', ') || 'Nessuno';
+        const no = voters.filter(v => typeof v === 'object' && v.vote === 'no').map(fmt).join(', ') || 'Nessuno';
+        details = `\n\n✅ Favorevoli: ${yes}\n🛡️ Contrari: ${no}`;
+    } catch (e) { }
+
     if (status === 'passed' || status === 'forced_ban') {
         try {
             await ctx.editMessageText(`⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è stato BANNATO.\nEsito: ${status === 'forced_ban' ? 'Forzato da Admin' : 'Votazione Conclusa'}`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
+
+            // Delete after 1 minute
+            setTimeout(() => { try { ctx.deleteMessage().catch(() => { }); } catch (e) { } }, 60000);
 
             await ctx.banChatMember(vote.target_user_id);
             userReputation.modifyFlux(vote.target_user_id, vote.chat_id, -200, 'vote_ban');
@@ -239,24 +268,44 @@ async function finalizeVote(ctx, vote, status, admin) {
                     guildName: ctx.chat.title,
                     guildId: ctx.chat.id,
                     reason: `Vote Ban: ${vote.reason}`,
-                    evidence: `Votes: ${vote.votes_yes} Yes / ${vote.votes_no} No`,
+                    evidence: `Votes: ${vote.votes_yes} Yes / ${vote.votes_no} No${details}`,
                     flux: userReputation.getLocalFlux(vote.target_user_id, vote.chat_id)
-                });
-            }
-
-            if (adminLogger.getLogEvent()) {
-                adminLogger.getLogEvent()({
-                    guildId: vote.chat_id,
-                    eventType: 'ban',
-                    targetUser: { id: vote.target_user_id, username: vote.target_username },
-                    executorAdmin: admin,
-                    reason: `Vote Ban (${status})`,
-                    isGlobal: true
                 });
             }
         } catch (e) { logger.error(`[vote-ban] Finalize vote error: ${e.message}`); }
     } else {
         await ctx.editMessageText(`⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO.\nEsito: ${status === 'pardon' ? 'Graziato da Admin' : 'Votazione Fallita'}`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
+
+        // Delete after 1 minute
+        setTimeout(() => { try { ctx.deleteMessage().catch(() => { }); } catch (e) { } }, 60000);
+    }
+
+    // Log outcome (Ban or Save)
+    // We use 'vote_ban' as eventType to ensure visibility if logging is enabled for this module,
+    // but the reason clearly states the outcome.
+
+    let tags = ['#VOTE_BAN'];
+    if (status === 'passed' || status === 'forced_ban') tags.push('#BAN');
+    else tags.push('#SAVE');
+
+    if (adminLogger.getLogEvent()) {
+        let cause = 'Votazione Conclusa';
+        if (status === 'forced_ban') cause = 'Forzato da Admin';
+        else if (status === 'pardon') cause = 'Graziato da Admin';
+        else if (status === 'failed') cause = 'Votazione Fallita';
+
+        let cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
+
+        adminLogger.getLogEvent()({
+            guildId: vote.chat_id,
+            guildName: ctx.chat.title,
+            eventType: 'vote_ban',
+            customTags: tags,
+            targetUser: { id: vote.target_user_id, username: vote.target_username, first_name: vote.target_username },
+            executorAdmin: admin,
+            reason: `Esito: ${cause}${cleanReason}${details}`,
+            isGlobal: true
+        });
     }
 }
 
@@ -271,8 +320,48 @@ async function cleanupVotes() {
         const expires = new Date(vote.expires_at);
         if (expires < now) {
             db.getDb().prepare("UPDATE active_votes SET status = 'expired' WHERE vote_id = ?").run(vote.vote_id);
+
+            // Prepare details for log and message
+            let details = '';
             try {
-                await _botInstance.api.editMessageText(vote.chat_id, vote.poll_message_id, "⚖️ **VOTAZIONE SCADUTA**\nTempo terminato.", { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
+                const voters = JSON.parse(vote.voters || '[]');
+                const fmt = (v) => `<a href="tg://user?id=${v.id}">${v.name}</a>`;
+                const yes = voters.filter(v => typeof v === 'object' && v.vote === 'yes').map(fmt).join(', ') || 'Nessuno';
+                const no = voters.filter(v => typeof v === 'object' && v.vote === 'no').map(fmt).join(', ') || 'Nessuno';
+                details = `\n\n✅ Favorevoli: ${yes}\n🛡️ Contrari: ${no}`;
+            } catch (e) { }
+
+
+
+            // Get Guild Name
+            let guildName = 'Unknown Group';
+            try { const chat = await _botInstance.api.getChat(vote.chat_id); guildName = chat.title; } catch (e) { }
+
+            // Log outcome
+            if (adminLogger.getLogEvent()) {
+                let cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
+
+                adminLogger.getLogEvent()({
+                    guildId: vote.chat_id,
+                    guildName: guildName,
+                    eventType: 'vote_ban',
+                    customTags: ['#VOTE_BAN', '#EXPIRED'],
+                    targetUser: { id: vote.target_user_id, username: vote.target_username, first_name: vote.target_username },
+                    executorAdmin: { first_name: 'System (Expired)' },
+                    reason: `Esito: Scaduto (Voti Insufficienti)${cleanReason}${details}`,
+                    isGlobal: true
+                });
+            }
+
+            try {
+                await _botInstance.api.editMessageText(vote.chat_id, vote.poll_message_id,
+                    `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO (Scaduto).\nEsito: Votazione Scaduta`,
+                    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
+                );
+                // Delete after 1 minute
+                setTimeout(() => {
+                    try { _botInstance.api.deleteMessage(vote.chat_id, vote.poll_message_id).catch(() => { }); } catch (e) { }
+                }, 60000);
             } catch (e) { }
             continue;
         }

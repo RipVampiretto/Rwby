@@ -61,7 +61,10 @@ function register(bot, database) {
             'keyword_ban': 'Keyword Monitor',
             'staff_ban': 'Staff Coordination',
             'staff_delete': 'Staff Coordination',
-            'staff_dismiss': 'Staff Coordination'
+            'staff_ban': 'Staff Coordination',
+            'staff_delete': 'Staff Coordination',
+            'staff_dismiss': 'Staff Coordination',
+            'vote_ban': 'Vote Ban'
         };
         const moduleName = executorModule || moduleMap[eventType] || 'System';
 
@@ -72,7 +75,8 @@ function register(bot, database) {
             'link_delete': '🔗',
             'ai_delete': '🤖', 'ai_ban': '🤖',
             'keyword_delete': '🔤', 'keyword_ban': '🔤',
-            'staff_ban': '👮', 'staff_delete': '👮', 'staff_dismiss': '👮'
+            'staff_ban': '👮', 'staff_delete': '👮', 'staff_dismiss': '👮',
+            'vote_ban': '⚖️'
         };
         const emoji = emojiMap[eventType] || 'ℹ️';
 
@@ -97,7 +101,9 @@ function register(bot, database) {
             ? `<a href="https://t.me/${targetUser.username}">${targetUser.first_name}</a>`
             : `<a href="tg://user?id=${targetUser?.id}">${targetUser?.first_name || 'Unknown'}</a>`;
 
-        let text = `${emoji} #${moduleTag} #${actionType}\n`;
+        // Tags
+        let tags = params.customTags || [`#${moduleTag}`, `#${actionType}`];
+        let text = `${emoji} ${tags.join(' ')}\n`;
         text += `• Di: ${botLink} [${botInfo.id}]\n`;
         text += `• A: ${userLink} [${targetUser?.id}]\n`;
         text += `• Gruppo: ${guildName || config.guild_name || guildId} [${guildId}]\n`;
@@ -248,6 +254,8 @@ async function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
             [{ text: "🔗 Link", callback_data: "log_noop" }, { text: has('link_delete'), callback_data: "log_t:link_delete" }, { text: "—", callback_data: "log_noop" }],
             // AI
             [{ text: "🤖 AI", callback_data: "log_noop" }, { text: has('ai_delete'), callback_data: "log_t:ai_delete" }, { text: has('ai_ban'), callback_data: "log_t:ai_ban" }],
+            // Vote
+            [{ text: "⚖️ Vote", callback_data: "log_noop" }, { text: "—", callback_data: "log_noop" }, { text: has('vote_ban'), callback_data: "log_t:vote_ban" }],
             // Keyword
             [{ text: "🔤 Keys", callback_data: "log_noop" }, { text: has('keyword_delete'), callback_data: "log_t:keyword_delete" }, { text: has('keyword_ban'), callback_data: "log_t:keyword_ban" }],
             // Staff header
