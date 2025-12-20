@@ -8,8 +8,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const enabled = config.edit_monitor_enabled ? t('common.on') : t('common.off');
     const lockT0 = config.edit_lock_tier0 ? t('common.on') : t('common.off');
     const thr = (config.edit_similarity_threshold || 0.5) * 100;
-    const actInj = (config.edit_link_injection_action || 'report_only').toUpperCase().replace('_', ' ');
-    const actGen = (config.edit_abuse_action || 'report_only').toUpperCase().replace('_', ' ');
+    const actInj = i18n.formatAction(guildId, config.edit_link_injection_action || 'report_only');
+    const actGen = i18n.formatAction(guildId, config.edit_abuse_action || 'report_only');
     const tierBypass = config.edit_tier_bypass ?? 2;
 
     const text = `${t('antiedit.title')}\n\n` +

@@ -1,10 +1,26 @@
 const i18n = require('../../i18n');
 
+let db = null;
+
+function setDb(database) {
+    db = database;
+}
+
 async function sendMainMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
+    // Check if staff group is configured
+    const config = db ? db.getGuildConfig(guildId) : null;
+    const hasStaffGroup = config && config.staff_group_id;
+
+    // Build warning text
+    let warningText = `\n\n${t('settings.main.warning_disabled')}`;
+    if (!hasStaffGroup) {
+        warningText += `\n${t('settings.main.warning_staff')}`;
+    }
+
+    const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}${warningText}`;
 
     // Layout: 2 columns, ordered by checking flow (first to last)
     // Flow: Blacklist → Link → Language → Keyword → Modals → NSFW → Anti-Edit → Vote Ban → AI (last)
@@ -86,6 +102,7 @@ async function sendLanguageUI(ctx) {
 }
 
 module.exports = {
+    setDb,
     sendMainMenu,
     sendLanguageUI
 };

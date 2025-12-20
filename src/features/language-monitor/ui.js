@@ -7,7 +7,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     const config = db.getGuildConfig(guildId);
     const enabled = config.lang_enabled ? t('common.on') : t('common.off');
-    const action = (config.lang_action || 'delete').toUpperCase().replace(/_/g, ' ');
+    const action = i18n.formatAction(guildId, config.lang_action || 'delete');
     const tierBypass = config.lang_tier_bypass ?? 2;
     const tierDisplay = tierBypass === -1 ? 'OFF' : `${tierBypass}+`;
 

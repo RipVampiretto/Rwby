@@ -9,7 +9,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     const config = db.getGuildConfig(guildId);
     const enabled = config.modal_enabled ? t('common.on') : t('common.off');
-    const action = (config.modal_action || 'report_only').toUpperCase().replace(/_/g, ' ');
+    const action = i18n.formatAction(guildId, config.modal_action || 'report_only');
     const tierBypass = config.modal_tier_bypass ?? 2;
 
     // Count active modals for this group's languages
@@ -26,8 +26,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('modals.description')}\n\n` +
         `ℹ️ **${t('modals.info_title')}:**\n` +
         `• ${t('modals.info_1', { count: activeCount })}\n` +
-        `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n` +
-        `• ${t('modals.info_3')}\n\n` +
+        `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n\n` +
         `${t('modals.status')}: ${enabled}\n` +
         `${t('modals.action')}: ${action}\n` +
         `${t('modals.tier_bypass')}: ${tierBypass}+`;

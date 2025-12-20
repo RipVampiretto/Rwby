@@ -18,6 +18,8 @@
         "main": {
             "title": "⚙️ **PANNELLO DI CONTROLLO**",
             "subtitle": "Scegli cosa vuoi configurare:",
+            "warning_disabled": "⚠️ Di default tutti i moduli sono disattivati. Attiva solo quelli che ti servono.",
+            "warning_staff": "⚠️ Per usare SEGNALA devi prima configurare il Gruppo Staff.",
             "close": "❌ Chiudi"
         },
         "buttons": {
@@ -108,7 +110,6 @@
         "info_title": "Come funziona",
         "info_1": "Pattern caricati per le tue lingue: {count}",
         "info_2": "Lingue del gruppo: {languages}",
-        "info_3": "Solo i SuperAdmin possono gestire i pattern globali",
         "status": "Stato",
         "action": "Azione",
         "tier_bypass": "Bypass Tier",
@@ -144,7 +145,7 @@
         "description": "Blocca i messaggi scritti in lingue non permesse. Utile per gruppi che vogliono mantenere una sola lingua.",
         "info_title": "Come funziona",
         "info_1": "Ignora automaticamente messaggi molto corti (emoji, ok, ecc.)",
-        "info_2": "Manda un avviso gentile all'utente prima di eliminare",
+        "info_2": "Manda un avviso all'utente prima di eliminare",
         "status": "Stato",
         "tier_bypass": "Bypass da Tier",
         "action": "Azione",

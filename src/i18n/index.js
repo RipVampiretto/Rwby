@@ -162,6 +162,29 @@ function middleware() {
     };
 }
 
+/**
+ * Format action value to localized UI text
+ * Converts: report_only -> "Segnala", delete -> "Elimina", ban -> "Banna"
+ * @param {number} guildId - Guild ID for language
+ * @param {string} action - Action value (report_only, delete, ban)
+ * @returns {string} Localized action text
+ */
+function formatAction(guildId, action) {
+    const actionKey = (action || 'report_only').toLowerCase().replace(/_/g, '');
+    const actionMap = {
+        'reportonly': 'common.report_only',
+        'report_only': 'common.report_only',
+        'delete': 'common.delete',
+        'ban': 'common.ban'
+    };
+
+    const key = actionMap[actionKey] || actionMap[(action || '').toLowerCase()];
+    if (key) {
+        return t(guildId, key);
+    }
+    return action || 'Report';
+}
+
 module.exports = {
     init,
     t,
@@ -169,6 +192,7 @@ module.exports = {
     setLanguage,
     getAvailableLanguages,
     getDefaultLanguage,
-    middleware
+    middleware,
+    formatAction
 };
 

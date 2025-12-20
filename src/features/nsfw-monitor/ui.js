@@ -11,7 +11,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     try {
         const config = db.getGuildConfig(guildId);
         const enabled = config.nsfw_enabled ? t('common.on') : t('common.off');
-        const action = (config.nsfw_action || 'delete').toUpperCase();
+        const action = i18n.formatAction(guildId, config.nsfw_action || 'delete');
         const thr = (config.nsfw_threshold || 0.7) * 100;
         const tierBypass = config.nsfw_tier_bypass ?? 2;
 

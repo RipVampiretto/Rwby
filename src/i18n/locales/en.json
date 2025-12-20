@@ -18,6 +18,8 @@
         "main": {
             "title": "⚙️ **CONTROL PANEL**",
             "subtitle": "Choose what you want to configure:",
+            "warning_disabled": "⚠️ All modules are disabled by default. Enable only those you need.",
+            "warning_staff": "⚠️ To use REPORT mode you must first configure the Staff Group.",
             "close": "❌ Close"
         },
         "buttons": {
@@ -108,7 +110,6 @@
         "info_title": "How it works",
         "info_1": "Patterns loaded for your languages: {count}",
         "info_2": "Group languages: {languages}",
-        "info_3": "Only SuperAdmins can manage global patterns",
         "status": "Status",
         "action": "Action",
         "tier_bypass": "Tier Bypass",
@@ -144,7 +145,7 @@
         "description": "Blocks messages written in languages not allowed. Useful for groups that want to maintain a single language.",
         "info_title": "How it works",
         "info_1": "Automatically ignores very short messages (emojis, ok, etc.)",
-        "info_2": "Sends a polite warning to the user before deleting",
+        "info_2": "Sends a warning to the user before deleting",
         "status": "Status",
         "tier_bypass": "Tier Bypass",
         "action": "Action",

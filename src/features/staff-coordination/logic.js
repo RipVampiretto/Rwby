@@ -2,11 +2,15 @@ const logger = require('../../middlewares/logger');
 const adminLogger = require('../admin-logger');
 
 async function reviewQueue(bot, db, params) {
-    if (!db) return logger.error("[staff-coordination] DB not initialized in reviewQueue");
+    if (!db) {
+        logger.error("[staff-coordination] DB not initialized in reviewQueue");
+        return false;
+    }
 
     const config = db.getGuildConfig(params.guildId);
     if (!config || !config.staff_group_id) {
-        return logger.debug(`[staff-coordination] No staff group set for guild ${params.guildId}`);
+        logger.debug(`[staff-coordination] No staff group set for guild ${params.guildId} - report_only disabled`);
+        return false;
     }
 
     let threadId = null;
@@ -44,8 +48,10 @@ async function reviewQueue(bot, db, params) {
             parse_mode: 'Markdown',
             reply_markup: keyboard
         });
+        return true;
     } else {
         logger.error("[staff-coordination] Bot instance not available in reviewQueue");
+        return false;
     }
 }
 
