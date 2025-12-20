@@ -160,7 +160,14 @@ function detectNonLatinScript(text) {
 }
 
 async function processLanguage(ctx, config) {
-    const text = ctx.message.text;
+    const rawText = ctx.message.text;
+
+    // Strip URLs and @mentions before analyzing - franc gets confused by them
+    const text = rawText
+        .replace(/https?:\/\/[^\s]+/g, '')  // Remove URLs
+        .replace(/@\w+/g, '')                // Remove @mentions
+        .trim();
+    if (text.length === 0) return; // Only URL/mentions, no text to analyze
 
     let allowed = ['it', 'en']; // Default
     try {
@@ -175,7 +182,7 @@ async function processLanguage(ctx, config) {
         return;
     }
 
-    // Second check: franc for longer texts (needs min_chars)
+    // Second check: franc for longer texts (needs min_chars after stripping URLs)
     if (!franc || text.length < (config.lang_min_chars || 20)) return;
 
     const detectedIso3 = franc(text);
@@ -200,7 +207,10 @@ async function executeAction(ctx, config, detected, allowed) {
     };
 
     // Get translation for this guild's UI language
-    const userName = user.username ? `@${user.username}` : `[${user.first_name}](tg://user?id=${user.id})`;
+    // Use HTML format for user mention to work properly
+    const userName = user.username
+        ? `@${user.username}`
+        : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
     const warningMsg = i18n.t(ctx.chat.id, 'language_monitor.warning', {
         languages: allowed.join(', ').toUpperCase(),
         user: userName
@@ -210,7 +220,7 @@ async function executeAction(ctx, config, detected, allowed) {
         await safeDelete(ctx, 'language-monitor');
         // Send warning and auto-delete after 1 minute
         try {
-            const warning = await ctx.reply(warningMsg);
+            const warning = await ctx.reply(warningMsg, { parse_mode: 'HTML' });
             setTimeout(async () => {
                 try { await ctx.api.deleteMessage(ctx.chat.id, warning.message_id); } catch (e) { }
             }, 60000); // 1 minute

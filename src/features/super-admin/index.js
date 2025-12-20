@@ -372,7 +372,29 @@ function register(bot, database) {
             };
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
         }
-        else if (data.startsWith("bl_link")) {
+        else if (data.startsWith("bl_link:")) {
+            // bl_link:domain:guildId:messageId
+            const parts = data.split(':');
+            const domain = parts[1] || '';
+            const origGuildId = parts[2] ? parseInt(parts[2]) : null;
+            const origMsgId = parts[3] ? parseInt(parts[3]) : null;
+
+            WIZARD_SESSIONS.set(ctx.from.id, {
+                type: 'link',
+                startedAt: Date.now(),
+                prefillDomain: domain,
+                origGuildId: origGuildId,
+                origMsgId: origMsgId
+            });
+            await ctx.answerCallbackQuery("Wizard avviato");
+            const prefillText = domain ? `\n\nDominio suggerito: \`${domain}\`` : '';
+            await ctx.reply(`🔗 **AGGIUNGI DOMINIO ALLA BLACKLIST**\n\nScrivi il dominio da bloccare (es. \`scam-site.com\`):${prefillText}`, {
+                reply_markup: { force_reply: true },
+                parse_mode: 'Markdown'
+            });
+        }
+        else if (data === "bl_link") {
+            // Legacy call without domain info
             WIZARD_SESSIONS.set(ctx.from.id, {
                 type: 'link',
                 startedAt: Date.now()
@@ -416,22 +438,23 @@ function register(bot, database) {
         try {
             if (type === 'link') {
                 // Add to global link blacklist
-                // Type in intel_data: 'global_blacklist_domain' (based on implicit convention, checking other modules might be good but let's stick to this or 'blacklist_domain' with proper metadata)
-                // Actually intel-network says: 'blacklist_domain' in comment
-
-                // Let's use 'blacklist_domain' as per intel-network comments, ensuring it's marked as global appropriately
-                // Intel data table: type, value, status='active'
-
                 db.getDb().prepare(`
                     INSERT INTO intel_data (type, value, added_by_user, status)
                     VALUES ('blacklist_domain', ?, ?, 'active')
                 `).run(input, userId);
 
                 await ctx.reply(`✅ Dominio \`${input}\` aggiunto alla Blacklist Globale.`);
-
-                // Notify logic: Creating a bill/report isn't needed if SuperAdmin does it directly? 
-                // Or maybe we want to log it?
                 logger.info(`[super-admin] Global domain blacklist added: ${input} by ${userId}`);
+
+                // Delete original message if we have the info
+                if (session.origGuildId && session.origMsgId) {
+                    try {
+                        await _botInstance.api.deleteMessage(session.origGuildId, session.origMsgId);
+                        logger.info(`[super-admin] Deleted original message ${session.origMsgId} in ${session.origGuildId}`);
+                    } catch (e) {
+                        logger.warn(`[super-admin] Could not delete original message: ${e.message}`);
+                    }
+                }
             }
             else if (type === 'word') {
                 db.getDb().prepare(`
@@ -931,7 +954,7 @@ async function forwardLinkCheck(info) {
             try { threadId = JSON.parse(globalConfig.global_topics).link_checks; } catch (e) { }
         }
 
-        const { user, guildName, guildId, link } = info;
+        const { user, guildName, guildId, messageId, link } = info;
 
         // Extract domain safely
         let domain = link;
@@ -942,14 +965,17 @@ async function forwardLinkCheck(info) {
         const userName = user.username ? `@${user.username}` : user.first_name;
 
         const text = `🔗 **LINK CHECK**\n\n` +
-            `🏛️ Gruppo: ${guildName}\n` +
+            `🏦️ Gruppo: ${guildName}\n` +
             `👤 Utente: ${user.first_name} (${userName}) (ID: \`${user.id}\`)\n` +
             `🔗 Link: \`${link}\`\n\n` +
             `⚠️ Dominio sconosciuto o sospetto.`;
 
+        // Pass guildId and messageId in blacklist callback for deletion
+        const blCallback = messageId ? `bl_link:${domain}:${guildId}:${messageId}` : `bl_link:${domain}`;
+
         const keyboard = {
             inline_keyboard: [
-                [{ text: "✅ Whitelist", callback_data: `gwl_add:${domain}` }, { text: "🚫 Blacklist", callback_data: `bl_link` }],
+                [{ text: "✅ Whitelist", callback_data: `gwl_add:${domain}` }, { text: "🚫 Blacklist", callback_data: blCallback }],
                 [{ text: "🗑️ Ignora", callback_data: `g_close` }]
             ]
         };
