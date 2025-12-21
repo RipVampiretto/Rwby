@@ -12,7 +12,25 @@
         "threshold": "Sensibilità",
         "delete": "ELIMINA",
         "ban": "BANNA",
-        "report_only": "SEGNALA"
+        "report_only": "SEGNALA",
+        "start": {
+            "greeting": "👋 Ciao! Sono il bot di moderazione per gruppi Telegram.",
+            "instructions": "Usa /help per vedere i comandi disponibili o /settings per il pannello di controllo completo."
+        },
+        "help": {
+            "title": "📚 **COMANDI DISPONIBILI**",
+            "user_section": "👤 **Comandi Utente:**",
+            "myflux_cmd": "/myflux - Vedi il tuo livello di fiducia (Flux) e privilegi",
+            "tier_cmd": "/tier - Informazioni sul sistema di fiducia",
+            "admin_section": "⚙️ **Comandi Admin:**",
+            "settings_cmd": "/settings - 🎛️ **PANNELLO DI CONTROLLO**",
+            "settings_desc": "Il pannello centralizzato per gestire tutti i moduli di moderazione del gruppo. Configura filtri, azioni automatiche, regole e molto altro in un'unica interfaccia intuitiva.",
+            "other_commands": "🛠️ **Altri Comandi:**",
+            "setstaff_cmd": "/setstaff \u003cid\u003e - Imposta il gruppo staff per le segnalazioni",
+            "notes_cmd": "/notes \u003cid\u003e - Visualizza/aggiungi note su un utente",
+            "moderation_section": "👮 **Moderazione Collettiva:**",
+            "voteban_trigger": "Rispondi a un messaggio con @admin, !admin, .admin o /admin per avviare una votazione di ban"
+        }
     },
     "settings": {
         "main": {
@@ -249,16 +267,16 @@
         },
         "tiers": {
             "0": {
-                "name": "Nuovo Arrivato"
+                "name": "Tier 0"
             },
             "1": {
-                "name": "Membro"
+                "name": "Tier 1"
             },
             "2": {
-                "name": "Fidato"
+                "name": "Tier 2"
             },
             "3": {
-                "name": "Veterano"
+                "name": "Tier 3"
             }
         },
         "details": {
@@ -298,11 +316,15 @@
             }
         },
         "flux_calc": {
-            "title": "📊 **COME FUNZIONANO I PUNTI**",
-            "earning": "**Guadagnare punti:**\n• +1 per ogni messaggio (massimo 1 ogni 6 minuti)\n• +1 al giorno come bonus passivo",
-            "losing": "**Perdere punti:**\n• -50 per spam\n• -50 per link pericolosi\n• -100 per contenuti vietati",
-            "thresholds": "**Livelli:**\n• Nuovo Arrivato: 0 - 99\n• Membro: 100 - 299\n• Fidato: 300 - 499\n• Veterano: 500+",
-            "cap": "I punti sono limitati a ±1000."
+            "title": "📊 **COME FUNZIONANO I PUNTI FIDUCIA (FLUX)**",
+            "intro": "Il Flux è un punteggio che riflette quanto sei attivo e affidabile nel gruppo. Più punti accumuli, più privilegi ottieni (configurabili dagli admin).",
+            "earning_title": "**💚 Guadagnare Punti:**",
+            "earning_items": "• +1 per ogni messaggio (massimo 1 ogni 6 minuti)\n• +1 al giorno come bonus passivo",
+            "losing_title": "**💔 Perdere Punti:**",
+            "losing_items": "• -50 per comportamento spam\n• -50 per link pericolosi\n• -100 per contenuti vietati",
+            "thresholds_title": "**🎯 Livelli di Fiducia:**",
+            "thresholds_items": "• **Tier 0:** 0 - 99 punti\n• **Tier 1:** 100 - 299 punti\n• **Tier 2:** 300 - 499 punti\n• **Tier 3:** 500+ punti",
+            "cap": "ℹ️ **Nota:** I punti sono limitati tra -1000 e +1000. Le restrizioni e privilegi sono configurabili dagli admin del gruppo."
         },
         "my_flux": {
             "title": "📊 **I TUOI PUNTI**",

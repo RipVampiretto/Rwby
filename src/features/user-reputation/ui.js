@@ -1,41 +1,8 @@
 const logic = require('./logic');
 
 async function sendTierMenu(ctx, isEdit = false) {
-    const userTier = ctx.userTier ?? 0;
-    const userInfo = logic.TIER_INFO[userTier];
-    const tierName = ctx.t(`tier_system.tiers.${userTier}.name`);
-
-    const text = `${ctx.t('tier_system.menu.title')}\n\n` +
-        `${ctx.t('tier_system.menu.your_rank', { emoji: userInfo.emoji, name: tierName })}\n\n` +
-        `${ctx.t('tier_system.menu.select_tier')}`;
-
-    const getBtnText = (tier, emoji) => {
-        const arrow = userTier === tier ? '▶ ' : '';
-        // Need to fetch name from ctx.t for button labels as well
-        const name = ctx.t(`tier_system.tiers.${tier}.name`);
-        return `${arrow}${emoji} ${name}`;
-    };
-
-    const keyboard = {
-        inline_keyboard: [
-            [
-                { text: getBtnText(0, '🌑'), callback_data: "tier_detail:0" },
-                { text: getBtnText(1, '⚔️'), callback_data: "tier_detail:1" }
-            ],
-            [
-                { text: getBtnText(2, '🛡️'), callback_data: "tier_detail:2" },
-                { text: getBtnText(3, '👁️'), callback_data: "tier_detail:3" }
-            ],
-            [{ text: ctx.t('tier_system.menu.buttons.flux_works'), callback_data: "tier_flux_calc" }],
-            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
-        ]
-    };
-
-    if (isEdit) {
-        try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
-    } else {
-        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
-    }
+    // Simplified: directly show Flux calculation info
+    await sendFluxCalculation(ctx, isEdit);
 }
 
 async function sendTierDetail(ctx, tierNum) {
@@ -72,24 +39,26 @@ async function sendTierDetail(ctx, tierNum) {
     } catch (e) { }
 }
 
-async function sendFluxCalculation(ctx) {
+async function sendFluxCalculation(ctx, isEdit = false) {
     const p = 'tier_system.flux_calc.';
     const text = `${ctx.t(p + 'title')}\n\n` +
-        `${ctx.t(p + 'earning')}\n\n` +
-        `${ctx.t(p + 'losing')}\n\n` +
-        `${ctx.t(p + 'thresholds')}\n\n` +
+        `${ctx.t(p + 'intro')}\n\n` +
+        `${ctx.t(p + 'earning_title')}\n${ctx.t(p + 'earning_items')}\n\n` +
+        `${ctx.t(p + 'losing_title')}\n${ctx.t(p + 'losing_items')}\n\n` +
+        `${ctx.t(p + 'thresholds_title')}\n${ctx.t(p + 'thresholds_items')}\n\n` +
         `${ctx.t(p + 'cap')}`;
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: ctx.t('tier_system.menu.buttons.back'), callback_data: "tier_menu" }],
             [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
         ]
     };
 
-    try {
-        await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard });
-    } catch (e) { }
+    if (isEdit) {
+        try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+    }
 }
 
 async function sendMyFlux(ctx, db) {

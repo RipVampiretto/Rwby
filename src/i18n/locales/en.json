@@ -12,7 +12,25 @@
         "threshold": "Sensitivity",
         "delete": "DELETE",
         "ban": "BAN",
-        "report_only": "REPORT"
+        "report_only": "REPORT",
+        "start": {
+            "greeting": "👋 Hello! I'm the moderation bot for Telegram groups.",
+            "instructions": "Use /help to see available commands or /settings for the complete control panel."
+        },
+        "help": {
+            "title": "📚 **AVAILABLE COMMANDS**",
+            "user_section": "👤 **User Commands:**",
+            "myflux_cmd": "/myflux - View your trust level (Flux) and privileges",
+            "tier_cmd": "/tier - Information about the trust system",
+            "admin_section": "⚙️ **Admin Commands:**",
+            "settings_cmd": "/settings - 🎛️ **CONTROL PANEL**",
+            "settings_desc": "The centralized panel to manage all group moderation modules. Configure filters, automatic actions, rules and much more in a single intuitive interface.",
+            "other_commands": "🛠️ **Other Commands:**",
+            "setstaff_cmd": "/setstaff \u003cid\u003e - Set the staff group for reports",
+            "notes_cmd": "/notes \u003cid\u003e - View/add notes about a user",
+            "moderation_section": "👮 **Collective Moderation:**",
+            "voteban_trigger": "Reply to a message with @admin, !admin, .admin or /admin to start a ban vote"
+        }
     },
     "settings": {
         "main": {
@@ -249,16 +267,16 @@
         },
         "tiers": {
             "0": {
-                "name": "Newcomer"
+                "name": "Tier 0"
             },
             "1": {
-                "name": "Member"
+                "name": "Tier 1"
             },
             "2": {
-                "name": "Trusted"
+                "name": "Tier 2"
             },
             "3": {
-                "name": "Veteran"
+                "name": "Tier 3"
             }
         },
         "details": {
@@ -298,11 +316,15 @@
             }
         },
         "flux_calc": {
-            "title": "📊 **HOW POINTS WORK**",
-            "earning": "**Earning points:**\n• +1 for each message (max 1 every 6 minutes)\n• +1 per day as a passive bonus",
-            "losing": "**Losing points:**\n• -50 for spam\n• -50 for dangerous links\n• -100 for forbidden content",
-            "thresholds": "**Levels:**\n• Newcomer: 0 - 99\n• Member: 100 - 299\n• Trusted: 300 - 499\n• Veteran: 500+",
-            "cap": "Points are capped at ±1000."
+            "title": "📊 **HOW TRUST POINTS (FLUX) WORK**",
+            "intro": "Flux is a score that reflects how active and reliable you are in the group. The more points you earn, the more privileges you get (configurable by admins).",
+            "earning_title": "**💚 Earning Points:**",
+            "earning_items": "• +1 for each message (max 1 every 6 minutes)\n• +1 per day as passive bonus",
+            "losing_title": "**💔 Losing Points:**",
+            "losing_items": "• -50 for spam behavior\n• -50 for dangerous links\n• -100 for forbidden content",
+            "thresholds_title": "**🎯 Trust Levels:**",
+            "thresholds_items": "• **Tier 0:** 0 - 99 points\n• **Tier 1:** 100 - 299 points\n• **Tier 2:** 300 - 499 points\n• **Tier 3:** 500+ points",
+            "cap": "ℹ️ **Note:** Points are capped between -1000 and +1000. Restrictions and privileges are configurable by group admins."
         },
         "my_flux": {
             "title": "📊 **YOUR POINTS**",

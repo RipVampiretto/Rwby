@@ -105,17 +105,20 @@ voteBan.register(bot, db);
 welcomeSystem.register(bot, db);
 settingsMenu.register(bot, db);
 
-// ============================================================================
 // COMMANDS - Basic
 // ============================================================================
-// COMMANDS - Basic
-// ============================================================================
-bot.command("start", (ctx) => ctx.reply(
-    "👋 Ciao! Sono il bot di moderazione.\n\n" +
-    "Uso /help per vedere i comandi disponibili o /settings per il pannello di controllo."
-));
+bot.command("start", (ctx) => {
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+    ctx.reply(
+        `${t('common.start.greeting')}\n\n` +
+        `${t('common.start.instructions')}`
+    );
+});
 
 bot.command("help", async (ctx) => {
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
     let isGroupAdmin = false;
 
     // Check admin status if in group
@@ -124,35 +127,27 @@ bot.command("help", async (ctx) => {
             const member = await ctx.getChatMember(ctx.from.id);
             isGroupAdmin = ['creator', 'administrator'].includes(member.status);
         } catch (e) { }
-    } else {
-        // In private chat, maybe checking if user is "global admin" (super admin)?
-        // For now, let's assume private chat users don't see group config commands 
-        // unless we later implement a "select group" flow.
-        // BUT, if they are testing in private, they might want to see commands.
-        // For safety, only show admin commands in groups where they are admin.
     }
 
-    let helpText = "📚 **COMANDI DISPONIBILI**\n\n";
-    helpText += "👤 **Utente:**\n";
-    helpText += "/myflux - Vedi il tuo Flux e Tier\n\n";
+    let helpText = `${t('common.help.title')}\n\n`;
+
+    // User commands
+    helpText += `${t('common.help.user_section')}\n`;
+    helpText += `${t('common.help.myflux_cmd')}\n`;
+    helpText += `${t('common.help.tier_cmd')}\n\n`;
 
     if (isGroupAdmin) {
-        helpText += "⚙️ **Admin Gruppo:**\n";
-        helpText += "/settings - 🎛️ **PANNELLO DI CONTROLLO** (Consigliato)\n\n";
-        helpText += "Comandi diretti:\n";
-        helpText += "/spamconfig - Configura anti-spam\n";
-        helpText += "/aiconfig - Configura AI moderation\n";
-        helpText += "/editconfig - Configura anti-edit abuse\n";
-        helpText += "/profilerconfig - Configura profiler nuovi utenti\n";
-        helpText += "/wordconfig - Gestisci parole vietate\n";
-        helpText += "/langconfig - Configura filtro lingua\n";
-        helpText += "/linkconfig - Gestisci whitelist/blacklist link\n";
-        helpText += "/nsfwconfig - Configura filtro NSFW\n";
-        helpText += "/visualconfig - Configura visual immune system\n";
-        helpText += "/voteconfig - Configura vote ban\n";
-        helpText += "/logconfig - Configura logging\n";
-        helpText += "/setstaff - Imposta gruppo staff\n";
-        helpText += "/intel - Status Intel Network\n";
+        // Admin commands
+        helpText += `${t('common.help.admin_section')}\n`;
+        helpText += `${t('common.help.settings_cmd')}\n`;
+        helpText += `${t('common.help.settings_desc')}\n\n`;
+
+        helpText += `${t('common.help.other_commands')}\n`;
+        helpText += `${t('common.help.setstaff_cmd')}\n`;
+        helpText += `${t('common.help.notes_cmd')}\n\n`;
+
+        helpText += `${t('common.help.moderation_section')}\n`;
+        helpText += `${t('common.help.voteban_trigger')}\n`;
     }
 
     await ctx.reply(helpText, { parse_mode: "Markdown" });
