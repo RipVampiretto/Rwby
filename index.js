@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Bot, GrammyError, HttpError } = require("grammy");
 const logger = require("./src/middlewares/logger");
+const features = require("./src/utils/feature-flags");
 
 // ============================================================================
 // INIT BOT
@@ -105,39 +106,98 @@ bot.use(adminOnlyCallbacks());
 // 3. Action handlers - Gestiscono risposte
 
 // Core: Reputation (deve essere primo per calcolare tier)
-userReputation.register(bot, db);
+// Core: Reputation (deve essere primo per calcolare tier)
+// Core: Reputation (deve essere primo per calcolare tier)
+if (features.isEnabled('userReputation')) {
+    userReputation.init(db);
+    userReputation.register(bot);
+}
 
 // Core: CAS Ban (early intercept for banned users)
-casBan.register(bot, db);
+if (features.isEnabled('casBan')) {
+    casBan.init(db);
+    casBan.register(bot);
+}
 
 // Core: Staff & Admin
-adminLogger.register(bot, db);
-staffCoordination.register(bot, db);
-superAdmin.register(bot, db);
-// intelNetwork.register(bot, db); // DISABLED
+if (features.isEnabled('adminLogger')) {
+    adminLogger.init(db);
+    adminLogger.register(bot);
+}
+if (features.isEnabled('staffCoordination')) {
+    staffCoordination.init(db);
+    staffCoordination.register(bot);
+}
+if (features.isEnabled('superAdmin')) {
+    superAdmin.init(db);
+    superAdmin.register(bot);
+}
+if (features.isEnabled('intelNetwork')) {
+    intelNetwork.init(db);
+    intelNetwork.register(bot);
+}
 
 // Detection: Text-based
-// antiSpam.register(bot, db); // DISABLED
-keywordMonitor.register(bot, db);
-languageMonitor.register(bot, db);
-modalPatterns.register(bot, db);
-linkMonitor.register(bot, db);
-aiModeration.register(bot, db);
+if (features.isEnabled('antiSpam')) {
+    antiSpam.init(db);
+    antiSpam.register(bot);
+}
+if (features.isEnabled('keywordMonitor')) {
+    keywordMonitor.init(db);
+    keywordMonitor.register(bot);
+}
+if (features.isEnabled('languageMonitor')) {
+    languageMonitor.init(db);
+    languageMonitor.register(bot);
+}
+if (features.isEnabled('modalPatterns')) {
+    modalPatterns.init(db);
+    modalPatterns.register(bot);
+}
+if (features.isEnabled('linkMonitor')) {
+    linkMonitor.init(db);
+    linkMonitor.register(bot);
+}
+if (features.isEnabled('aiModeration')) {
+    aiModeration.init(db);
+    aiModeration.register(bot);
+}
 
 // Detection: Edit monitoring
-antiEditAbuse.register(bot, db);
+if (features.isEnabled('antiEditAbuse')) {
+    antiEditAbuse.init(db);
+    antiEditAbuse.register(bot);
+}
 
 // Detection: New user profiling
-// intelligentProfiler.register(bot, db); // DISABLED
+if (features.isEnabled('intelligentProfiler')) {
+    intelligentProfiler.init(db);
+    intelligentProfiler.register(bot);
+}
 
 // Detection: Media
-nsfwMonitor.register(bot, db);
-// visualImmuneSystem.register(bot, db); // DISABLED
+if (features.isEnabled('nsfwMonitor')) {
+    nsfwMonitor.init(db);
+    nsfwMonitor.register(bot);
+}
+if (features.isEnabled('visualImmuneSystem')) {
+    visualImmuneSystem.init(db);
+    visualImmuneSystem.register(bot);
+}
 
 // Community moderation
-voteBan.register(bot, db);
-welcomeSystem.register(bot, db);
-settingsMenu.register(bot, db);
+if (features.isEnabled('voteBan')) {
+    voteBan.init(db);
+    voteBan.register(bot);
+}
+if (features.isEnabled('welcomeSystem')) {
+    welcomeSystem.init(db);
+    welcomeSystem.register(bot);
+}
+if (features.isEnabled('settingsMenu')) {
+    settingsMenu.init(db);
+    settingsMenu.register(bot);
+}
 
 // COMMANDS - Basic
 // ============================================================================

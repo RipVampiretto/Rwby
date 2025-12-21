@@ -7,14 +7,17 @@
 
 const commands = require('./commands');
 const ui = require('./ui');
-const loggerUtil = require('../../middlewares/logger');
+const logger = require('../../middlewares/logger');
 
 let db = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
-    commands.registerCommands(bot, database);
-    loggerUtil.info('[nsfw-monitor] Module registered and ready');
+}
+
+function register(bot) {
+    commands.registerCommands(bot, db);
+    logger.info('[nsfw-monitor] Module registered and ready');
 }
 
 function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
@@ -22,6 +25,7 @@ function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI
 };

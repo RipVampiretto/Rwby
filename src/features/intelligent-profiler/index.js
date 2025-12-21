@@ -6,14 +6,21 @@
 
 const logic = require('./logic');
 const commands = require('./commands');
-const ui = require('./ui');
+const ui = require('./ui');    
 
-function register(bot, database) {
+let db = null;
+
+function init(database) {
+    db = database;
     logic.init(database);
-    commands.registerCommands(bot, database);
+}
+
+function register(bot) {
+    commands.registerCommands(bot, db);
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI: ui.sendConfigUI
 };

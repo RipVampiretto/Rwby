@@ -6,8 +6,11 @@ const logger = require('../../middlewares/logger');
 let db = null;
 let _botInstance = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
+}
+
+function register(bot) {
     _botInstance = bot;
     commands.registerCommands(bot, db);
     logger.info('[staff-coordination] Module registered');
@@ -22,6 +25,7 @@ function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 module.exports = {
+    init,
     register,
     reviewQueue,
     sendConfigUI

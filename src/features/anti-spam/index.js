@@ -9,13 +9,18 @@ const actions = require('./actions');
 const commands = require('./commands');
 const ui = require('./ui');
 
-function register(bot, database) {
+function init(database) {
     stats.init(database);
+}
+
+function register(bot, database) {
+    // actions.init requires bot instance
     actions.init(database, bot);
     commands.registerCommands(bot, database);
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI: ui.sendConfigUI,
     // Utils exported for testing if needed

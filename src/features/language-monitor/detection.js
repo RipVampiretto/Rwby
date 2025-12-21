@@ -1,4 +1,4 @@
-const loggerUtil = require('../../middlewares/logger');
+const logger = require('../../middlewares/logger');
 
 let eld = null;
 let eldReady = false;
@@ -7,9 +7,9 @@ let eldReady = false;
 const eldPromise = import('eld').then(m => {
     eld = m.eld;
     eldReady = true;
-    loggerUtil.info('[language-monitor] ELD library loaded successfully');
+    logger.info('[language-monitor] ELD library loaded successfully');
 }).catch(e => {
-    loggerUtil.error(`[language-monitor] Failed to load ELD: ${e.message}`);
+    logger.error(`[language-monitor] Failed to load ELD: ${e.message}`);
 });
 
 /**

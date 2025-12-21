@@ -10,9 +10,12 @@ const ui = require('./ui');
 
 let db = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
-    commands.registerCommands(bot, database);
+}
+
+function register(bot) {
+    commands.registerCommands(bot, db);
 }
 
 function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
@@ -20,6 +23,7 @@ function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI
 };

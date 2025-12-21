@@ -101,7 +101,9 @@ async function createTables() {
             nsfw_check_gifs BOOLEAN DEFAULT TRUE,
             nsfw_check_stickers BOOLEAN DEFAULT FALSE,
             nsfw_frame_interval_percent INTEGER DEFAULT 5,
+            nsfw_frame_interval_percent INTEGER DEFAULT 5,
             nsfw_tier_bypass INTEGER DEFAULT 2,
+            nsfw_blocked_categories JSONB DEFAULT '["real_nudity","real_sex","hentai","gore","minors"]'::jsonb,
             
             -- Visual Immune System
             visual_enabled BOOLEAN DEFAULT FALSE,
@@ -119,7 +121,12 @@ async function createTables() {
             -- Smart Report System
             report_mode TEXT DEFAULT 'ai_voteban',  -- 'ai_only', 'voteban_only', 'ai_voteban'
             report_ai_fallback TEXT DEFAULT 'voteban',  -- 'voteban', 'report_only' (when AI says safe)
+            report_mode TEXT DEFAULT 'ai_voteban',  -- 'ai_only', 'voteban_only', 'ai_voteban'
+            report_ai_fallback TEXT DEFAULT 'voteban',  -- 'voteban', 'report_only' (when AI says safe)
             report_context_messages INTEGER DEFAULT 10,
+            report_action_scam TEXT DEFAULT 'report_only',
+            report_action_nsfw TEXT DEFAULT 'report_only',
+            report_action_spam TEXT DEFAULT 'report_only',
             
             -- Modal Pattern System
             modal_enabled BOOLEAN DEFAULT FALSE,

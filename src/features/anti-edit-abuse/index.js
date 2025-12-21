@@ -10,13 +10,15 @@ const ui = require('./ui');
 
 let db = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
     // Initialize core (snapshots)
     core.init(database);
+}
 
+function register(bot) {
     // Register commands and listeners
-    commands.registerCommands(bot, database);
+    commands.registerCommands(bot, db);
 }
 
 function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
@@ -24,6 +26,7 @@ function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI
 };

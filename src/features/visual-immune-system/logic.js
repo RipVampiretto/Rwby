@@ -5,7 +5,7 @@ const imghash = require('imghash');
 const { handleCriticalError } = require('../../utils/error-handlers');
 const actions = require('./actions');
 
-const TEMP_DIR = path.join(__dirname, '../../temp_visual');
+const TEMP_DIR = path.join(process.cwd(), 'temp', 'visual');
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });

@@ -1,8 +1,10 @@
-const { query, queryOne } = require('./connection');
+const { query } = require('./connection');
 const logger = require('../middlewares/logger');
 
 /**
  * Run database migrations (PostgreSQL)
+ * NOTE: All main schema definitions are now in schema.js
+ * This file is kept for future schema evolutions.
  */
 async function runMigrations() {
     // Create migrations tracking table if not exists
@@ -14,45 +16,7 @@ async function runMigrations() {
         )
     `);
 
-    const migrations = [
-        // Add migrations here as needed
-        // { name: 'add_some_column', up: async () => { await query('ALTER TABLE...'); } }
-        {
-            name: 'add_nsfw_blocked_categories',
-            up: async () => {
-                await query(`
-                    ALTER TABLE guild_config 
-                    ADD COLUMN IF NOT EXISTS nsfw_blocked_categories JSONB 
-                    DEFAULT '["real_nudity","real_sex","hentai","gore","minors"]'::jsonb
-                `);
-            }
-        },
-        {
-            name: 'add_smart_report_actions',
-            up: async () => {
-                await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_scam TEXT DEFAULT 'report_only'`);
-                await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_nsfw TEXT DEFAULT 'report_only'`);
-                await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_spam TEXT DEFAULT 'report_only'`);
-            }
-        }
-    ];
-
-    for (const migration of migrations) {
-        const existing = await queryOne('SELECT * FROM migrations WHERE name = $1', [migration.name]);
-        if (!existing) {
-            logger.info(`[migrations] Running: ${migration.name}`);
-            try {
-                await migration.up();
-                await query('INSERT INTO migrations (name) VALUES ($1)', [migration.name]);
-                logger.info(`[migrations] Completed: ${migration.name}`);
-            } catch (err) {
-                logger.error(`[migrations] Failed: ${migration.name} - ${err.message}`);
-                throw err;
-            }
-        }
-    }
-
-    logger.info('[migrations] All migrations applied');
+    logger.info('[migrations] Schema is up to date (consolidated)');
 }
 
 module.exports = {

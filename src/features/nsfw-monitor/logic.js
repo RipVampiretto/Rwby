@@ -8,10 +8,10 @@ const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 fluentFfmpeg.setFfmpegPath(ffmpegPath);
 fluentFfmpeg.setFfprobePath(ffprobePath);
 
-const loggerUtil = require('../../middlewares/logger');
+const logger = require('../../middlewares/logger');
 const actions = require('./actions');
 
-const TEMP_DIR = path.join(__dirname, 'temp_nsfw');
+const TEMP_DIR = path.join(process.cwd(), 'temp', 'nsfw');
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -22,7 +22,7 @@ async function processMedia(ctx, config) {
     const userId = ctx.from?.id;
     const startTime = Date.now();
 
-    loggerUtil.info(`[nsfw-monitor] 🔄 Starting processMedia - Chat: ${chatId}, User: ${userId}`);
+    logger.info(`[nsfw-monitor] 🔄 Starting processMedia - Chat: ${chatId}, User: ${userId}`);
 
     let fileId;
     let type = 'photo';
@@ -32,25 +32,25 @@ async function processMedia(ctx, config) {
         const photo = ctx.message.photo[ctx.message.photo.length - 1];
         fileId = photo.file_id;
         fileSize = photo.file_size || 0;
-        loggerUtil.debug(`[nsfw-monitor] 📷 Photo detected - Size: ${fileSize} bytes, Dimensions: ${photo.width}x${photo.height}`);
+        logger.debug(`[nsfw-monitor] 📷 Photo detected - Size: ${fileSize} bytes, Dimensions: ${photo.width}x${photo.height}`);
     } else if (ctx.message.video) {
         fileId = ctx.message.video.file_id;
         type = 'video';
         fileSize = ctx.message.video.file_size || 0;
-        loggerUtil.debug(`[nsfw-monitor] 🎥 Video detected - Size: ${fileSize} bytes, Duration: ${ctx.message.video.duration}s`);
+        logger.debug(`[nsfw-monitor] 🎥 Video detected - Size: ${fileSize} bytes, Duration: ${ctx.message.video.duration}s`);
     } else if (ctx.message.animation) {
         fileId = ctx.message.animation.file_id;
         type = 'gif';
         fileSize = ctx.message.animation.file_size || 0;
-        loggerUtil.debug(`[nsfw-monitor] 🎞️ Animation/GIF detected - Size: ${fileSize} bytes`);
+        logger.debug(`[nsfw-monitor] 🎞️ Animation/GIF detected - Size: ${fileSize} bytes`);
     } else if (ctx.message.document) {
         fileId = ctx.message.document.file_id;
         fileSize = ctx.message.document.file_size || 0;
-        loggerUtil.debug(`[nsfw-monitor] 📄 Document detected - MIME: ${ctx.message.document.mime_type}, Size: ${fileSize} bytes`);
+        logger.debug(`[nsfw-monitor] 📄 Document detected - MIME: ${ctx.message.document.mime_type}, Size: ${fileSize} bytes`);
         if (ctx.message.document.mime_type?.startsWith('video')) type = 'video';
         else if (ctx.message.document.mime_type?.startsWith('image')) type = 'photo';
         else {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Document is not image/video, skipping`);
+            logger.debug(`[nsfw-monitor] ⏭️ Document is not image/video, skipping`);
             return;
         }
     } else if (ctx.message.sticker) {
@@ -58,11 +58,11 @@ async function processMedia(ctx, config) {
         const sticker = ctx.message.sticker;
         fileId = sticker.file_id;
         fileSize = sticker.file_size || 0;
-        loggerUtil.debug(`[nsfw-monitor] 🪙 Sticker detected - Size: ${fileSize} bytes, is_video: ${sticker.is_video}`);
+        logger.debug(`[nsfw-monitor] 🪙 Sticker detected - Size: ${fileSize} bytes, is_video: ${sticker.is_video}`);
         type = sticker.is_video ? 'gif' : 'photo';
     }
 
-    loggerUtil.info(`[nsfw-monitor] 📁 Getting file info from Telegram - FileId: ${fileId?.substring(0, 20)}...`);
+    logger.info(`[nsfw-monitor] 📁 Getting file info from Telegram - FileId: ${fileId?.substring(0, 20)}...`);
 
     // SAFETY CHECK: Skip large files or long videos BEFORE getFile to avoid API errors
     // If using local API server, limit is 2000MB via HTTP, otherwise 20MB
@@ -71,12 +71,12 @@ async function processMedia(ctx, config) {
     const MAX_VIDEO_DURATION = 300; // 5 minutes
 
     if (fileSize > MAX_FILE_SIZE) {
-        loggerUtil.warn(`[nsfw-monitor] ⚠️ File too large (${(fileSize / 1024 / 1024).toFixed(2)} MB), limit is ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)} MB. Skipping analysis.`);
+        logger.warn(`[nsfw-monitor] ⚠️ File too large (${(fileSize / 1024 / 1024).toFixed(2)} MB), limit is ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)} MB. Skipping analysis.`);
         return;
     }
 
     if (type === 'video' && ctx.message.video?.duration > MAX_VIDEO_DURATION) {
-        loggerUtil.warn(`[nsfw-monitor] ⚠️ Video too long (${(ctx.message.video.duration / 60).toFixed(1)} min), skipping analysis`);
+        logger.warn(`[nsfw-monitor] ⚠️ Video too long (${(ctx.message.video.duration / 60).toFixed(1)} min), skipping analysis`);
         return;
     }
 
@@ -86,15 +86,15 @@ async function processMedia(ctx, config) {
     } catch (err) {
         // Handle "file is too big" error specifically
         if (err.description && err.description.includes('file is too big')) {
-            loggerUtil.warn(`[nsfw-monitor] ⚠️ Telegram API Error: File is too big to download via Cloud API. Consider using Local API Server.`);
+            logger.warn(`[nsfw-monitor] ⚠️ Telegram API Error: File is too big to download via Cloud API. Consider using Local API Server.`);
             return;
         }
         // Re-throw other errors or log and return
-        loggerUtil.error(`[nsfw-monitor] ❌ Error getting file info: ${err.message}`);
+        logger.error(`[nsfw-monitor] ❌ Error getting file info: ${err.message}`);
         return;
     }
 
-    loggerUtil.debug(`[nsfw-monitor] 📁 File path: ${file.file_path}`);
+    logger.debug(`[nsfw-monitor] 📁 File path: ${file.file_path}`);
 
     // Construct download URL or local path
     let downloadUrl;
@@ -117,7 +117,7 @@ async function processMedia(ctx, config) {
 
             if (fs.existsSync(mappedPath)) {
                 directLocalPath = mappedPath;
-                loggerUtil.debug(`[nsfw-monitor] 📂 Local API detected, found direct file at: ${mappedPath}`);
+                logger.debug(`[nsfw-monitor] 📂 Local API detected, found direct file at: ${mappedPath}`);
             }
         }
 
@@ -146,21 +146,21 @@ async function processMedia(ctx, config) {
     const downloadStart = Date.now();
     try {
         if (directLocalPath) {
-            loggerUtil.info(`[nsfw-monitor] 📂 Copying file from local storage: ${directLocalPath} -> ${localPath}`);
+            logger.info(`[nsfw-monitor] 📂 Copying file from local storage: ${directLocalPath} -> ${localPath}`);
             fs.copyFileSync(directLocalPath, localPath);
         } else {
-            loggerUtil.info(`[nsfw-monitor] ⬇️ Downloading file to: ${localPath} (Source: ${IS_LOCAL_API ? 'Local API' : 'Cloud API'})`);
-            loggerUtil.info(`[nsfw-monitor] 🔗 Download URL: ${downloadUrl}`);
+            logger.info(`[nsfw-monitor] ⬇️ Downloading file to: ${localPath} (Source: ${IS_LOCAL_API ? 'Local API' : 'Cloud API'})`);
+            logger.info(`[nsfw-monitor] 🔗 Download URL: ${downloadUrl}`);
             await downloadFile(downloadUrl, localPath);
         }
     } catch (e) {
-        loggerUtil.error(`[nsfw-monitor] ❌ Download/Copy failed: ${e.message}`);
+        logger.error(`[nsfw-monitor] ❌ Download/Copy failed: ${e.message}`);
         return false;
     }
     const downloadTime = Date.now() - downloadStart;
 
     const actualSize = fs.statSync(localPath).size;
-    loggerUtil.info(`[nsfw-monitor] ✅ File ready - Size: ${actualSize} bytes, Time: ${downloadTime}ms`);
+    logger.info(`[nsfw-monitor] ✅ File ready - Size: ${actualSize} bytes, Time: ${downloadTime}ms`);
 
     try {
         let isNsfw = false;
@@ -169,46 +169,46 @@ async function processMedia(ctx, config) {
         // Extract caption if available (photos/videos can have captions)
         const caption = ctx.message.caption || null;
         if (caption) {
-            loggerUtil.debug(`[nsfw-monitor] 📝 Caption present: "${caption.substring(0, 50)}..."`);
+            logger.debug(`[nsfw-monitor] 📝 Caption present: "${caption.substring(0, 50)}..."`);
         }
 
         if (type === 'video' || type === 'gif') {
-            loggerUtil.info(`[nsfw-monitor] 🎬 Starting VIDEO/GIF analysis...`);
+            logger.info(`[nsfw-monitor] 🎬 Starting VIDEO/GIF analysis...`);
             isNsfw = await checkVideo(localPath, config, reasons, caption);
         } else {
-            loggerUtil.info(`[nsfw-monitor] 🖼️ Starting IMAGE analysis...`);
+            logger.info(`[nsfw-monitor] 🖼️ Starting IMAGE analysis...`);
             isNsfw = await checkImage(localPath, config, reasons, caption);
         }
 
         const totalTime = Date.now() - startTime;
         if (isNsfw) {
-            loggerUtil.warn(`[nsfw-monitor] 🚨 NSFW DETECTED - Chat: ${chatId}, User: ${userId}, Reason: ${reasons[0]}, TotalTime: ${totalTime}ms`);
+            logger.warn(`[nsfw-monitor] 🚨 NSFW DETECTED - Chat: ${chatId}, User: ${userId}, Reason: ${reasons[0]}, TotalTime: ${totalTime}ms`);
             await actions.executeAction(ctx, config.nsfw_action || 'delete', reasons[0], type);
         } else {
-            loggerUtil.info(`[nsfw-monitor] ✅ Content is SAFE - Chat: ${chatId}, User: ${userId}, TotalTime: ${totalTime}ms`);
+            logger.info(`[nsfw-monitor] ✅ Content is SAFE - Chat: ${chatId}, User: ${userId}, TotalTime: ${totalTime}ms`);
         }
     } finally {
         // Cleanup main file
-        loggerUtil.debug(`[nsfw-monitor] 🧹 Cleaning up temp file: ${localPath}`);
+        logger.debug(`[nsfw-monitor] 🧹 Cleaning up temp file: ${localPath}`);
         try { fs.unlinkSync(localPath); } catch (e) { }
     }
 }
 
 async function downloadFile(url, dest) {
-    loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: Starting download to ${dest}`);
+    logger.debug(`[nsfw-monitor] ⬇️ downloadFile: Starting download to ${dest}`);
     const client = url.startsWith('http:') ? http : https;
 
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(dest);
         client.get(url, (response) => {
-            loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: Got response, status: ${response.statusCode}`);
+            logger.debug(`[nsfw-monitor] ⬇️ downloadFile: Got response, status: ${response.statusCode}`);
             response.pipe(file);
             file.on('finish', () => {
-                loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: File write finished`);
+                logger.debug(`[nsfw-monitor] ⬇️ downloadFile: File write finished`);
                 file.close(resolve);
             });
         }).on('error', (err) => {
-            loggerUtil.error(`[nsfw-monitor] ❌ downloadFile: Error - ${err.message}`);
+            logger.error(`[nsfw-monitor] ❌ downloadFile: Error - ${err.message}`);
             fs.unlink(dest, () => { });
             reject(err);
         });
@@ -216,18 +216,18 @@ async function downloadFile(url, dest) {
 }
 
 async function checkImage(imagePath, config, reasons, caption = null) {
-    loggerUtil.debug(`[nsfw-monitor] 🖼️ checkImage: Reading file ${imagePath}`);
+    logger.debug(`[nsfw-monitor] 🖼️ checkImage: Reading file ${imagePath}`);
     const buffer = fs.readFileSync(imagePath);
     const base64 = buffer.toString('base64');
     const base64Size = Math.round(base64.length / 1024);
-    loggerUtil.debug(`[nsfw-monitor] 🖼️ checkImage: Base64 size: ${base64Size}KB`);
+    logger.debug(`[nsfw-monitor] 🖼️ checkImage: Base64 size: ${base64Size}KB`);
 
-    loggerUtil.info(`[nsfw-monitor] 🤖 Sending image to Vision LLM for analysis...`);
+    logger.info(`[nsfw-monitor] 🤖 Sending image to Vision LLM for analysis...`);
     const llmStart = Date.now();
     const res = await callVisionLLM(base64, config, caption);
     const llmTime = Date.now() - llmStart;
 
-    loggerUtil.info(`[nsfw-monitor] 🤖 LLM Response (${llmTime}ms): category=${res.category}, confidence=${res.confidence}, reason=${res.reason || 'N/A'}`);
+    logger.info(`[nsfw-monitor] 🤖 LLM Response (${llmTime}ms): category=${res.category}, confidence=${res.confidence}, reason=${res.reason || 'N/A'}`);
 
     // Get blocked categories for this guild
     let blockedCategories = config.nsfw_blocked_categories;
@@ -252,31 +252,31 @@ async function checkImage(imagePath, config, reasons, caption = null) {
 
     if (isBlocked && res.confidence >= threshold) {
         const categoryInfo = NSFW_CATEGORIES[res.category] || { name: res.category };
-        loggerUtil.warn(`[nsfw-monitor] ⚠️ Blocked category detected: ${res.category} (${res.confidence} >= ${threshold})`);
+        logger.warn(`[nsfw-monitor] ⚠️ Blocked category detected: ${res.category} (${res.confidence} >= ${threshold})`);
         reasons.push(`${categoryInfo.name} (${Math.round(res.confidence * 100)}%)`);
         return true;
     }
 
-    loggerUtil.debug(`[nsfw-monitor] ✅ Image passed check - category: ${res.category}, blocked: ${isBlocked}, confidence: ${res.confidence}`);
+    logger.debug(`[nsfw-monitor] ✅ Image passed check - category: ${res.category}, blocked: ${isBlocked}, confidence: ${res.confidence}`);
     return false;
 }
 
 async function checkVideo(videoPath, config, reasons, caption = null) {
-    loggerUtil.info(`[nsfw-monitor] 🎬 checkVideo: Analyzing ${videoPath}`);
+    logger.info(`[nsfw-monitor] 🎬 checkVideo: Analyzing ${videoPath}`);
 
     // Get duration
-    loggerUtil.debug(`[nsfw-monitor] 🎬 Getting video duration...`);
+    logger.debug(`[nsfw-monitor] 🎬 Getting video duration...`);
     const duration = await getVideoDuration(videoPath);
     if (!duration) {
-        loggerUtil.warn(`[nsfw-monitor] ⚠️ Could not get video duration, skipping analysis`);
+        logger.warn(`[nsfw-monitor] ⚠️ Could not get video duration, skipping analysis`);
         return false;
     }
-    loggerUtil.info(`[nsfw-monitor] 🎬 Video duration: ${duration.toFixed(2)}s`);
+    logger.info(`[nsfw-monitor] 🎬 Video duration: ${duration.toFixed(2)}s`);
 
     // LIMIT: Skip videos longer than 5 minutes
     const MAX_DURATION = 300; // 5 minutes in seconds
     if (duration > MAX_DURATION) {
-        loggerUtil.warn(`[nsfw-monitor] ⚠️ Video too long (${(duration / 60).toFixed(1)} min > 5 min), skipping analysis`);
+        logger.warn(`[nsfw-monitor] ⚠️ Video too long (${(duration / 60).toFixed(1)} min > 5 min), skipping analysis`);
         return false;
     }
 
@@ -302,7 +302,7 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
     // Adjust if video is shorter than MIN_FRAMES seconds (can't have more frames than duration in seconds)
     const actualFrames = Math.min(targetFrames, Math.floor(duration));
 
-    loggerUtil.info(`[nsfw-monitor] 🎬 Duration: ${duration.toFixed(1)}s → Extracting ${actualFrames} frames uniformly`);
+    logger.info(`[nsfw-monitor] 🎬 Duration: ${duration.toFixed(1)}s → Extracting ${actualFrames} frames uniformly`);
 
     // Generate uniform timestamps
     const timestamps = [];
@@ -320,7 +320,7 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
     }));
 
     // Extract all frames in parallel
-    loggerUtil.info(`[nsfw-monitor] ⚡ Extracting ${timestamps.length} frames in parallel...`);
+    logger.info(`[nsfw-monitor] ⚡ Extracting ${timestamps.length} frames in parallel...`);
     const extractStart = Date.now();
 
     const extractResults = await Promise.allSettled(
@@ -332,14 +332,14 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
         extractResults[i].status === 'fulfilled' && fs.existsSync(f.path)
     );
 
-    loggerUtil.info(`[nsfw-monitor] ⚡ Extraction complete: ${validFrames.length}/${timestamps.length} frames in ${Date.now() - extractStart}ms`);
+    logger.info(`[nsfw-monitor] ⚡ Extraction complete: ${validFrames.length}/${timestamps.length} frames in ${Date.now() - extractStart}ms`);
 
     if (validFrames.length === 0) {
-        loggerUtil.warn(`[nsfw-monitor] ⚠️ No frames extracted successfully`);
+        logger.warn(`[nsfw-monitor] ⚠️ No frames extracted successfully`);
         return false;
     }
 
-    loggerUtil.info(`[nsfw-monitor] 🎬 Final frame count: ${validFrames.length}`);
+    logger.info(`[nsfw-monitor] 🎬 Final frame count: ${validFrames.length}`);
 
     // Batch frames for LLM analysis
     const BATCH_SIZE = parseInt(process.env.LM_STUDIO_BATCH_SIZE) || 5;
@@ -348,12 +348,12 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
         batches.push(validFrames.slice(i, i + BATCH_SIZE));
     }
 
-    loggerUtil.info(`[nsfw-monitor] 🤖 Analyzing ${validFrames.length} frames in ${batches.length} batches (${BATCH_SIZE} per batch)...`);
+    logger.info(`[nsfw-monitor] 🤖 Analyzing ${validFrames.length} frames in ${batches.length} batches (${BATCH_SIZE} per batch)...`);
 
     try {
         for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
             const batch = batches[batchIdx];
-            loggerUtil.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1}/${batches.length}: Analyzing ${batch.length} frames...`);
+            logger.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1}/${batches.length}: Analyzing ${batch.length} frames...`);
 
             // Read all frames in batch to base64
             const base64Images = batch.map(f => {
@@ -364,22 +364,22 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
             // Call LLM with all images in batch
             const batchStart = Date.now();
             const result = await callVisionLLMBatch(base64Images, config, caption, batch.map(f => f.timestamp));
-            loggerUtil.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1} analyzed in ${Date.now() - batchStart}ms`);
+            logger.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1} analyzed in ${Date.now() - batchStart}ms`);
 
             // Check result
             if (result.isNsfw) {
                 reasons.push(result.reason);
-                loggerUtil.warn(`[nsfw-monitor] 🚨 NSFW detected in batch ${batchIdx + 1}: ${result.reason}`);
+                logger.warn(`[nsfw-monitor] 🚨 NSFW detected in batch ${batchIdx + 1}: ${result.reason}`);
                 return true;
             }
         }
 
-        loggerUtil.info(`[nsfw-monitor] ✅ All ${batches.length} batches passed check`);
+        logger.info(`[nsfw-monitor] ✅ All ${batches.length} batches passed check`);
         return false;
 
     } finally {
         // Cleanup all frame files
-        loggerUtil.debug(`[nsfw-monitor] 🧹 Cleaning up ${validFrames.length} frame files...`);
+        logger.debug(`[nsfw-monitor] 🧹 Cleaning up ${validFrames.length} frame files...`);
         for (const frame of validFrames) {
             try { fs.unlinkSync(frame.path); } catch (e) { }
         }
@@ -390,13 +390,13 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
 
 function getVideoDuration(filePath) {
     return new Promise((resolve) => {
-        loggerUtil.debug(`[nsfw-monitor] 🎬 ffprobe: Getting duration for ${filePath}`);
+        logger.debug(`[nsfw-monitor] 🎬 ffprobe: Getting duration for ${filePath}`);
         fluentFfmpeg.ffprobe(filePath, (err, metadata) => {
             if (err) {
-                loggerUtil.error(`[nsfw-monitor] ❌ ffprobe error: ${err.message}`);
+                logger.error(`[nsfw-monitor] ❌ ffprobe error: ${err.message}`);
                 resolve(0);
             } else {
-                loggerUtil.debug(`[nsfw-monitor] 🎬 ffprobe: Duration = ${metadata.format.duration}s, Format = ${metadata.format.format_name}`);
+                logger.debug(`[nsfw-monitor] 🎬 ffprobe: Duration = ${metadata.format.duration}s, Format = ${metadata.format.format_name}`);
                 resolve(metadata.format.duration);
             }
         });
@@ -405,17 +405,17 @@ function getVideoDuration(filePath) {
 
 function extractFrame(videoPath, timestamp, outputPath) {
     return new Promise((resolve, reject) => {
-        loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath}`);
+        logger.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath}`);
         fluentFfmpeg(videoPath)
             .seekInput(timestamp)
             .frames(1)
             .output(outputPath)
             .on('end', () => {
-                loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Frame extracted successfully`);
+                logger.debug(`[nsfw-monitor] 🎬 ffmpeg: Frame extracted successfully`);
                 resolve();
             })
             .on('error', (err) => {
-                loggerUtil.error(`[nsfw-monitor] ❌ ffmpeg error: ${err.message}`);
+                logger.error(`[nsfw-monitor] ❌ ffmpeg error: ${err.message}`);
                 reject(err);
             })
             .run();
@@ -447,7 +447,7 @@ function getDefaultBlockedCategories() {
 
 async function callVisionLLM(base64Image, config, caption = null) {
     const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
-    loggerUtil.debug(`[nsfw-monitor] 🤖 callVisionLLM: Connecting to ${url}`);
+    logger.debug(`[nsfw-monitor] 🤖 callVisionLLM: Connecting to ${url}`);
 
     // Build category list for prompt
     const categoryList = Object.entries(NSFW_CATEGORIES)
@@ -478,11 +478,11 @@ Respond ONLY with a JSON object:
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => {
-            loggerUtil.warn(`[nsfw-monitor] ⏰ LLM request timeout (60s)`);
+            logger.warn(`[nsfw-monitor] ⏰ LLM request timeout (60s)`);
             controller.abort();
         }, 60000);
 
-        loggerUtil.debug(`[nsfw-monitor] 🤖 Sending request to LLM API...`);
+        logger.debug(`[nsfw-monitor] 🤖 Sending request to LLM API...`);
         const requestStart = Date.now();
 
         const response = await fetch(`${url}/v1/chat/completions`, {
@@ -507,16 +507,16 @@ Respond ONLY with a JSON object:
         clearTimeout(timeout);
 
         const responseTime = Date.now() - requestStart;
-        loggerUtil.debug(`[nsfw-monitor] 🤖 LLM response received in ${responseTime}ms, status: ${response.status}`);
+        logger.debug(`[nsfw-monitor] 🤖 LLM response received in ${responseTime}ms, status: ${response.status}`);
 
         if (!response.ok) {
-            loggerUtil.error(`[nsfw-monitor] ❌ LLM API error: status ${response.status}`);
+            logger.error(`[nsfw-monitor] ❌ LLM API error: status ${response.status}`);
             throw new Error(`API Error: ${response.status}`);
         }
 
         const data = await response.json();
         const content = data.choices[0].message.content;
-        loggerUtil.debug(`[nsfw-monitor] 🤖 LLM raw response: ${content}`);
+        logger.debug(`[nsfw-monitor] 🤖 LLM raw response: ${content}`);
 
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         let result;
@@ -528,20 +528,20 @@ Respond ONLY with a JSON object:
 
         // Normalize category to known values
         if (!NSFW_CATEGORIES[result.category]) {
-            loggerUtil.warn(`[nsfw-monitor] Unknown category "${result.category}", defaulting to safe`);
+            logger.warn(`[nsfw-monitor] Unknown category "${result.category}", defaulting to safe`);
             result.category = 'safe';
         }
 
-        loggerUtil.debug(`[nsfw-monitor] 🤖 LLM parsed result: ${JSON.stringify(result)}`);
+        logger.debug(`[nsfw-monitor] 🤖 LLM parsed result: ${JSON.stringify(result)}`);
         return result;
 
     } catch (e) {
         if (e.name === 'AbortError') {
-            loggerUtil.error(`[nsfw-monitor] ❌ LLM request aborted (timeout)`);
+            logger.error(`[nsfw-monitor] ❌ LLM request aborted (timeout)`);
         } else {
-            loggerUtil.error(`[nsfw-monitor] ❌ LLM error: ${e.message}`);
+            logger.error(`[nsfw-monitor] ❌ LLM error: ${e.message}`);
         }
-        loggerUtil.debug(`[nsfw-monitor] 🤖 Returning safe default due to error`);
+        logger.debug(`[nsfw-monitor] 🤖 Returning safe default due to error`);
         return { category: "safe", confidence: 1, reason: "LLM error - defaulting to safe" };
     }
 }
@@ -556,7 +556,7 @@ Respond ONLY with a JSON object:
  */
 async function callVisionLLMBatch(base64Images, config, caption = null, timestamps = []) {
     const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
-    loggerUtil.debug(`[nsfw-monitor] 🤖 callVisionLLMBatch: Analyzing ${base64Images.length} images`);
+    logger.debug(`[nsfw-monitor] 🤖 callVisionLLMBatch: Analyzing ${base64Images.length} images`);
 
     // Get blocked categories for this guild
     let blockedCategories = config.nsfw_blocked_categories;
@@ -608,11 +608,11 @@ Respond ONLY with a JSON object:
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => {
-            loggerUtil.warn(`[nsfw-monitor] ⏰ Batch LLM request timeout (90s)`);
+            logger.warn(`[nsfw-monitor] ⏰ Batch LLM request timeout (90s)`);
             controller.abort();
         }, 90000); // Longer timeout for batch
 
-        loggerUtil.debug(`[nsfw-monitor] 🤖 Sending batch request to LLM API...`);
+        logger.debug(`[nsfw-monitor] 🤖 Sending batch request to LLM API...`);
         const requestStart = Date.now();
 
         const response = await fetch(`${url}/v1/chat/completions`, {
@@ -632,16 +632,16 @@ Respond ONLY with a JSON object:
         clearTimeout(timeout);
 
         const responseTime = Date.now() - requestStart;
-        loggerUtil.debug(`[nsfw-monitor] 🤖 Batch LLM response in ${responseTime}ms, status: ${response.status}`);
+        logger.debug(`[nsfw-monitor] 🤖 Batch LLM response in ${responseTime}ms, status: ${response.status}`);
 
         if (!response.ok) {
-            loggerUtil.error(`[nsfw-monitor] ❌ Batch LLM API error: status ${response.status}`);
+            logger.error(`[nsfw-monitor] ❌ Batch LLM API error: status ${response.status}`);
             throw new Error(`API Error: ${response.status}`);
         }
 
         const data = await response.json();
         const content = data.choices[0].message.content;
-        loggerUtil.debug(`[nsfw-monitor] 🤖 Batch LLM raw response: ${content.substring(0, 200)}...`);
+        logger.debug(`[nsfw-monitor] 🤖 Batch LLM raw response: ${content.substring(0, 200)}...`);
 
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         let result;
@@ -668,11 +668,11 @@ Respond ONLY with a JSON object:
 
     } catch (e) {
         if (e.name === 'AbortError') {
-            loggerUtil.error(`[nsfw-monitor] ❌ Batch LLM request aborted (timeout)`);
+            logger.error(`[nsfw-monitor] ❌ Batch LLM request aborted (timeout)`);
         } else {
-            loggerUtil.error(`[nsfw-monitor] ❌ Batch LLM error: ${e.message}`);
+            logger.error(`[nsfw-monitor] ❌ Batch LLM error: ${e.message}`);
         }
-        loggerUtil.debug(`[nsfw-monitor] 🤖 Returning safe default due to batch error`);
+        logger.debug(`[nsfw-monitor] 🤖 Returning safe default due to batch error`);
         return { isNsfw: false, reason: null };
     }
 }
@@ -734,7 +734,7 @@ async function analyzeMediaOnly(ctx, config) {
     try {
         file = await ctx.api.getFile(fileId);
     } catch (e) {
-        loggerUtil.error(`[nsfw-monitor] analyzeMediaOnly: getFile error - ${e.message}`);
+        logger.error(`[nsfw-monitor] analyzeMediaOnly: getFile error - ${e.message}`);
         return { isNsfw: false };
     }
 
@@ -781,7 +781,7 @@ async function analyzeMediaOnly(ctx, config) {
             reason: reasons[0] || null
         };
     } catch (e) {
-        loggerUtil.error(`[nsfw-monitor] analyzeMediaOnly error: ${e.message}`);
+        logger.error(`[nsfw-monitor] analyzeMediaOnly error: ${e.message}`);
         return { isNsfw: false };
     } finally {
         try { fs.unlinkSync(localPath); } catch (e) { }

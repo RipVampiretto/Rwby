@@ -6,8 +6,11 @@ const logger = require('../../middlewares/logger');
 let db = null;
 let _botInstance = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
+}
+
+function register(bot) {
     _botInstance = bot;
     commands.registerCommands(bot, db);
     logger.info('[visual-immune-system] Module registered');
@@ -19,6 +22,7 @@ function sendConfigUI(ctx) {
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI
 };

@@ -5,8 +5,11 @@ const logger = require('../../middlewares/logger');
 let db = null;
 let _botInstance = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
+}
+
+function register(bot) {
     _botInstance = bot;
 
     // Init Cron
@@ -29,6 +32,7 @@ function syncGlobalBansToGuild(guildId) {
 }
 
 module.exports = {
+    init,
     register,
     forwardToParliament,
     sendGlobalLog,

@@ -1,5 +1,5 @@
 const { safeEdit } = require('../../utils/error-handlers');
-const loggerUtil = require('../../middlewares/logger');
+const logger = require('../../middlewares/logger');
 const i18n = require('../../i18n');
 const { NSFW_CATEGORIES, getDefaultBlockedCategories } = require('./logic');
 
@@ -7,7 +7,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    loggerUtil.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`);
+    logger.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`);
 
     try {
         const config = db.getGuildConfig(guildId);
@@ -70,7 +70,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
         }
     } catch (e) {
-        loggerUtil.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
+        logger.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
         } catch (e2) { }
@@ -158,7 +158,7 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
     try {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'nsfw-monitor');
     } catch (e) {
-        loggerUtil.error(`[nsfw-monitor] sendCategoriesUI error: ${e.message}`);
+        logger.error(`[nsfw-monitor] sendCategoriesUI error: ${e.message}`);
     }
 }
 

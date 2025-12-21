@@ -16,14 +16,18 @@ let _botInstance = null;
 // Sync interval: 24 hours in milliseconds
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-function register(bot, database) {
+function init(database) {
     db = database;
+    // Initialize detection which only needs db
+    detection.init(database);
+}
+
+function register(bot) {
     _botInstance = bot;
 
-    // Initialize sub-modules
-    sync.init(database, bot);
-    detection.init(database);
-    actions.init(database, bot);
+    // Initialize sub-modules that need bot
+    sync.init(db, bot);
+    actions.init(db, bot);
 
     // Register message middleware for CAS checking
     bot.on('message', async (ctx, next) => {
@@ -119,6 +123,7 @@ function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI,
     // Expose for testing

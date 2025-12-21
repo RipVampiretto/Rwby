@@ -6,8 +6,11 @@ const logger = require('../../middlewares/logger');
 let db = null;
 let _botInstance = null;
 
-function register(bot, database) {
+function init(database) {
     db = database;
+}
+
+function register(bot) {
     _botInstance = bot;
 
     // Clean expired votes periodically
@@ -22,6 +25,7 @@ function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
 }
 
 module.exports = {
+    init,
     register,
     sendConfigUI
 };

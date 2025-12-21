@@ -1,7 +1,7 @@
 const logic = require('./logic');
 const ui = require('./ui');
 const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
-const loggerUtil = require('../../middlewares/logger');
+const logger = require('../../middlewares/logger');
 
 function registerCommands(bot, db) {
     // Handler: photos, videos, animations, stickers
@@ -10,30 +10,30 @@ function registerCommands(bot, db) {
         const userId = ctx.from?.id;
         const msgId = ctx.message?.message_id;
 
-        loggerUtil.debug(`[nsfw-monitor] 📥 Media received - Chat: ${chatId}, User: ${userId}, MsgId: ${msgId}`);
+        logger.debug(`[nsfw-monitor] 📥 Media received - Chat: ${chatId}, User: ${userId}, MsgId: ${msgId}`);
 
         if (ctx.chat.type === 'private') {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: private chat`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: private chat`);
             return next();
         }
 
         // Skip admins
         if (await isAdmin(ctx, 'nsfw-monitor')) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} is admin`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} is admin`);
             return next();
         }
 
         // Config check
         const config = db.getGuildConfig(ctx.chat.id);
         if (!config.nsfw_enabled) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: NSFW monitor disabled for chat ${chatId}`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: NSFW monitor disabled for chat ${chatId}`);
             return next();
         }
 
         // Tier bypass (-1 = OFF, no bypass)
         const tierBypass = config.nsfw_tier_bypass ?? 2;
         if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${tierBypass})`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${tierBypass})`);
             return next();
         }
 
@@ -44,37 +44,37 @@ function registerCommands(bot, db) {
         const isSticker = ctx.message.sticker;
 
         const mediaType = isVideo ? 'VIDEO' : (isGif ? 'GIF' : (isPhoto ? 'PHOTO' : (isSticker ? 'STICKER' : 'UNKNOWN')));
-        loggerUtil.info(`[nsfw-monitor] 🎬 Media type detected: ${mediaType} - Chat: ${chatId}, User: ${userId}`);
+        logger.info(`[nsfw-monitor] 🎬 Media type detected: ${mediaType} - Chat: ${chatId}, User: ${userId}`);
 
         // Skip animated stickers (they're Lottie files, not images)
         if (isSticker && ctx.message.sticker.is_animated) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: animated sticker (not analyzable)`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: animated sticker (not analyzable)`);
             return next();
         }
 
         if (isVideo && !config.nsfw_check_videos) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: video check disabled`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: video check disabled`);
             return next();
         }
         if (isGif && !config.nsfw_check_gifs) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: GIF check disabled`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: GIF check disabled`);
             return next();
         }
         if (isPhoto && !config.nsfw_check_photos) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: photo check disabled`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: photo check disabled`);
             return next();
         }
         // Stickers have their own check
         if (isSticker && !config.nsfw_check_stickers) {
-            loggerUtil.debug(`[nsfw-monitor] ⏭️ Skipping: sticker check disabled`);
+            logger.debug(`[nsfw-monitor] ⏭️ Skipping: sticker check disabled`);
             return next();
         }
 
-        loggerUtil.info(`[nsfw-monitor] ✅ Proceeding with analysis for ${mediaType} - Chat: ${chatId}, User: ${userId}`);
+        logger.info(`[nsfw-monitor] ✅ Proceeding with analysis for ${mediaType} - Chat: ${chatId}, User: ${userId}`);
 
         // Download and analyze
         // Fire and forget to avoid blocking, but handle errors
-        logic.processMedia(ctx, config).catch(err => loggerUtil.error(`[nsfw-monitor] ❌ Process error: ${err.message}\n${err.stack}`));
+        logic.processMedia(ctx, config).catch(err => logger.error(`[nsfw-monitor] ❌ Process error: ${err.message}\n${err.stack}`));
 
         await next();
     });

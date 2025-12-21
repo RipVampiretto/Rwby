@@ -8,3 +8,4 @@ package-lock.json
 *.db
 *.sql
 telegram-bot-api-data
+temp/
