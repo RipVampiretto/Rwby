@@ -690,8 +690,107 @@ async function testConnection(ctx) {
     }
 }
 
+/**
+ * Analyze media WITHOUT executing any action (for Smart Report System)
+ * @param {object} ctx - Telegram context with message containing media
+ * @param {object} config - Guild config
+ * @returns {Promise<{isNsfw: boolean, category: string, reason: string}>}
+ */
+async function analyzeMediaOnly(ctx, config) {
+    const message = ctx.message;
+    if (!message) return { isNsfw: false };
+
+    // Determine media type
+    let fileId;
+    let type = 'photo';
+
+    if (message.photo) {
+        fileId = message.photo[message.photo.length - 1].file_id;
+    } else if (message.video) {
+        fileId = message.video.file_id;
+        type = 'video';
+    } else if (message.animation) {
+        fileId = message.animation.file_id;
+        type = 'gif';
+    } else if (message.sticker) {
+        fileId = message.sticker.file_id;
+        type = message.sticker.is_video ? 'gif' : 'photo';
+    } else if (message.document) {
+        if (message.document.mime_type?.startsWith('video')) {
+            fileId = message.document.file_id;
+            type = 'video';
+        } else if (message.document.mime_type?.startsWith('image')) {
+            fileId = message.document.file_id;
+            type = 'photo';
+        } else {
+            return { isNsfw: false };
+        }
+    } else {
+        return { isNsfw: false };
+    }
+
+    // Download and analyze
+    let file;
+    try {
+        file = await ctx.api.getFile(fileId);
+    } catch (e) {
+        loggerUtil.error(`[nsfw-monitor] analyzeMediaOnly: getFile error - ${e.message}`);
+        return { isNsfw: false };
+    }
+
+    const IS_LOCAL_API = !!process.env.TELEGRAM_API_URL;
+    let downloadUrl;
+    if (IS_LOCAL_API) {
+        downloadUrl = `${process.env.TELEGRAM_API_URL}/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+    } else {
+        downloadUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+    }
+
+    const localPath = path.join(TEMP_DIR, `smartreport_${Date.now()}_${path.basename(file.file_path)}`);
+
+    try {
+        // Check for direct local path (Local API)
+        let directLocalPath = null;
+        if (IS_LOCAL_API && file.file_path.startsWith('/var/lib/telegram-bot-api/')) {
+            const relativePath = file.file_path.replace('/var/lib/telegram-bot-api/', '');
+            const mappedPath = path.join('./telegram-bot-api-data', relativePath);
+            if (fs.existsSync(mappedPath)) {
+                directLocalPath = mappedPath;
+            }
+        }
+
+        if (directLocalPath) {
+            fs.copyFileSync(directLocalPath, localPath);
+        } else {
+            await downloadFile(downloadUrl, localPath);
+        }
+
+        const caption = message.caption || null;
+        const reasons = [];
+
+        let isNsfw = false;
+        if (type === 'video' || type === 'gif') {
+            isNsfw = await checkVideo(localPath, config, reasons, caption);
+        } else {
+            isNsfw = await checkImage(localPath, config, reasons, caption);
+        }
+
+        return {
+            isNsfw: isNsfw,
+            category: isNsfw ? (reasons[0]?.split(' ')[0] || 'nsfw') : 'safe',
+            reason: reasons[0] || null
+        };
+    } catch (e) {
+        loggerUtil.error(`[nsfw-monitor] analyzeMediaOnly error: ${e.message}`);
+        return { isNsfw: false };
+    } finally {
+        try { fs.unlinkSync(localPath); } catch (e) { }
+    }
+}
+
 module.exports = {
     processMedia,
+    analyzeMediaOnly,
     testConnection,
     NSFW_CATEGORIES,
     getDefaultBlockedCategories

@@ -26,6 +26,14 @@ async function runMigrations() {
                     DEFAULT '["real_nudity","real_sex","hentai","gore","minors"]'::jsonb
                 `);
             }
+        },
+        {
+            name: 'add_smart_report_actions',
+            up: async () => {
+                await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_scam TEXT DEFAULT 'report_only'`);
+                await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_nsfw TEXT DEFAULT 'report_only'`);
+                await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_spam TEXT DEFAULT 'report_only'`);
+            }
         }
     ];
 

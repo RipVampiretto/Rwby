@@ -55,7 +55,7 @@
             "links": "🔗 Links",
             "nsfw": "🔞 NSFW",
             "visual": "🖼️ Visual",
-            "voteban": "🗳️ Vote Ban",
+            "voteban": "📋 Report",
             "logger": "📜 Logger",
             "staff": "👮 Staff",
             "intel": "🧠 Intel",
@@ -72,15 +72,26 @@
         }
     },
     "voteban": {
-        "title": "⚖️ **VOTE BAN**",
-        "description": "Lets group members vote to ban someone who is causing problems.",
+        "title": "📋 **REPORTS**",
+        "description": "Smart system for reporting problematic users. AI analyzes the message and, if no violations are found, starts a community vote.",
         "how_to_use": "How to use",
         "usage_info": "Reply to the troublemaker's message with @admin, !admin, .admin or /admin",
+        "smart_report_info": "If you reply to a message, AI analyzes it automatically. If you use @admin without replying, the recent chat is analyzed (last 10 messages).",
+        "everyone": "Everyone",
         "status": "Status",
         "votes_required": "Votes needed",
         "timer": "Voting time",
         "tier_initiator": "Who can start",
         "disabled_timer": "No limit",
+        "settings_section": "VoteBan Settings",
+        "smart_report_section": "Smart Report (AI)",
+        "report_mode": "Mode",
+        "ai_not_enabled": "To use AI reports, enable AI Mod or NSFW",
+        "modes": {
+            "voteban_only": "VoteBan Only",
+            "ai_only": "AI Only",
+            "ai_voteban": "AI + VoteBan"
+        },
         "vote_message": {
             "title": "⚖️ **VOTING IN PROGRESS**",
             "votes": "📊 **Votes:** {current}/{required}",
@@ -93,7 +104,9 @@
             "system": "⚖️ System",
             "threshold": "📊 Threshold",
             "duration": "⏱️ Duration",
-            "tier": "🏷️ Who can start"
+            "tier": "🏷️ Who can start",
+            "report_mode": "Mode",
+            "category_actions": "Category Actions"
         }
     },
     "logger": {
@@ -599,5 +612,12 @@
             "from_group": "from {group}",
             "requires_review": "Requires staff review."
         }
+    },
+    "smart_report": {
+        "category_title": "⚙️ **CATEGORY ACTIONS**",
+        "category_subtitle": "Choose the action to perform for each type of AI-detected violation.",
+        "action_delete": "🤖 **Content Removed**\n\n⚠️ Violation detected: _{category}_\n\n_The message was automatically deleted._",
+        "action_ban": "🚨 **User Banned**\n\n👤 {user} has been removed from the group.\n⚠️ Reason: _{category}_\n\n_Thanks for the report! (+2 Flux)_",
+        "action_report": "📋 **Report Submitted**\n\n⚠️ Possible violation: _{category}_\n\n_Staff will review the report._"
     }
 }

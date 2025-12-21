@@ -27,24 +27,25 @@ function djb2(str) {
     return hash;
 }
 
-async function processWithAI(text, contextMessages, config) {
-    // Create cache key including context
+async function processWithAI(text, contextMessages, config, model = null) {
+    // Create cache key including context and model
     const contextStr = contextMessages.map(m => m.text).join('|');
-    const hash = djb2(text + contextStr);
+    const hash = djb2(text + contextStr + (model || ''));
     const cached = CACHE.get(hash);
 
     if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
         return cached.res;
     }
 
-    const result = await callLLM(text, contextMessages, config);
+    const result = await callLLM(text, contextMessages, config, model);
     CACHE.set(hash, { ts: Date.now(), res: result });
 
     return result;
 }
 
-async function callLLM(text, contextMessages, config) {
+async function callLLM(text, contextMessages, config, model = null) {
     const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+    const modelToUse = model || process.env.LM_STUDIO_MODEL || undefined;
 
     // Build context string
     let contextStr = '';
@@ -74,7 +75,7 @@ Respond with ONLY a JSON object:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: process.env.LM_STUDIO_MODEL || undefined, // Use specific model if set
+                model: modelToUse,
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userMessage }

@@ -133,6 +133,7 @@ async function processExpiredVotes(bot, db) {
         // Update Timer UI if not expired
         try {
             const { text, keyboard } = ui.getVoteMessage(
+                vote.guild_id,
                 { id: vote.target_user_id, username: vote.target_username },
                 null, vote.reason, vote.votes_yes, vote.votes_no, vote.required_votes, vote.expires_at, vote.vote_id, false
             );

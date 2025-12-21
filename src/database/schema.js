@@ -76,7 +76,7 @@ async function createTables() {
             profiler_action_pattern TEXT DEFAULT 'report_only',
             
             -- Keyword Monitor
-            keyword_sync_global BOOLEAN DEFAULT TRUE,
+            keyword_sync_global BOOLEAN DEFAULT FALSE,
             
             -- Language Monitor
             lang_enabled BOOLEAN DEFAULT FALSE,
@@ -89,7 +89,7 @@ async function createTables() {
             -- Link Monitor
             link_enabled BOOLEAN DEFAULT FALSE,
             link_action_unknown TEXT DEFAULT 'report_only',
-            link_sync_global BOOLEAN DEFAULT TRUE,
+            link_sync_global BOOLEAN DEFAULT FALSE,
             link_tier_bypass INTEGER DEFAULT 2,
             
             -- NSFW Monitor
@@ -106,20 +106,25 @@ async function createTables() {
             -- Visual Immune System
             visual_enabled BOOLEAN DEFAULT FALSE,
             visual_action TEXT DEFAULT 'delete',
-            visual_sync_global BOOLEAN DEFAULT TRUE,
+            visual_sync_global BOOLEAN DEFAULT FALSE,
             visual_hamming_threshold INTEGER DEFAULT 5,
             
-            -- Vote Ban
+            -- Vote Ban / Smart Report System
             voteban_enabled BOOLEAN DEFAULT FALSE,
             voteban_threshold INTEGER DEFAULT 5,
             voteban_duration_minutes INTEGER DEFAULT 30,
             voteban_initiator_tier INTEGER DEFAULT 1,
             voteban_voter_tier INTEGER DEFAULT 0,
             
+            -- Smart Report System
+            report_mode TEXT DEFAULT 'ai_voteban',  -- 'ai_only', 'voteban_only', 'ai_voteban'
+            report_ai_fallback TEXT DEFAULT 'voteban',  -- 'voteban', 'report_only' (when AI says safe)
+            report_context_messages INTEGER DEFAULT 10,
+            
             -- Modal Pattern System
             modal_enabled BOOLEAN DEFAULT FALSE,
             modal_action TEXT DEFAULT 'report_only',
-            modal_sync_global BOOLEAN DEFAULT TRUE,
+            modal_sync_global BOOLEAN DEFAULT FALSE,
             modal_tier_bypass INTEGER DEFAULT 2,
             
             -- CAS Ban / Global Blacklist

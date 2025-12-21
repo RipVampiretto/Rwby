@@ -55,7 +55,7 @@
             "links": "🔗 Link",
             "nsfw": "🔞 NSFW",
             "visual": "🖼️ Visual",
-            "voteban": "🗳️ Vote Ban",
+            "voteban": "� Report",
             "logger": "📜 Logger",
             "staff": "👮 Staff",
             "intel": "🧠 Intel",
@@ -72,15 +72,26 @@
         }
     },
     "voteban": {
-        "title": "⚖️ **VOTAZIONE BAN**",
-        "description": "Permette ai membri del gruppo di votare se bannare qualcuno che crea problemi.",
+        "title": "📋 **SEGNALAZIONI**",
+        "description": "Sistema intelligente per segnalare utenti problematici. L'AI analizza il messaggio e, se non trova violazioni, avvia una votazione della community.",
         "how_to_use": "Come si usa",
         "usage_info": "Rispondi al messaggio di chi disturba scrivendo @admin, !admin, .admin oppure /admin",
+        "smart_report_info": "Se rispondi a un messaggio, l'AI lo analizza automaticamente. Se usi @admin senza rispondere, viene analizzata la chat recente (ultimi 10 messaggi).",
+        "everyone": "Tutti",
         "status": "Stato",
         "votes_required": "Voti necessari",
         "timer": "Tempo per votare",
         "tier_initiator": "Chi può avviare",
         "disabled_timer": "Nessun limite",
+        "settings_section": "Impostazioni VoteBan",
+        "smart_report_section": "Smart Report (AI)",
+        "report_mode": "Modalità",
+        "ai_not_enabled": "Per usare i report AI, attiva AI Mod o NSFW",
+        "modes": {
+            "voteban_only": "Solo VoteBan",
+            "ai_only": "Solo AI",
+            "ai_voteban": "AI + VoteBan"
+        },
         "vote_message": {
             "title": "⚖️ **VOTAZIONE IN CORSO**",
             "votes": "📊 **Voti:** {current}/{required}",
@@ -93,7 +104,9 @@
             "system": "⚖️ Sistema",
             "threshold": "📊 Soglia",
             "duration": "⏱️ Durata",
-            "tier": "🏷️ Chi può avviare"
+            "tier": "🏷️ Chi può avviare",
+            "report_mode": "Modalità",
+            "category_actions": "Azioni per Categoria"
         }
     },
     "logger": {
@@ -600,5 +613,12 @@
             "from_group": "da {group}",
             "requires_review": "Richiede revisione da parte dello staff."
         }
+    },
+    "smart_report": {
+        "category_title": "⚙️ **AZIONI PER CATEGORIA**",
+        "category_subtitle": "Scegli l'azione da eseguire per ogni tipo di violazione rilevata dall'AI.",
+        "action_delete": "🤖 **Contenuto Rimosso**\n\n⚠️ Rilevata violazione: _{category}_\n\n_Il messaggio è stato eliminato automaticamente._",
+        "action_ban": "🚨 **Utente Bannato**\n\n👤 {user} è stato rimosso dal gruppo.\n⚠️ Motivo: _{category}_\n\n_Grazie per la segnalazione! (+2 Flux)_",
+        "action_report": "📋 **Segnalazione Inviata**\n\n⚠️ Possibile violazione: _{category}_\n\n_Lo staff esaminerà la segnalazione._"
     }
 }

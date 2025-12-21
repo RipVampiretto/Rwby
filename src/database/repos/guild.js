@@ -67,9 +67,11 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'nsfw_frame_interval_percent', 'nsfw_tier_bypass', 'nsfw_blocked_categories',
     // Visual Immune System
     'visual_enabled', 'visual_action', 'visual_sync_global', 'visual_hamming_threshold',
-    // Vote Ban
+    // Vote Ban / Smart Report System
     'voteban_enabled', 'voteban_threshold', 'voteban_duration_minutes',
     'voteban_initiator_tier', 'voteban_voter_tier',
+    'report_mode', 'report_ai_fallback', 'report_context_messages',
+    'report_action_scam', 'report_action_nsfw', 'report_action_spam',
     // Modal Pattern System
     'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass',
     // CAS Ban / Global Blacklist
