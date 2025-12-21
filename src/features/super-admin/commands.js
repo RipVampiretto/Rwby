@@ -121,73 +121,83 @@ function registerCommands(bot, db) {
         return ctx.reply("❓ Uso: /gwhitelist [list|add|remove] [dominio]");
     });
 
-    // Command: /gblacklist
+    // Command: /gblacklist <w/d> <add/remove/list> <value>
+    // w = word, d = domain
     bot.command("gblacklist", async (ctx) => {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
         const args = ctx.message.text.split(' ').slice(1);
-        const action = args[0];
-        const domain = args[1];
+        const typeArg = args[0]?.toLowerCase(); // w or d
+        const action = args[1]?.toLowerCase();  // add, remove, list
+        const value = args.slice(2).join(' ');
 
-        if (!action || action === 'list') {
-            const items = await db.queryAll(
-                "SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND status = 'active'"
-            );
-            if (items.length === 0) return ctx.reply("🚫 **BLACKLIST DOMINI GLOBALE**\n\nNessun dominio in blacklist.");
+        // Show help if no args or just 'list'
+        if (!typeArg || typeArg === 'list') {
+            const domains = await db.queryAll("SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND status = 'active'");
+            const words = await db.queryAll("SELECT * FROM intel_data WHERE type = 'blacklist_word' AND status = 'active'");
 
-            let msg = "🚫 **BLACKLIST DOMINI GLOBALE**\n\n";
-            items.forEach((item, i) => msg += `${i + 1}. \`${item.value}\`\n`);
-            msg += "\n_Usa /gblacklist add <dominio> o /gblacklist remove <dominio>_";
+            let msg = "🚫 **BLACKLIST GLOBALE**\n\n";
+
+            msg += `**🔗 Domini (${domains.length}):**\n`;
+            if (domains.length === 0) msg += "_Nessuno_\n";
+            else domains.slice(0, 10).forEach((item, i) => msg += `${i + 1}. \`${item.value}\`\n`);
+            if (domains.length > 10) msg += `_...e altri ${domains.length - 10}_\n`;
+
+            msg += `\n**🔤 Parole (${words.length}):**\n`;
+            if (words.length === 0) msg += "_Nessuna_\n";
+            else words.slice(0, 10).forEach((item, i) => msg += `${i + 1}. \`${item.value}\`\n`);
+            if (words.length > 10) msg += `_...e altre ${words.length - 10}_\n`;
+
+            msg += "\n**Uso:**\n";
+            msg += "`/gblacklist d add example.com` - Aggiungi dominio\n";
+            msg += "`/gblacklist w add parola` - Aggiungi parola\n";
+            msg += "`/gblacklist d remove example.com` - Rimuovi dominio\n";
+            msg += "`/gblacklist w remove parola` - Rimuovi parola";
             return ctx.reply(msg, { parse_mode: 'Markdown' });
         }
 
-        if (action === 'add' && domain) {
-            const existing = await db.queryOne("SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND value = $1", [domain]);
+        // Determine type
+        let dbType;
+        let typeName;
+        if (typeArg === 'w' || typeArg === 'word') {
+            dbType = 'blacklist_word';
+            typeName = 'parola';
+        } else if (typeArg === 'd' || typeArg === 'domain') {
+            dbType = 'blacklist_domain';
+            typeName = 'dominio';
+        } else {
+            return ctx.reply("❌ Tipo non valido. Usa `w` (word) o `d` (domain).", { parse_mode: 'Markdown' });
+        }
+
+        // List specific type
+        if (action === 'list' || !action) {
+            const items = await db.queryAll(`SELECT * FROM intel_data WHERE type = $1 AND status = 'active'`, [dbType]);
+            if (items.length === 0) return ctx.reply(`🚫 Nessun ${typeName} in blacklist.`);
+
+            let msg = `🚫 **BLACKLIST ${typeName.toUpperCase()}**\n\n`;
+            items.forEach((item, i) => msg += `${i + 1}. \`${item.value}\`\n`);
+            return ctx.reply(msg, { parse_mode: 'Markdown' });
+        }
+
+        // Add
+        if (action === 'add' && value) {
+            const existing = await db.queryOne(`SELECT * FROM intel_data WHERE type = $1 AND value = $2`, [dbType, value]);
             if (existing) {
-                if (existing.status === 'active') return ctx.reply(`⚠️ \`${domain}\` già in blacklist.`);
+                if (existing.status === 'active') return ctx.reply(`⚠️ \`${value}\` già in blacklist.`, { parse_mode: 'Markdown' });
                 await db.query("UPDATE intel_data SET status='active' WHERE id=$1", [existing.id]);
             } else {
-                await db.query("INSERT INTO intel_data (type, value, added_by_user) VALUES ('blacklist_domain', $1, $2)", [domain, ctx.from.id]);
+                await db.query("INSERT INTO intel_data (type, value, added_by_user) VALUES ($1, $2, $3)", [dbType, value, ctx.from.id]);
             }
-            return ctx.reply(`✅ \`${domain}\` aggiunto blacklist.`);
+            return ctx.reply(`✅ ${typeName} \`${value}\` aggiunto alla blacklist.`, { parse_mode: 'Markdown' });
         }
 
-        if (action === 'remove' && domain) {
-            await db.query("UPDATE intel_data SET status='removed' WHERE type='blacklist_domain' AND value=$1", [domain]);
-            return ctx.reply(`🗑️ \`${domain}\` rimosso.`);
+        // Remove
+        if (action === 'remove' && value) {
+            const result = await db.query(`UPDATE intel_data SET status='removed' WHERE type=$1 AND value=$2`, [dbType, value]);
+            if (result.rowCount > 0) return ctx.reply(`🗑️ ${typeName} \`${value}\` rimosso.`, { parse_mode: 'Markdown' });
+            return ctx.reply(`⚠️ \`${value}\` non trovato.`, { parse_mode: 'Markdown' });
         }
 
-        return ctx.reply("❓ Uso: /gblacklist [list|add|remove] [dominio]");
-    });
-
-    // Command: /gscam
-    bot.command("gscam", async (ctx) => {
-        if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
-        const args = ctx.message.text.split(' ').slice(1);
-        const action = args[0];
-        const pattern = args.slice(1).join(' ');
-
-        if (!action || action === 'list') {
-            const items = await db.queryAll("SELECT * FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'");
-            if (items.length === 0) return ctx.reply("🎯 **SCAM PATTERNS GLOBALI**\n\nNessun pattern.");
-            let msg = "🎯 **SCAM PATTERNS GLOBALI**\n\n";
-            items.forEach((item, i) => msg += `${i + 1}. \`${item.word}\`\n`);
-            return ctx.reply(msg, { parse_mode: 'Markdown' });
-        }
-
-        if ((action === 'add' || action === 'addregex') && pattern) {
-            const isRegex = action === 'addregex';
-            if (isRegex) { try { new RegExp(pattern); } catch (e) { return ctx.reply("Regex invalida"); } }
-            try {
-                await db.query("INSERT INTO word_filters (guild_id, word, is_regex, category, action, bypass_tier) VALUES (0, $1, $2, 'scam_pattern', 'report_only', 2)", [pattern, isRegex]);
-                return ctx.reply(`✅ Pattern aggiunto.`);
-            } catch (e) { return ctx.reply("⚠️ Possibile duplicato."); }
-        }
-
-        if (action === 'remove' && pattern) {
-            await db.query("DELETE FROM word_filters WHERE guild_id=0 AND category='scam_pattern' AND word=$1", [pattern]);
-            return ctx.reply("🗑️ Rimosso.");
-        }
-        return ctx.reply("❓ Uso: /gscam [list|add|addregex|remove] [pattern]");
+        return ctx.reply("❓ Uso: `/gblacklist <w|d> <add|remove|list> [valore]`", { parse_mode: 'Markdown' });
     });
 
     // Command: /gmodal

@@ -148,6 +148,19 @@ function isFromSettingsMenu(ctx) {
     return false;
 }
 
+/**
+ * Check if user ID is a super admin
+ * @param {number} userId - User ID to check
+ * @returns {boolean} True if super admin
+ */
+function isSuperAdmin(userId) {
+    const superAdminIds = (process.env.SUPER_ADMIN_IDS || '')
+        .split(',')
+        .map(id => parseInt(id.trim(), 10))
+        .filter(id => !isNaN(id));
+    return superAdminIds.includes(userId);
+}
+
 module.exports = {
     handleTelegramError,
     handleCriticalError,
@@ -157,5 +170,6 @@ module.exports = {
     safeBan,
     safeGetChatMember,
     isAdmin,
-    isFromSettingsMenu
+    isFromSettingsMenu,
+    isSuperAdmin
 };

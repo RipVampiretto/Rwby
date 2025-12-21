@@ -44,24 +44,11 @@ function register(bot, database) {
         return next();
     });
 
-    // Register admin command for manual sync
+    // Register super admin command for manual sync
     bot.command('cassync', async (ctx) => {
-        // Check if admin
-        if (ctx.chat.type === 'private') {
-            // Check if super admin
-            const superAdminIds = (process.env.SUPER_ADMIN_IDS || '').split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
-            if (!superAdminIds.includes(ctx.from.id)) {
-                return ctx.reply('❌ Solo super admin possono usare questo comando.');
-            }
-        } else {
-            try {
-                const member = await ctx.getChatMember(ctx.from.id);
-                if (!['creator', 'administrator'].includes(member.status)) {
-                    return ctx.reply('❌ Solo admin possono usare questo comando.');
-                }
-            } catch (e) {
-                return ctx.reply('❌ Errore verifica permessi.');
-            }
+        const { isSuperAdmin } = require('../../utils/error-handlers');
+        if (!isSuperAdmin(ctx.from.id)) {
+            return ctx.reply('❌ Solo super admin possono usare questo comando.');
         }
 
         await ctx.reply('🔄 Avvio sincronizzazione CAS...');

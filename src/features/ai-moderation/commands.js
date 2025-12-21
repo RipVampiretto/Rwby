@@ -1,6 +1,6 @@
 const { sendConfigUI, sendCategoryConfigUI } = require('./ui');
 const { testConnection, callLLM } = require('./api');
-const { isFromSettingsMenu } = require('../../utils/error-handlers');
+const { isFromSettingsMenu, isSuperAdmin } = require('../../utils/error-handlers');
 
 /**
  * Check if user is admin
@@ -15,34 +15,29 @@ async function isAdmin(ctx, source) {
 }
 
 function registerCommands(bot, db) {
-    // Command: /testai <message> - Admin only, test AI analysis
+    // Command: /testai - Super Admin only, health check for AI connection
     bot.command("testai", async (ctx) => {
-        if (ctx.chat.type === 'private') return;
-        if (!await isAdmin(ctx, 'ai-moderation')) return;
-
-        const text = ctx.message.text.replace(/^\/testai\s*/, '').trim();
-        if (!text) {
-            await ctx.reply("⚠️ Uso: `/testai <messaggio da analizzare>`", { parse_mode: 'Markdown' });
-            return;
+        if (!isSuperAdmin(ctx.from.id)) {
+            return ctx.reply('❌ Solo super admin possono usare questo comando.');
         }
 
-        await ctx.reply("🔄 Analisi in corso...");
+        await ctx.reply("🔄 Testing AI connection...");
 
         try {
-            const config = db.getGuildConfig(ctx.chat.id);
-            const result = await callLLM(text, [], config);
+            const startTime = Date.now();
+            const result = await callLLM("Hello, this is a test message.", [], { ai_confidence_threshold: 0.5 }, process.env.LM_STUDIO_NSFW_MODEL);
+            const latency = Date.now() - startTime;
 
-            const emoji = result.category === 'safe' ? '✅' : '🚨';
-            const response = `${emoji} **RISULTATO AI**\n\n` +
-                `📁 Categoria: \`${result.category}\`\n` +
-                `📊 Confidenza: \`${Math.round(result.confidence * 100)}%\`\n` +
-                `📝 Motivo: ${result.reason}\n\n` +
-                `🔧 Soglia attuale: ${(config.ai_confidence_threshold || 0.75) * 100}%\n` +
-                `⚡ Azione se rilevato: \`${config['ai_action_' + result.category] || 'N/A'}\``;
+            const status = result && result.category ? '✅ OK' : '❌ FAILED';
+            const response = `🤖 **AI HEALTH CHECK**\n\n` +
+                `Status: ${status}\n` +
+                `Latency: ${latency}ms\n` +
+                `Response Category: \`${result?.category || 'N/A'}\`\n` +
+                `Confidence: \`${result?.confidence ? Math.round(result.confidence * 100) + '%' : 'N/A'}\``;
 
             await ctx.reply(response, { parse_mode: 'Markdown' });
         } catch (e) {
-            await ctx.reply(`❌ Errore: ${e.message}`);
+            await ctx.reply(`❌ **AI HEALTH CHECK FAILED**\n\nError: ${e.message}`, { parse_mode: 'Markdown' });
         }
     });
 
