@@ -40,6 +40,12 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass',
     // CAS Ban / Global Blacklist
     'casban_enabled',
+    // CAS Ban / Global Blacklist
+    'casban_enabled',
+    // Welcome & Captcha System
+    'welcome_enabled', 'welcome_msg_enabled', 'welcome_message', 'welcome_buttons', 'captcha_enabled', 'captcha_mode', 'kick_timeout',
+    'welcome_autodelete_timer', 'rules_enabled', 'rules_link', 'captcha_logs_enabled',
+    // UI Language
     // UI Language
     'ui_language'
 ]);

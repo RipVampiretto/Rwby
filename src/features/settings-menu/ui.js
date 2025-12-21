@@ -28,6 +28,9 @@ async function sendMainMenu(ctx, isEdit = false) {
         inline_keyboard: [
             // === FIRST LINE OF DEFENSE ===
             [
+                { text: `🛡️ Welcome & Captcha`, callback_data: "set_goto:welcome" }
+            ],
+            [
                 { text: `${t('settings.buttons.casban')}`, callback_data: "set_goto:casban" },
                 { text: `${t('settings.buttons.links')}`, callback_data: "set_goto:links" }
             ],

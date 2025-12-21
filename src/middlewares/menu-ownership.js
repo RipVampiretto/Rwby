@@ -77,7 +77,7 @@ function adminOnlyCallbacks() {
         const isAdmin = await isAdminCached(ctx);
 
         // Check whitelist first
-        const allowedPrefixes = ['vote_'];
+        const allowedPrefixes = ['vote_', 'wc:'];
         if (allowedPrefixes.some(p => ctx.callbackQuery.data && ctx.callbackQuery.data.startsWith(p))) {
             return next();
         }

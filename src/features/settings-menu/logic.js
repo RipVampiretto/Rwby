@@ -15,13 +15,18 @@ const adminLogger = require('../admin-logger');
 const staffCoordination = require('../staff-coordination');
 const intelNetwork = require('../intel-network');
 const modalPatterns = require('../modal-patterns');
+
 const casBan = require('../cas-ban');
+const welcomeSystem = require('../welcome-system');
 
 async function routeToFeature(ctx, feature) {
     // Call the feature's sendConfigUI with fromSettings=true
     // Note: features need to export sendConfigUI
 
     switch (feature) {
+        case 'welcome':
+            if (welcomeSystem.ui.sendWelcomeMenu) await welcomeSystem.ui.sendWelcomeMenu(ctx, true);
+            break;
         case 'antispam':
             // DISABLED
             await ctx.answerCallbackQuery("Anti-Spam module is disabled.");

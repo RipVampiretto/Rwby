@@ -30,6 +30,7 @@ const linkMonitor = require("./src/features/link-monitor");
 const nsfwMonitor = require("./src/features/nsfw-monitor");
 const visualImmuneSystem = require("./src/features/visual-immune-system");
 const voteBan = require("./src/features/vote-ban");
+const welcomeSystem = require("./src/features/welcome-system");
 const settingsMenu = require("./src/features/settings-menu");
 
 // ============================================================================
@@ -101,6 +102,7 @@ visualImmuneSystem.register(bot, db);
 
 // Community moderation
 voteBan.register(bot, db);
+welcomeSystem.register(bot, db);
 settingsMenu.register(bot, db);
 
 // ============================================================================

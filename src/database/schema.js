@@ -121,6 +121,15 @@ function createTables(db) {
             -- CAS Ban / Global Blacklist
             casban_enabled INTEGER DEFAULT 0,
             
+            -- Welcome & Captcha System
+            welcome_enabled INTEGER DEFAULT 0, -- DEPRECATED (use captcha_enabled) but keeping for potential migration or master switch
+            welcome_msg_enabled INTEGER DEFAULT 0,
+            welcome_message TEXT,
+            welcome_buttons TEXT,
+            captcha_enabled INTEGER DEFAULT 0,
+            captcha_mode TEXT DEFAULT 'button',
+            kick_timeout INTEGER DEFAULT 5, -- minutes
+            
             -- UI Language
             ui_language TEXT DEFAULT 'en',
             
