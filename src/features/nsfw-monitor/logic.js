@@ -201,34 +201,77 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
 
     loggerUtil.info(`[nsfw-monitor] 🎬 Will extract ${timestamps.length} frames at ${intervalPct}% intervals`);
 
-    for (let i = 0; i < timestamps.length; i++) {
-        const ts = timestamps[i];
-        const framePath = path.join(TEMP_DIR, `frame_${path.basename(videoPath)}_${ts}.jpg`);
-        loggerUtil.debug(`[nsfw-monitor] 🎬 Processing frame ${i + 1}/${timestamps.length} at ${ts.toFixed(2)}s`);
+    // Generate frame paths
+    const framePaths = timestamps.map((ts, i) =>
+        path.join(TEMP_DIR, `frame_${path.basename(videoPath)}_${i}.jpg`)
+    );
 
-        try {
-            loggerUtil.debug(`[nsfw-monitor] 🎬 Extracting frame at ${ts.toFixed(2)}s to ${framePath}`);
-            const extractStart = Date.now();
-            await extractFrame(videoPath, ts, framePath);
-            loggerUtil.debug(`[nsfw-monitor] 🎬 Frame extracted in ${Date.now() - extractStart}ms`);
+    // OPTIMIZATION 1: Extract ALL frames in parallel
+    loggerUtil.info(`[nsfw-monitor] ⚡ Extracting ${timestamps.length} frames in PARALLEL (scaled 25%)...`);
+    const extractStart = Date.now();
 
-            const isNsfw = await checkImage(framePath, config, reasons, caption);
+    const extractResults = await Promise.allSettled(
+        timestamps.map((ts, i) => extractFrame(videoPath, ts, framePaths[i]))
+    );
 
-            loggerUtil.debug(`[nsfw-monitor] 🧹 Cleaning up frame: ${framePath}`);
-            fs.unlinkSync(framePath);
-
-            if (isNsfw) {
-                reasons[0] += ` @ ${ts.toFixed(1)}s`;
-                loggerUtil.warn(`[nsfw-monitor] 🚨 NSFW detected at frame ${i + 1} (${ts.toFixed(1)}s) - stopping early`);
-                return true;
-            }
-        } catch (e) {
-            loggerUtil.warn(`[nsfw-monitor] ⚠️ Frame ${i + 1} check error: ${e.message}`);
+    // Filter successful extractions
+    const validFrames = [];
+    for (let i = 0; i < extractResults.length; i++) {
+        if (extractResults[i].status === 'fulfilled' && fs.existsSync(framePaths[i])) {
+            validFrames.push({ path: framePaths[i], timestamp: timestamps[i], index: i });
         }
     }
 
-    loggerUtil.info(`[nsfw-monitor] ✅ All ${timestamps.length} frames passed check`);
-    return false;
+    loggerUtil.info(`[nsfw-monitor] ⚡ Parallel extraction complete: ${validFrames.length}/${timestamps.length} frames in ${Date.now() - extractStart}ms`);
+
+    if (validFrames.length === 0) {
+        loggerUtil.warn(`[nsfw-monitor] ⚠️ No frames extracted successfully`);
+        return false;
+    }
+
+    // OPTIMIZATION 2: Batch frames for LLM analysis (5 frames per batch)
+    const BATCH_SIZE = 5;
+    const batches = [];
+    for (let i = 0; i < validFrames.length; i += BATCH_SIZE) {
+        batches.push(validFrames.slice(i, i + BATCH_SIZE));
+    }
+
+    loggerUtil.info(`[nsfw-monitor] 🤖 Analyzing ${validFrames.length} frames in ${batches.length} batches (${BATCH_SIZE} per batch)...`);
+
+    try {
+        for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+            const batch = batches[batchIdx];
+            loggerUtil.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1}/${batches.length}: Analyzing ${batch.length} frames...`);
+
+            // Read all frames in batch to base64
+            const base64Images = batch.map(f => {
+                const buffer = fs.readFileSync(f.path);
+                return buffer.toString('base64');
+            });
+
+            // Call LLM with all images in batch
+            const batchStart = Date.now();
+            const result = await callVisionLLMBatch(base64Images, config, caption, batch.map(f => f.timestamp));
+            loggerUtil.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1} analyzed in ${Date.now() - batchStart}ms`);
+
+            // Check result
+            if (result.isNsfw) {
+                reasons.push(result.reason);
+                loggerUtil.warn(`[nsfw-monitor] 🚨 NSFW detected in batch ${batchIdx + 1}: ${result.reason}`);
+                return true;
+            }
+        }
+
+        loggerUtil.info(`[nsfw-monitor] ✅ All ${batches.length} batches passed check`);
+        return false;
+
+    } finally {
+        // Cleanup all frame files
+        loggerUtil.debug(`[nsfw-monitor] 🧹 Cleaning up ${validFrames.length} frame files...`);
+        for (const frame of validFrames) {
+            try { fs.unlinkSync(frame.path); } catch (e) { }
+        }
+    }
 }
 
 function getVideoDuration(filePath) {
@@ -248,10 +291,11 @@ function getVideoDuration(filePath) {
 
 function extractFrame(videoPath, timestamp, outputPath) {
     return new Promise((resolve, reject) => {
-        loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath}`);
+        loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath} (scaled 75%)`);
         fluentFfmpeg(videoPath)
             .seekInput(timestamp)
             .frames(1)
+            .outputOptions(['-vf', 'scale=iw*0.75:ih*0.75'])  // Reduce by 25% (keep 75%)
             .output(outputPath)
             .on('end', () => {
                 loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Frame extracted successfully`);
@@ -276,7 +320,8 @@ const NSFW_CATEGORIES = {
     real_nudity: { name: 'Real Nudity', description: 'Photographic/realistic human nudity', blockable: true },
     real_sex: { name: 'Real Sex', description: 'Photographic/realistic sexual acts', blockable: true },
     hentai: { name: 'Hentai', description: 'Explicit anime/manga sexual content', blockable: true },
-    gore: { name: 'Gore/Violence', description: 'Blood, injuries, graphic violence', blockable: true },
+    real_gore: { name: 'Real Gore', description: 'Photographic blood, injuries, graphic violence', blockable: true },
+    drawn_gore: { name: 'Drawn Gore', description: 'Stylized/anime blood, injuries, graphic violence', blockable: true },
     minors: { name: 'Minors (CSAM)', description: 'Any sexualized content involving minors', blockable: false, alwaysBlocked: true }
 };
 
@@ -284,7 +329,7 @@ const NSFW_CATEGORIES = {
  * Get default blocked categories
  */
 function getDefaultBlockedCategories() {
-    return ['real_nudity', 'real_sex', 'hentai', 'gore', 'minors'];
+    return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'minors'];
 }
 
 async function callVisionLLM(base64Image, config, caption = null) {
@@ -385,6 +430,137 @@ Respond ONLY with a JSON object:
         }
         loggerUtil.debug(`[nsfw-monitor] 🤖 Returning safe default due to error`);
         return { category: "safe", confidence: 1, reason: "LLM error - defaulting to safe" };
+    }
+}
+
+/**
+ * Batch version: Analyze multiple images in a single LLM call
+ * @param {string[]} base64Images - Array of base64 encoded images
+ * @param {object} config - Guild config
+ * @param {string|null} caption - Optional caption
+ * @param {number[]} timestamps - Timestamps for each frame (for logging)
+ * @returns {Promise<{isNsfw: boolean, reason: string}>}
+ */
+async function callVisionLLMBatch(base64Images, config, caption = null, timestamps = []) {
+    const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+    loggerUtil.debug(`[nsfw-monitor] 🤖 callVisionLLMBatch: Analyzing ${base64Images.length} images`);
+
+    // Get blocked categories for this guild
+    let blockedCategories = config.nsfw_blocked_categories;
+    if (!blockedCategories || !Array.isArray(blockedCategories)) {
+        try {
+            blockedCategories = typeof blockedCategories === 'string'
+                ? JSON.parse(blockedCategories)
+                : getDefaultBlockedCategories();
+        } catch (e) {
+            blockedCategories = getDefaultBlockedCategories();
+        }
+    }
+    if (!blockedCategories.includes('minors')) {
+        blockedCategories.push('minors');
+    }
+
+    const categoryList = Object.entries(NSFW_CATEGORIES)
+        .map(([key, val]) => `- "${key}": ${val.description}`)
+        .join('\n');
+
+    const systemPrompt = `You are an image content classifier. Analyze these ${base64Images.length} video frames and classify each into ONE of these categories.
+
+CATEGORIES:
+${categoryList}
+
+IMPORTANT RULES:
+- "minors" takes absolute priority - if ANY sexualized content involves minors, classify as "minors"
+- Distinguish between real photography and anime/cartoon/3D rendered content
+- Analyze EACH frame independently but report if ANY frame is problematic
+
+Respond ONLY with a JSON object:
+{"frames": [{"category": "...", "confidence": 0.0-1.0}], "worst_category": "...", "worst_confidence": 0.0-1.0, "reason": "brief explanation of worst finding"}`;
+
+    // Build user message with optional caption context
+    let userMessage = `Analyze these ${base64Images.length} video frames for NSFW content.`;
+    if (caption && caption.trim()) {
+        userMessage += ` The uploader's caption was: "${caption.substring(0, 200)}"`;
+    }
+
+    // Build content array with multiple images
+    const contentItems = [{ type: "text", text: userMessage }];
+    for (let i = 0; i < base64Images.length; i++) {
+        contentItems.push({
+            type: "image_url",
+            image_url: { url: `data:image/jpeg;base64,${base64Images[i]}` }
+        });
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => {
+            loggerUtil.warn(`[nsfw-monitor] ⏰ Batch LLM request timeout (90s)`);
+            controller.abort();
+        }, 90000); // Longer timeout for batch
+
+        loggerUtil.debug(`[nsfw-monitor] 🤖 Sending batch request to LLM API...`);
+        const requestStart = Date.now();
+
+        const response = await fetch(`${url}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: process.env.LM_STUDIO_NSFW_MODEL || undefined,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: contentItems }
+                ],
+                temperature: 0.1,
+                max_tokens: 300
+            }),
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        const responseTime = Date.now() - requestStart;
+        loggerUtil.debug(`[nsfw-monitor] 🤖 Batch LLM response in ${responseTime}ms, status: ${response.status}`);
+
+        if (!response.ok) {
+            loggerUtil.error(`[nsfw-monitor] ❌ Batch LLM API error: status ${response.status}`);
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        loggerUtil.debug(`[nsfw-monitor] 🤖 Batch LLM raw response: ${content.substring(0, 200)}...`);
+
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        let result;
+        if (jsonMatch) {
+            result = JSON.parse(jsonMatch[0]);
+        } else {
+            result = JSON.parse(content);
+        }
+
+        // Check if worst category is blocked
+        const worstCategory = result.worst_category || 'safe';
+        const worstConfidence = result.worst_confidence || 0;
+        const threshold = config.nsfw_threshold || 0.7;
+
+        if (blockedCategories.includes(worstCategory) && worstConfidence >= threshold) {
+            const categoryInfo = NSFW_CATEGORIES[worstCategory] || { name: worstCategory };
+            return {
+                isNsfw: true,
+                reason: `${categoryInfo.name} (${Math.round(worstConfidence * 100)}%) - ${result.reason || 'Detected in video frames'}`
+            };
+        }
+
+        return { isNsfw: false, reason: null };
+
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            loggerUtil.error(`[nsfw-monitor] ❌ Batch LLM request aborted (timeout)`);
+        } else {
+            loggerUtil.error(`[nsfw-monitor] ❌ Batch LLM error: ${e.message}`);
+        }
+        loggerUtil.debug(`[nsfw-monitor] 🤖 Returning safe default due to batch error`);
+        return { isNsfw: false, reason: null };
     }
 }
 

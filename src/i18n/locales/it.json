@@ -246,9 +246,13 @@
                 "name": "Hentai",
                 "desc": "Anime/manga con contenuti sessuali espliciti"
             },
-            "gore": {
-                "name": "Violenza/Gore",
-                "desc": "Sangue, ferite, violenza grafica"
+            "real_gore": {
+                "name": "Gore Reale",
+                "desc": "Foto/video con sangue, ferite, violenza grafica reale"
+            },
+            "drawn_gore": {
+                "name": "Gore Stilizzato",
+                "desc": "Anime/disegni/videogiochi con sangue, ferite, violenza grafica stilizzata"
             },
             "minors": {
                 "name": "Minori (CSAM)",
