@@ -101,7 +101,7 @@ antiEditAbuse.register(bot, db);
 
 // Detection: Media
 nsfwMonitor.register(bot, db);
-visualImmuneSystem.register(bot, db);
+// visualImmuneSystem.register(bot, db); // DISABLED
 
 // Community moderation
 voteBan.register(bot, db);
