@@ -38,7 +38,7 @@ function registerCommands(bot, db) {
             }
         } catch (e) { }
 
-        const existing = logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
+        const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
         if (existing) {
             return ctx.reply("⚠️ C'è già una votazione attiva per questo utente.", {
                 reply_to_message_id: existing.poll_message_id
@@ -55,14 +55,14 @@ function registerCommands(bot, db) {
 
         const voters = [{ id: ctx.from.id, name: ctx.from.first_name, vote: 'yes' }];
 
-        const voteId = logic.createVote(db, {
+        const voteId = await logic.createVote(db, {
             target, chat: ctx.chat, initiator: ctx.from, reason, required, expires, voters
         });
 
         const { text: msgText, keyboard } = ui.getVoteMessage(target, ctx.from, reason, 1, 0, required, expires, voteId, duration === 0);
         const msg = await ctx.reply(msgText, { reply_markup: keyboard, parse_mode: 'Markdown' });
 
-        logic.setPollMessageId(db, voteId, msg.message_id);
+        await logic.setPollMessageId(db, voteId, msg.message_id);
     });
 
     bot.on("callback_query:data", async (ctx, next) => {
@@ -108,7 +108,7 @@ function registerCommands(bot, db) {
 
             if (isNaN(voteId)) return ctx.answerCallbackQuery("Errore: ID votazione non valido.");
 
-            const vote = logic.getVote(db, voteId);
+            const vote = await logic.getVote(db, voteId);
             if (!vote || vote.status !== 'active') return ctx.answerCallbackQuery("Votazione scaduta o inesistente.");
 
             const member = await ctx.getChatMember(ctx.from.id);
@@ -145,7 +145,7 @@ function registerCommands(bot, db) {
             if (action === 'yes') yes++;
             else if (action === 'no') no++;
 
-            logic.updateVote(db, voteId, yes, no, voters);
+            await logic.updateVote(db, voteId, yes, no, voters);
 
             await ctx.answerCallbackQuery("Voto registrato.");
 

@@ -69,7 +69,7 @@ function registerCommands(bot, db) {
             return ctx.reply("❌ Uso:\n`/notes <user_id>` - Visualizza note\n`/notes add <user_id> <severity> <testo>` - Aggiungi nota", { parse_mode: 'Markdown' });
         }
 
-        const notes = logic.getNotes(db, targetId, staffGroupId);
+        const notes = await logic.getNotes(db, targetId, staffGroupId);
         const text = ui.formatNoteList(targetId, notes);
         await ctx.reply(text, { parse_mode: 'HTML' });
     });

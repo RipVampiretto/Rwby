@@ -35,7 +35,7 @@ function register(bot, database) {
         if (config.casban_enabled === 0) return next();
 
         // Check if user is CAS banned
-        const isBanned = detection.isCasBanned(ctx.from.id);
+        const isBanned = await detection.isCasBanned(ctx.from.id);
         if (isBanned) {
             await actions.handleCasBan(ctx);
             return; // Stop processing, user is banned

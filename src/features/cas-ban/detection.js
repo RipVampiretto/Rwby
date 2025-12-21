@@ -23,7 +23,8 @@ async function loadCache() {
 
     try {
         const bans = await db.queryAll('SELECT user_id FROM cas_bans');
-        _casBanCache = new Set(bans.map(b => b.user_id));
+        // PostgreSQL BIGINT is returned as string, parse to Number for consistent lookup
+        _casBanCache = new Set(bans.map(b => Number(b.user_id)));
         _cacheLoaded = true;
         logger.info(`[cas-ban] Loaded ${_casBanCache.size} CAS bans into cache`);
         return true;
@@ -44,7 +45,8 @@ async function isCasBanned(userId) {
     if (!_cacheLoaded) {
         await loadCache();
     }
-    return _casBanCache ? _casBanCache.has(userId) : false;
+    // Ensure consistent Number type for lookup
+    return _casBanCache ? _casBanCache.has(Number(userId)) : false;
 }
 
 /**

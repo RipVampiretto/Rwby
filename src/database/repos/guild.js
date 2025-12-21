@@ -1,5 +1,39 @@
-const { queryOne, query } = require('../connection');
+const { queryOne, query, queryAll } = require('../connection');
 const logger = require('../../middlewares/logger');
+
+// ============================================================================
+// IN-MEMORY CACHE FOR GUILD CONFIGS (Enables sync getGuildConfig calls)
+// ============================================================================
+const _guildCache = new Map();
+let _cacheInitialized = false;
+
+/**
+ * Default config values for new guilds (used when not in cache yet)
+ */
+const DEFAULT_CONFIG = {
+    spam_enabled: 0, ai_enabled: 0, edit_monitor_enabled: 0, profiler_enabled: 0,
+    lang_enabled: 0, link_enabled: 0, nsfw_enabled: 0, visual_enabled: 0,
+    voteban_enabled: 0, modal_enabled: 0, casban_enabled: 0, welcome_enabled: 0,
+    captcha_enabled: 0, rules_enabled: 0, welcome_msg_enabled: 0
+};
+
+/**
+ * Initialize cache by loading all guild configs from database
+ * Called once at startup
+ */
+async function initCache() {
+    if (_cacheInitialized) return;
+    try {
+        const configs = await queryAll('SELECT * FROM guild_config');
+        for (const config of configs) {
+            _guildCache.set(String(config.guild_id), config);
+        }
+        _cacheInitialized = true;
+        logger.info(`[database] Loaded ${_guildCache.size} guild configs into cache`);
+    } catch (e) {
+        logger.error(`[database] Failed to init guild cache: ${e.message}`);
+    }
+}
 
 /**
  * Valid column names for guild_config table (whitelist to prevent SQL injection)
@@ -48,17 +82,39 @@ const GUILD_CONFIG_COLUMNS = new Set([
 ]);
 
 /**
- * Get or create guild config
- * @param {number} guildId - Guild ID
- * @returns {Promise<object>}
+ * Get guild config - SYNC from cache, async DB fetch if not cached
+ * @param {number|string} guildId - Guild ID
+ * @returns {object} Config object (sync) or Promise<object> if fetching from DB
  */
-async function getGuildConfig(guildId) {
-    let config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
-    if (!config) {
-        await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
-        config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
+function getGuildConfig(guildId) {
+    const key = String(guildId);
+
+    // Return from cache if available (sync)
+    if (_guildCache.has(key)) {
+        return _guildCache.get(key);
     }
-    return config;
+
+    // Not in cache - return default and trigger async load
+    const defaultConfig = { guild_id: guildId, ...DEFAULT_CONFIG };
+    _guildCache.set(key, defaultConfig); // Set temporary default
+
+    // Async: fetch from DB and update cache
+    (async () => {
+        try {
+            let config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
+            if (!config) {
+                await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
+                config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
+            }
+            if (config) {
+                _guildCache.set(key, config);
+            }
+        } catch (e) {
+            logger.error(`[database] Failed to fetch guild config for ${guildId}: ${e.message}`);
+        }
+    })();
+
+    return defaultConfig;
 }
 
 /**
@@ -95,6 +151,15 @@ async function updateGuildConfig(guildId, updates) {
 
     const sql = `UPDATE guild_config SET ${setClauses.join(', ')}, updated_at = NOW() WHERE guild_id = $${values.length}`;
     await query(sql, values);
+
+    // Sync cache: update cached config with new values
+    const key = String(guildId);
+    if (_guildCache.has(key)) {
+        const cached = _guildCache.get(key);
+        for (const k of validKeys) {
+            cached[k] = updates[k];
+        }
+    }
 }
 
 /**
@@ -111,9 +176,16 @@ async function upsertGuild(chat) {
             guild_name = EXCLUDED.guild_name,
             updated_at = NOW()
     `, [id, title]);
+
+    // Sync cache
+    const key = String(id);
+    if (_guildCache.has(key)) {
+        _guildCache.get(key).guild_name = title;
+    }
 }
 
 module.exports = {
+    initCache,
     getGuildConfig,
     updateGuildConfig,
     upsertGuild

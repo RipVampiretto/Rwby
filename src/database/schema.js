@@ -129,7 +129,7 @@ async function createTables() {
             welcome_enabled BOOLEAN DEFAULT FALSE,
             welcome_msg_enabled BOOLEAN DEFAULT FALSE,
             welcome_message TEXT,
-            welcome_buttons TEXT,
+            welcome_buttons JSONB,
             captcha_enabled BOOLEAN DEFAULT FALSE,
             captcha_mode TEXT DEFAULT 'button',
             kick_timeout INTEGER DEFAULT 5,

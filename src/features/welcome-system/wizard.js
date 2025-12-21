@@ -111,7 +111,7 @@ async function handleMessage(ctx) {
 
         const parts = input.split('||');
         const welcomeText = parts[0].trim();
-        const buttonConfig = parts.length > 1 ? parts.slice(1).join('||').trim() : '';
+        const buttonConfigStr = parts.length > 1 ? parts.slice(1).join('||').trim() : '';
 
         if (!welcomeText) {
             const warning = await ctx.reply("⚠️ Il testo non può essere vuoto.");
@@ -119,9 +119,44 @@ async function handleMessage(ctx) {
             return true;
         }
 
+        // Parse button config string into Telegram inline_keyboard JSON format
+        // Format: Label,URL | Label2,URL ; Label3,URL3
+        // | = new row, ; = same row
+        let buttonJson = null;
+        if (buttonConfigStr) {
+            const keyboard = [];
+            const rows = buttonConfigStr.split('|');
+
+            for (const row of rows) {
+                if (!row.trim()) continue;
+                const buttons = [];
+                const buttonDefs = row.split(';');
+
+                for (const btnDef of buttonDefs) {
+                    const firstCommaIndex = btnDef.indexOf(',');
+                    if (firstCommaIndex === -1) continue;
+
+                    const text = btnDef.substring(0, firstCommaIndex).trim();
+                    const url = btnDef.substring(firstCommaIndex + 1).trim();
+
+                    if (text && url) {
+                        buttons.push({ text, url });
+                    }
+                }
+
+                if (buttons.length > 0) {
+                    keyboard.push(buttons);
+                }
+            }
+
+            if (keyboard.length > 0) {
+                buttonJson = { inline_keyboard: keyboard };
+            }
+        }
+
         updateGuildConfig(ctx.chat.id, {
             welcome_message: welcomeText,
-            welcome_buttons: buttonConfig,
+            welcome_buttons: buttonJson,
             welcome_msg_enabled: 1
         });
 

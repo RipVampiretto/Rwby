@@ -1,41 +1,36 @@
 /**
- * Parse custom button configuration string
- * Format: Label,URL|Label2,URL;Label3,URL3
- * | = New Row
- * ; = New Button in same row
- * , = Separator between Label and URL
- * @param {string} configStr 
+ * Parse button configuration from database (JSONB)
+ * Now stored directly as Telegram inline_keyboard format
+ * @param {object|null} buttonsJson - The JSONB from database
  * @returns {Array<Array<{text: string, url: string}>>}
  */
-function parseButtonConfig(configStr) {
-    if (!configStr) return [];
+function parseButtonConfig(buttonsJson) {
+    if (!buttonsJson) return [];
 
-    const rows = configStr.split('|');
-    const keyboard = [];
-
-    for (const row of rows) {
-        if (!row.trim()) continue;
-        const buttons = [];
-        const buttonDefs = row.split(';');
-
-        for (const btnDef of buttonDefs) {
-            const firstCommaIndex = btnDef.indexOf(',');
-            if (firstCommaIndex === -1) continue;
-
-            const text = btnDef.substring(0, firstCommaIndex).trim();
-            const url = btnDef.substring(firstCommaIndex + 1).trim();
-
-            if (text && url) {
-                buttons.push({ text, url });
-            }
+    // If it's already parsed (JSONB comes as object from PostgreSQL)
+    if (typeof buttonsJson === 'object') {
+        // Could be { inline_keyboard: [...] } or just [...]
+        if (buttonsJson.inline_keyboard) {
+            return buttonsJson.inline_keyboard;
         }
-
-        if (buttons.length > 0) {
-            keyboard.push(buttons);
+        // If it's already the array format
+        if (Array.isArray(buttonsJson)) {
+            return buttonsJson;
         }
     }
 
-    return keyboard;
+    // Fallback: try to parse if it's somehow a string
+    if (typeof buttonsJson === 'string') {
+        try {
+            const parsed = JSON.parse(buttonsJson);
+            if (parsed.inline_keyboard) return parsed.inline_keyboard;
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            return [];
+        }
+    }
+
+    return [];
 }
 
 /**
