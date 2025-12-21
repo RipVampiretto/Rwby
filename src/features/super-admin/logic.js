@@ -192,11 +192,38 @@ async function getStats(db) {
     `);
 }
 
+/**
+ * Sync all global bans to a specific guild when they enable gban_sync
+ * @param {Bot} bot - Grammy bot instance
+ * @param {object} db - Database instance
+ * @param {number} guildId - Guild ID to sync to
+ * @returns {Promise<{success: number, failed: number}>}
+ */
+async function syncGlobalBansToGuild(bot, db, guildId) {
+    const bannedUsers = await db.getGloballyBannedUsers();
+    let success = 0;
+    let failed = 0;
+
+    for (const userId of bannedUsers) {
+        try {
+            await bot.api.banChatMember(guildId, userId);
+            success++;
+        } catch (e) {
+            // User might not be in this chat, or already banned - that's ok
+            failed++;
+        }
+    }
+
+    logger.info(`[super-admin] Synced global bans to guild ${guildId}: ${success} banned, ${failed} failed`);
+    return { success, failed };
+}
+
 module.exports = {
     forwardToParliament,
     sendGlobalLog,
     executeGlobalBan,
     cleanupPendingDeletions,
     setupParliament,
-    getStats
+    getStats,
+    syncGlobalBansToGuild
 };

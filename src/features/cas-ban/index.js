@@ -85,7 +85,19 @@ function register(bot, database) {
         }
 
         if (data === 'cas_toggle') {
-            await db.updateGuildConfig(ctx.chat.id, { casban_enabled: config.casban_enabled === 0 ? 1 : 0 });
+            const newState = config.casban_enabled === 0 ? 1 : 0;
+            await db.updateGuildConfig(ctx.chat.id, { casban_enabled: newState });
+
+            // When enabling, sync all existing internal global bans to this group
+            if (newState === 1) {
+                await ctx.answerCallbackQuery({ text: '🔄 Sincronizzazione blacklist in corso...' });
+
+                const superAdmin = require('../super-admin');
+                const result = await superAdmin.syncGlobalBansToGuild(ctx.chat.id);
+
+                logger.info(`[cas-ban] Blacklist sync to ${ctx.chat.id}: ${result.success} internal gbans applied`);
+            }
+
             await ui.sendConfigUI(ctx, db, true, fromSettings);
             return;
         }

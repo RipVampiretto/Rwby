@@ -35,6 +35,8 @@ module.exports = {
     getUser: userRepo.getUser,
     upsertUser: userRepo.upsertUser,
     setUserGlobalBan: userRepo.setUserGlobalBan,
+    getGloballyBannedUsers: userRepo.getGloballyBannedUsers,
+    isUserGloballyBanned: userRepo.isUserGloballyBanned,
 
     // Guild Repository (async)
     getGuildConfig: guildRepo.getGuildConfig,

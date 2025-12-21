@@ -49,7 +49,7 @@ const db = require("./src/database");
 const i18n = require("./src/i18n");
 
 // ============================================================================
-// GLOBAL MIDDLEWARE - Logging & User Cache
+// GLOBAL MIDDLEWARE - Logging & User Cache & Global Ban Check
 // ============================================================================
 bot.use(async (ctx, next) => {
     // Cache user info (async)
@@ -58,6 +58,28 @@ bot.use(async (ctx, next) => {
     }
     if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
         await db.upsertGuild(ctx.chat);
+
+        // Global Ban Check - if blacklist is enabled, check internal global bans
+        // (CAS bans are checked in the cas-ban module)
+        if (ctx.from) {
+            const config = db.getGuildConfig(ctx.chat.id);
+            if (config.casban_enabled) {
+                const isBanned = await db.isUserGloballyBanned(ctx.from.id);
+                if (isBanned) {
+                    logger.info(`[global-ban] Intercepted globally banned user ${ctx.from.id} in ${ctx.chat.id}`);
+                    try {
+                        await ctx.banChatMember(ctx.from.id);
+                        // Try to delete the message that triggered this
+                        if (ctx.message) {
+                            await ctx.deleteMessage().catch(() => { });
+                        }
+                    } catch (e) {
+                        logger.warn(`[global-ban] Failed to ban ${ctx.from.id}: ${e.message}`);
+                    }
+                    return; // Stop processing - user is globally banned
+                }
+            }
+        }
     }
 
     // Log message

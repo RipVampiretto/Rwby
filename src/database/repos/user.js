@@ -36,8 +36,29 @@ async function setUserGlobalBan(userId, isBanned) {
     await query('UPDATE users SET is_banned_global = $1 WHERE user_id = $2', [isBanned, userId]);
 }
 
+/**
+ * Get all globally banned user IDs
+ * @returns {Promise<Array<number>>} Array of user IDs
+ */
+async function getGloballyBannedUsers() {
+    const rows = await query('SELECT user_id FROM users WHERE is_banned_global = TRUE');
+    return rows.map(r => r.user_id);
+}
+
+/**
+ * Check if a user is globally banned
+ * @param {number} userId - The user ID
+ * @returns {Promise<boolean>}
+ */
+async function isUserGloballyBanned(userId) {
+    const user = await queryOne('SELECT is_banned_global FROM users WHERE user_id = $1', [userId]);
+    return user?.is_banned_global === true;
+}
+
 module.exports = {
     getUser,
     upsertUser,
-    setUserGlobalBan
+    setUserGlobalBan,
+    getGloballyBannedUsers,
+    isUserGloballyBanned
 };

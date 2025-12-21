@@ -297,11 +297,12 @@
     },
     "blacklist": {
         "title": "🚫 **LISTA NERA GLOBALE**",
-        "description": "Lista globale di utenti malevoli conosciuti. Banna automaticamente spammer e truffatori già segnalati.",
+        "description": "Sistema unificato di protezione. Banna automaticamente utenti malevoli dalle liste esterne (CAS) e dai ban interni emessi dal Parliament.",
         "info_title": "Come funziona",
-        "info_1": "Banna automaticamente gli utenti nella lista nera",
-        "info_2": "La lista viene aggiornata automaticamente ogni 24 ore",
-        "info_3": "Protegge da spammer e truffatori conosciuti",
+        "info_1": "Controlla la lista CAS (Combot Anti-Spam) aggiornata ogni 24h",
+        "info_2": "Controlla i ban globali interni emessi dal Parliament",
+        "info_3": "Banna automaticamente gli utenti quando scrivono o entrano",
+        "info_4": "Un unico toggle per tutte le blacklist",
         "status": "Stato",
         "buttons": {
             "system": "🚫 Sistema"

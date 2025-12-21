@@ -13,7 +13,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `ℹ️ **${t('blacklist.info_title')}:**\n` +
         `• ${t('blacklist.info_1')}\n` +
         `• ${t('blacklist.info_2')}\n` +
-        `• ${t('blacklist.info_3')}\n\n` +
+        `• ${t('blacklist.info_3')}\n` +
+        `• ${t('blacklist.info_4')}\n\n` +
         `${t('common.status')}: ${enabled}`;
 
     const closeBtn = fromSettings

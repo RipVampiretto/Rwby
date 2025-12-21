@@ -24,8 +24,13 @@ function sendGlobalLog(event) {
     return logic.sendGlobalLog(_botInstance, db, event);
 }
 
+function syncGlobalBansToGuild(guildId) {
+    return logic.syncGlobalBansToGuild(_botInstance, db, guildId);
+}
+
 module.exports = {
     register,
     forwardToParliament,
-    sendGlobalLog
+    sendGlobalLog,
+    syncGlobalBansToGuild
 };

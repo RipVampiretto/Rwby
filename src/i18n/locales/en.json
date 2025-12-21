@@ -297,11 +297,12 @@
     },
     "blacklist": {
         "title": "🚫 **GLOBAL BLACKLIST**",
-        "description": "Global list of known malicious users. Automatically bans spammers and scammers already reported.",
+        "description": "Unified protection system. Automatically bans malicious users from external lists (CAS) and internal bans issued by Parliament.",
         "info_title": "How it works",
-        "info_1": "Automatically bans users on the blacklist",
-        "info_2": "The list is updated automatically every 24 hours",
-        "info_3": "Protects from known spammers and scammers",
+        "info_1": "Checks CAS (Combot Anti-Spam) list updated every 24h",
+        "info_2": "Checks internal global bans issued by Parliament",
+        "info_3": "Automatically bans users when they write or join",
+        "info_4": "Single toggle for all blacklists",
         "status": "Status",
         "buttons": {
             "system": "🚫 System"
