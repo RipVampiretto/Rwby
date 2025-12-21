@@ -7,7 +7,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const enabled = config.modal_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.modal_action || 'report_only');
     const tierBypass = config.modal_tier_bypass ?? 2;
@@ -22,7 +22,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const modals = await logic.getModalsForLanguages(allowedLangs);
     const activeCount = modals.filter(m => m.enabled).length;
 
-    const text = `${t('modals.title')}\n\n` +
+    let text = `${t('modals.title')}\n\n` +
         `${t('modals.description')}\n\n` +
         `ℹ️ **${t('modals.info_title')}:**\n` +
         `• ${t('modals.info_1', { count: activeCount })}\n` +
@@ -30,6 +30,10 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('modals.status')}: ${enabled}\n` +
         `${t('modals.action')}: ${action}\n` +
         `${t('modals.tier_bypass')}: ${tierBypass}+`;
+
+    if (!config.staff_group_id && (config.modal_action || 'report_only') === 'report_only') {
+        text += `\n${t('common.warnings.no_staff_group')}\n`;
+    }
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: "settings_main" }
@@ -56,7 +60,7 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
 
     // Get group's allowed languages
     let allowedLangs = ['it', 'en'];

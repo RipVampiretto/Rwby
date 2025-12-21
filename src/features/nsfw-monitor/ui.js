@@ -10,7 +10,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     logger.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`);
 
     try {
-        const config = db.getGuildConfig(guildId);
+        const config = await db.fetchGuildConfig(guildId);
         const enabled = config.nsfw_enabled ? t('common.on') : t('common.off');
         const action = i18n.formatAction(guildId, config.nsfw_action || 'delete');
         const thr = (config.nsfw_threshold || 0.7) * 100;
@@ -35,7 +35,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         }
         const blockedCount = blockedCategories.length;
 
-        const text = `${t('nsfw.title')}\n\n` +
+        let text = `${t('nsfw.title')}\n\n` +
             `${t('nsfw.description')}\n\n` +
             `ℹ️ <b>${t('nsfw.info_title')}:</b>\n` +
             `• ${t('nsfw.info_1')}\n` +
@@ -47,6 +47,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             `${t('nsfw.threshold')}: ${thr}%\n` +
             `${t('nsfw.check_types')}: Foto ${p} | Video ${v} | GIF ${g} | Sticker ${s}\n` +
             `🚫 ${t('nsfw.blocked_categories')}: ${blockedCount}`;
+
+        // Add warning if action is report_only and no staff group
+        if (config.nsfw_action === 'report_only' && !config.staff_group_id) {
+            text += `\n${t('common.warnings.no_staff_group')}`;
+        }
 
         const closeBtn = fromSettings
             ? { text: t('common.back'), callback_data: "settings_main" }
@@ -84,7 +89,7 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
 
     // Get blocked categories
     let blockedCategories = config.nsfw_blocked_categories;

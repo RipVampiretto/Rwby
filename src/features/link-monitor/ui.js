@@ -5,12 +5,12 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const enabled = config.link_enabled ? t('common.on') : t('common.off');
     const sync = config.link_sync_global ? t('common.on') : t('common.off');
     const tierBypass = config.link_tier_bypass ?? 2;
 
-    const text = `${t('link.title')}\n\n` +
+    let text = `${t('link.title')}\n\n` +
         `${t('link.description')}\n\n` +
         `ℹ️ **${t('link.info_title')}:**\n` +
         `• ${t('link.info_1')}\n` +
@@ -18,6 +18,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('link.status')}: ${enabled}\n` +
         `${t('link.tier_bypass')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
         `${t('link.global_sync')}: ${sync}`;
+
+    // Add warning if action is report_only (unknown links are reported by default if not blocked)
+    if (!config.staff_group_id && (config.link_action_unknown || 'report_only') === 'report_only') {
+        text += `\n${t('common.warnings.no_staff_group')}\n`;
+    }
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: "settings_main" }

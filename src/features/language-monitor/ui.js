@@ -5,7 +5,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const enabled = config.lang_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.lang_action || 'delete');
     const tierBypass = config.lang_tier_bypass ?? 2;

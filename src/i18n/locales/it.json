@@ -13,6 +13,9 @@
         "delete": "ELIMINA",
         "ban": "BANNA",
         "report_only": "SEGNALA",
+        "warnings": {
+            "no_staff_group": "⚠️ ATTENZIONE: L'azione 'Segnala' richiede un Gruppo Staff configurato (/setstaff). Senza di esso, non verrà eseguita alcuna azione."
+        },
         "start": {
             "greeting": "👋 Ciao! Sono il bot di moderazione per gruppi Telegram.",
             "instructions": "Usa /help per vedere i comandi disponibili o /settings per il pannello di controllo completo.",
@@ -238,10 +241,6 @@
             "suggestive": {
                 "name": "Pose Provocanti",
                 "desc": "Vestiti rivelatori, pose sexy (es. influencer in bikini)"
-            },
-            "ecchi": {
-                "name": "Anime Sexy",
-                "desc": "Anime/manga con contenuti sexy ma senza nudità esplicita"
             },
             "figures_nsfw": {
                 "name": "Figure/Statuine",

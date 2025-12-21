@@ -120,6 +120,37 @@ function getGuildConfig(guildId) {
 }
 
 /**
+ * Fetch guild config directly from DB (bypassing cache check, but updating it)
+ * Used for UI menus to ensure latest data is displayed
+ * @param {number|string} guildId - Guild ID
+ * @returns {Promise<object>} Config object
+ */
+async function fetchGuildConfig(guildId) {
+    const key = String(guildId);
+    let config = null;
+
+    try {
+        config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
+        if (!config) {
+            // If doesn't exist, ensure it exists
+            await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
+            config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
+        }
+    } catch (e) {
+        logger.error(`[database] Failed to fetch guild config for ${guildId}: ${e.message}`);
+    }
+
+    // Default if still null (DB error)
+    if (!config) {
+        config = { guild_id: guildId, ...DEFAULT_CONFIG };
+    }
+
+    // Update cache
+    _guildCache.set(key, config);
+    return config;
+}
+
+/**
  * Update guild config (with SQL injection protection)
  * @param {number} guildId - Guild ID
  * @param {object} updates - Object with column:value pairs to update
@@ -189,6 +220,8 @@ async function upsertGuild(chat) {
 module.exports = {
     initCache,
     getGuildConfig,
+    fetchGuildConfig,
+    updateGuildConfig,
     updateGuildConfig,
     upsertGuild
 };

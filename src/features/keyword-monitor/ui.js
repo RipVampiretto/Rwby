@@ -5,7 +5,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const syncGlobal = config.keyword_sync_global ? t('common.on') : t('common.off');
 
     const text = `${t('keyword.title')}\n\n` +

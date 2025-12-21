@@ -4,10 +4,21 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const enabled = config.ai_enabled ? t('common.on') : t('common.off');
     const tierBypass = config.ai_tier_bypass ?? 2;
     const thr = (config.ai_confidence_threshold || 0.75) * 100;
+
+    let warning = '';
+    // Warning for categories set to report_only without staff group
+    const cats = ['scam', 'nsfw', 'spam', 'hate', 'threat'];
+    let needsStaff = false;
+    for (const cat of cats) {
+        if ((config[`ai_action_${cat}`] || 'report_only') === 'report_only') needsStaff = true;
+    }
+    if (needsStaff && !config.staff_group_id) {
+        warning = `\n${t('common.warnings.no_staff_group')}\n`;
+    }
 
     const text = `${t('ai.title')}\n\n` +
         `${t('ai.description')}\n\n` +
@@ -17,7 +28,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `• ${t('ai.info_3')}\n\n` +
         `${t('ai.status')}: ${enabled}\n` +
         `${t('ai.tier_bypass')}: ${tierBypass}+\n` +
-        `${t('ai.threshold')}: ${thr}%`;
+        `${t('ai.threshold')}: ${thr}%` +
+        warning;
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: "settings_main" }
@@ -45,7 +57,7 @@ async function sendCategoryConfigUI(ctx, db, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const cats = ['scam', 'nsfw', 'spam'];
 
     const rows = [];

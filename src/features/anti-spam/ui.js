@@ -2,7 +2,7 @@ const { safeEdit } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
+    const config = await db.fetchGuildConfig(ctx.chat.id);
     const enabled = config.spam_enabled ? '✅ ON' : '❌ OFF';
     const sens = (config.spam_sensitivity || 'medium').toUpperCase();
     const actVol = (config.spam_action_volume || 'delete').toUpperCase().replace(/_/g, ' ');

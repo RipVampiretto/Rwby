@@ -1,4 +1,4 @@
-const { getGuildConfig } = require('../../database/repos/guild');
+const { fetchGuildConfig: getGuildConfig } = require('../../database/repos/guild');
 const i18n = require('../../i18n');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
 
@@ -8,7 +8,7 @@ const { replaceWildcards, parseButtonConfig } = require('./utils');
 async function sendWelcomeMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
-    const config = getGuildConfig(guildId) || {};
+    const config = (await getGuildConfig(guildId)) || {};
 
     const captchaEnabled = config.captcha_enabled === 1;
     const msgEnabled = config.welcome_msg_enabled === 1;

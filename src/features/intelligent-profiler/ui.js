@@ -2,11 +2,22 @@ const { safeEdit } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
+    const config = await db.fetchGuildConfig(ctx.chat.id);
     const enabled = config.profiler_enabled ? '✅ ON' : '❌ OFF';
     const actLink = (config.profiler_action_link || 'delete').toUpperCase().replace(/_/g, ' ');
     const actFwd = (config.profiler_action_forward || 'delete').toUpperCase().replace(/_/g, ' ');
     const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase().replace(/_/g, ' ');
+
+    let warning = '';
+    if (!config.staff_group_id && (
+        config.profiler_action_pattern === 'report_only' ||
+        config.profiler_action_link === 'report_only' ||
+        config.profiler_action_forward === 'report_only'
+    )) {
+        warning = `\n${i18n.t(ctx.chat.id, 'common.warnings.no_staff_group')}\n`;
+    }
+
+    const t = (key, params) => i18n.t(ctx.chat.id, key, params);
 
     const text = `🔍 **PROFILER NUOVI UTENTI**\n\n` +
         `Analizza i nuovi arrivati per bloccare bot e spammer istantanei.\n` +
@@ -18,7 +29,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `Stato: ${enabled}\n` +
         `Azione Link: ${actLink}\n` +
         `Azione Fwd: ${actFwd}\n` +
-        `Azione Pattern: ${actPat}`;
+        `Azione Pattern: ${actPat}` +
+        warning;
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: "settings_main" }

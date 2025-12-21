@@ -11,7 +11,7 @@ async function sendMainMenu(ctx, isEdit = false) {
     const t = (key, params) => i18n.t(guildId, key, params);
 
     // Check if staff group is configured
-    const config = db ? db.getGuildConfig(guildId) : null;
+    const config = db ? await db.fetchGuildConfig(guildId) : null;
     const hasStaffGroup = config && config.staff_group_id;
 
     // Build warning text

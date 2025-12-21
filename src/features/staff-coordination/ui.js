@@ -4,7 +4,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : t('logger.channel_not_set');
 
     const text = `${t('staff.title')}\n\n` +

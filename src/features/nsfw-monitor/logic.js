@@ -428,7 +428,6 @@ function extractFrame(videoPath, timestamp, outputPath) {
 const NSFW_CATEGORIES = {
     safe: { name: 'Safe', description: 'Normal, appropriate content', blockable: false },
     suggestive: { name: 'Suggestive', description: 'Revealing clothing, provocative poses', blockable: true },
-    ecchi: { name: 'Ecchi/Sexy Anime', description: 'Anime/manga with sexy but non-explicit content', blockable: true },
     figures_nsfw: { name: 'NSFW Figures', description: 'Action figures/statues with nudity or sexual themes', blockable: true },
     real_nudity: { name: 'Real Nudity', description: 'Photographic/realistic human nudity', blockable: true },
     real_sex: { name: 'Real Sex', description: 'Photographic/realistic sexual acts', blockable: true },
@@ -463,7 +462,6 @@ IMPORTANT RULES:
 - "minors" takes absolute priority - if ANY sexualized content involves minors, classify as "minors"
 - Distinguish between real photography and anime/cartoon/3D rendered content
 - Action figures and statues go in "figures_nsfw" if they show nudity/sexual themes
-- "ecchi" is for anime that's sexy but NOT explicit (no exposed genitals)
 - "hentai" is for anime with explicit sexual content
 
 Respond ONLY with a JSON object:

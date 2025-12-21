@@ -4,7 +4,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
     const enabled = config.edit_monitor_enabled ? t('common.on') : t('common.off');
     const lockT0 = config.edit_lock_tier0 ? t('common.on') : t('common.off');
     const thr = (config.edit_similarity_threshold || 0.5) * 100;

@@ -40,6 +40,7 @@ module.exports = {
 
     // Guild Repository (async)
     getGuildConfig: guildRepo.getGuildConfig,
+    fetchGuildConfig: guildRepo.fetchGuildConfig,
     updateGuildConfig: guildRepo.updateGuildConfig,
     upsertGuild: guildRepo.upsertGuild
 };

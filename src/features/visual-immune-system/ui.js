@@ -1,7 +1,7 @@
 const { safeEdit } = require('../../utils/error-handlers');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = db.getGuildConfig(ctx.chat.id);
+    const config = await db.fetchGuildConfig(ctx.chat.id);
     const enabled = config.visual_enabled ? '✅ ON' : '❌ OFF';
     const sync = config.visual_sync_global ? '✅ ON' : '❌ OFF';
     const action = (config.visual_action || 'delete').toUpperCase();

@@ -39,7 +39,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
 
     // Standard VoteBan settings
     const enabled = config.voteban_enabled ? t('common.on') : t('common.off');
@@ -107,7 +107,7 @@ function getActionDisplay(action, t) {
 async function sendCategoryActionsUI(ctx, db, isEdit = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
-    const config = db.getGuildConfig(guildId);
+    const config = await db.fetchGuildConfig(guildId);
 
     // Get current actions for each category (defaults to report_only)
     const scamAction = config.report_action_scam || 'report_only';
