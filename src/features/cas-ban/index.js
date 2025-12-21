@@ -85,7 +85,7 @@ function register(bot, database) {
         }
 
         if (data === 'cas_toggle') {
-            db.updateGuildConfig(ctx.chat.id, { casban_enabled: config.casban_enabled === 0 ? 1 : 0 });
+            await db.updateGuildConfig(ctx.chat.id, { casban_enabled: config.casban_enabled === 0 ? 1 : 0 });
             await ui.sendConfigUI(ctx, db, true, fromSettings);
             return;
         }

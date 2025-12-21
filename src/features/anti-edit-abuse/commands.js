@@ -49,30 +49,30 @@ function registerCommands(bot, db) {
         if (data === "edt_close") return ctx.deleteMessage();
 
         if (data === "edt_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { edit_monitor_enabled: config.edit_monitor_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { edit_monitor_enabled: config.edit_monitor_enabled ? 0 : 1 });
         } else if (data === "edt_thr") {
             let thr = config.edit_similarity_threshold || 0.5;
             thr = thr >= 0.9 ? 0.1 : thr + 0.1;
-            db.updateGuildConfig(ctx.chat.id, { edit_similarity_threshold: parseFloat(thr.toFixed(1)) });
+            await db.updateGuildConfig(ctx.chat.id, { edit_similarity_threshold: parseFloat(thr.toFixed(1)) });
         } else if (data === "edt_act_inj") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.edit_link_injection_action || 'ban';
             if (!acts.includes(cur)) cur = 'ban';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { edit_link_injection_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { edit_link_injection_action: nextAct });
         } else if (data === "edt_act_gen") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.edit_abuse_action || 'report_only';
             if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { edit_abuse_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { edit_abuse_action: nextAct });
         } else if (data === "edt_tier") {
             // Cycle through 0, 1, 2, 3, -1 (OFF)
             const current = config.edit_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
-            db.updateGuildConfig(ctx.chat.id, { edit_tier_bypass: next });
+            await db.updateGuildConfig(ctx.chat.id, { edit_tier_bypass: next });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

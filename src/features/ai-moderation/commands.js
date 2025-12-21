@@ -57,23 +57,23 @@ function registerCommands(bot, db) {
         if (data === "ai_close") return ctx.deleteMessage();
 
         if (data === "ai_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { ai_enabled: config.ai_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { ai_enabled: config.ai_enabled ? 0 : 1 });
         } else if (data === "ai_test_conn") {
             await testConnection(ctx);
             return; // Don't refresh UI immediately, testConnection sends a message
         } else if (data === "ai_ctx") {
-            db.updateGuildConfig(ctx.chat.id, { ai_context_aware: config.ai_context_aware ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { ai_context_aware: config.ai_context_aware ? 0 : 1 });
         } else if (data === "ai_tier_bypass") {
             // Cycle through 0, 1, 2, 3, -1 (OFF)
             const current = config.ai_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
-            db.updateGuildConfig(ctx.chat.id, { ai_tier_bypass: next });
+            await db.updateGuildConfig(ctx.chat.id, { ai_tier_bypass: next });
         } else if (data === "ai_threshold") {
             let thr = config.ai_confidence_threshold || 0.75;
             thr = thr >= 0.9 ? 0.5 : thr + 0.05;
-            db.updateGuildConfig(ctx.chat.id, { ai_confidence_threshold: parseFloat(thr.toFixed(2)) });
+            await db.updateGuildConfig(ctx.chat.id, { ai_confidence_threshold: parseFloat(thr.toFixed(2)) });
         } else if (data === "ai_config_cats") {
             return sendCategoryConfigUI(ctx, db, fromSettings);
         } else if (data.startsWith("ai_set_act:")) {
@@ -87,7 +87,7 @@ function registerCommands(bot, db) {
                 let current = config[key] || 'report_only';
                 if (!actions.includes(current)) current = 'report_only';
                 const nextAct = actions[(actions.indexOf(current) + 1) % 3];
-                db.updateGuildConfig(ctx.chat.id, { [key]: nextAct });
+                await db.updateGuildConfig(ctx.chat.id, { [key]: nextAct });
                 return sendCategoryConfigUI(ctx, db, fromSettings); // Stay in sub-menu
             }
         } else if (data === "ai_back_main") {

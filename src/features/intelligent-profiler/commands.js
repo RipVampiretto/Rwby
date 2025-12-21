@@ -39,25 +39,25 @@ function registerCommands(bot, db) {
         if (data === "prf_close") return ctx.deleteMessage();
 
         if (data === "prf_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { profiler_enabled: config.profiler_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { profiler_enabled: config.profiler_enabled ? 0 : 1 });
         } else if (data === "prf_act_link") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.profiler_action_link || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { profiler_action_link: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { profiler_action_link: nextAct });
         } else if (data === "prf_act_fwd") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.profiler_action_forward || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { profiler_action_forward: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { profiler_action_forward: nextAct });
         } else if (data === "prf_act_pat") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.profiler_action_pattern || 'report_only';
             if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { profiler_action_pattern: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { profiler_action_pattern: nextAct });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

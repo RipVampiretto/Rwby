@@ -132,7 +132,7 @@ function registerCommands(bot, db) {
             }
 
             // Save
-            db.updateGuildConfig(ctx.chat.id, { nsfw_blocked_categories: blockedCategories });
+            await db.updateGuildConfig(ctx.chat.id, { nsfw_blocked_categories: blockedCategories });
 
             // Refresh categories UI
             await ui.sendCategoriesUI(ctx, db, fromSettings);
@@ -140,7 +140,7 @@ function registerCommands(bot, db) {
         }
 
         if (data === "nsf_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { nsfw_enabled: config.nsfw_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { nsfw_enabled: config.nsfw_enabled ? 0 : 1 });
         } else if (data === "nsf_test") {
             await logic.testConnection(ctx);
             return;
@@ -149,23 +149,23 @@ function registerCommands(bot, db) {
             let cur = config.nsfw_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { nsfw_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { nsfw_action: nextAct });
         } else if (data === "nsf_thr") {
             let thr = config.nsfw_threshold || 0.7;
             thr = thr >= 0.9 ? 0.5 : thr + 0.1;
-            db.updateGuildConfig(ctx.chat.id, { nsfw_threshold: parseFloat(thr.toFixed(1)) });
+            await db.updateGuildConfig(ctx.chat.id, { nsfw_threshold: parseFloat(thr.toFixed(1)) });
         } else if (data.startsWith("nsf_tog_")) {
             const type = data.split('_')[2]; // photo, video, gif, sticker
             const key = `nsfw_check_${type}s`;
             if (config[key] !== undefined) {
-                db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
+                await db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
             }
         } else if (data === "nsf_tier") {
             const current = config.nsfw_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
-            db.updateGuildConfig(ctx.chat.id, { nsfw_tier_bypass: next });
+            await db.updateGuildConfig(ctx.chat.id, { nsfw_tier_bypass: next });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

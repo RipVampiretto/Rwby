@@ -75,20 +75,20 @@ function registerCommands(bot, db) {
             await ctx.deleteMessage();
             return;
         } else if (action === "toggle") {
-            db.updateGuildConfig(ctx.chat.id, { spam_enabled: config.spam_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { spam_enabled: config.spam_enabled ? 0 : 1 });
         } else if (action === "sens") {
             const levels = ['low', 'medium', 'high'];
             const currentIdx = levels.indexOf(config.spam_sensitivity || 'medium');
             const nextLevel = levels[(currentIdx + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { spam_sensitivity: nextLevel });
+            await db.updateGuildConfig(ctx.chat.id, { spam_sensitivity: nextLevel });
         } else if (action === "act_vol") {
             const acts = ['delete', 'ban', 'report_only'];
             const idx = acts.indexOf(config.spam_action_volume || 'delete');
-            db.updateGuildConfig(ctx.chat.id, { spam_action_volume: acts[(idx + 1) % 3] });
+            await db.updateGuildConfig(ctx.chat.id, { spam_action_volume: acts[(idx + 1) % 3] });
         } else if (action === "act_rep") {
             const acts = ['delete', 'ban', 'report_only'];
             const idx = acts.indexOf(config.spam_action_repetition || 'delete');
-            db.updateGuildConfig(ctx.chat.id, { spam_action_repetition: acts[(idx + 1) % 3] });
+            await db.updateGuildConfig(ctx.chat.id, { spam_action_repetition: acts[(idx + 1) % 3] });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

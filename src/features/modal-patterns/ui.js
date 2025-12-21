@@ -19,7 +19,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         if (parsed.length > 0) allowedLangs = parsed;
     } catch (e) { }
 
-    const modals = logic.getModalsForLanguages(allowedLangs);
+    const modals = await logic.getModalsForLanguages(allowedLangs);
     const activeCount = modals.filter(m => m.enabled).length;
 
     const text = `${t('modals.title')}\n\n` +
@@ -65,7 +65,7 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
         if (parsed.length > 0) allowedLangs = parsed;
     } catch (e) { }
 
-    const modals = logic.getModalsForLanguages(allowedLangs);
+    const modals = await logic.getModalsForLanguages(allowedLangs);
 
     if (modals.length === 0) {
         const text = `${t('modals.list.title')}\n\n${t('modals.list.empty')}`;
@@ -85,15 +85,15 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
     let text = `${t('modals.list.title')}\n\n${t('modals.list.toggle_info')}\n`;
 
     // Build toggle buttons for each modal
-    const buttons = modals.map(m => {
-        const isEnabled = logic.isModalEnabledForGuild(guildId, m.id);
+    const buttons = await Promise.all(modals.map(async m => {
+        const isEnabled = await logic.isModalEnabledForGuild(guildId, m.id);
         const patterns = logic.safeJsonParse(m.patterns, []);
         const icon = isEnabled ? '✅' : '❌';
         return {
             text: `${icon} ${m.language.toUpperCase()}/${m.category} (${patterns.length})`,
             callback_data: `mdl_tog:${m.id}`
         };
-    });
+    }));
 
     // Split into rows of 2
     const rows = [];

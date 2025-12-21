@@ -45,15 +45,15 @@ function registerCommands(bot, db) {
         if (data === "lnk_close") return ctx.deleteMessage();
 
         if (data === "lnk_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { link_enabled: config.link_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { link_enabled: config.link_enabled ? 0 : 1 });
         } else if (data === "lnk_sync") {
-            db.updateGuildConfig(ctx.chat.id, { link_sync_global: config.link_sync_global ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { link_sync_global: config.link_sync_global ? 0 : 1 });
         } else if (data === "lnk_tier") {
             const current = config.link_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
-            db.updateGuildConfig(ctx.chat.id, { link_tier_bypass: next });
+            await db.updateGuildConfig(ctx.chat.id, { link_tier_bypass: next });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

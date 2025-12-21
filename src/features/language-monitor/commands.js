@@ -72,19 +72,19 @@ function registerCommands(bot, db) {
         if (data === "lng_close") return ctx.deleteMessage();
 
         if (data === "lng_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { lang_enabled: config.lang_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { lang_enabled: config.lang_enabled ? 0 : 1 });
         } else if (data === "lng_act") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.lang_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
         } else if (data === "lng_tier") {
             const current = config.lang_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
-            db.updateGuildConfig(ctx.chat.id, { lang_tier_bypass: next });
+            await db.updateGuildConfig(ctx.chat.id, { lang_tier_bypass: next });
         } else if (data.startsWith("lng_set:")) {
             const lang = data.split(':')[1];
             let allowed = [];
@@ -97,7 +97,7 @@ function registerCommands(bot, db) {
             } else {
                 allowed.push(lang);
             }
-            db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
+            await db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

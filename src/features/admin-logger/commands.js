@@ -31,7 +31,7 @@ function registerCommands(bot, db) {
             // Toggle format: log_t:module_action (e.g., log_t:lang_delete)
             const key = data.split(":")[1];
             logEvents[key] = !logEvents[key];
-            db.updateGuildConfig(ctx.chat.id, { log_events: JSON.stringify(logEvents) });
+            await db.updateGuildConfig(ctx.chat.id, { log_events: JSON.stringify(logEvents) });
             await sendConfigUI(ctx, db, true, fromSettings);
         }
     });
@@ -56,7 +56,7 @@ function registerCommands(bot, db) {
             const testMsg = await bot.api.sendMessage(targetId, "✅ Test connessione log channel riuscito.");
             await bot.api.deleteMessage(targetId, testMsg.message_id);
 
-            db.updateGuildConfig(ctx.chat.id, { log_channel_id: targetId });
+            await db.updateGuildConfig(ctx.chat.id, { log_channel_id: targetId });
             await ctx.reply(`✅ Canale log impostato: \`${targetId}\``, { parse_mode: 'Markdown' });
         } catch (e) {
             await ctx.reply(`❌ Impossibile inviare messaggi nel canale \`${targetId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`, { parse_mode: 'Markdown' });

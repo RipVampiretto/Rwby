@@ -76,25 +76,25 @@ function registerCommands(bot, db) {
             if (data === "vb_close") return ctx.deleteMessage();
 
             if (data === "vb_toggle") {
-                db.updateGuildConfig(ctx.chat.id, { voteban_enabled: config.voteban_enabled ? 0 : 1 });
+                await db.updateGuildConfig(ctx.chat.id, { voteban_enabled: config.voteban_enabled ? 0 : 1 });
             } else if (data === "vb_thr") {
                 const val = config.voteban_threshold || 5;
                 const thresholds = [3, 5, 7, 10];
                 const idx = thresholds.indexOf(val);
                 const nextVal = thresholds[(idx + 1) % thresholds.length];
-                db.updateGuildConfig(ctx.chat.id, { voteban_threshold: nextVal });
+                await db.updateGuildConfig(ctx.chat.id, { voteban_threshold: nextVal });
             } else if (data === "vb_dur") {
                 const val = config.voteban_duration_minutes;
                 const durations = [15, 30, 60, 0];
                 const idx = durations.indexOf(val);
                 const nextVal = durations[(idx + 1) % durations.length];
-                db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: nextVal });
+                await db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: nextVal });
             } else if (data === "vb_tier") {
                 let val = config.voteban_initiator_tier || 0;
                 const tiers = [0, 1, 2, 3, -1];
                 const idx = tiers.indexOf(val);
                 const nextVal = tiers[(idx + 1) % tiers.length];
-                db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: nextVal });
+                await db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: nextVal });
             }
             await ui.sendConfigUI(ctx, db, true, fromSettings);
             return;

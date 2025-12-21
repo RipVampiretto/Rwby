@@ -41,19 +41,19 @@ function registerCommands(bot, db) {
         if (data === "vis_close") return ctx.deleteMessage();
 
         if (data === "vis_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { visual_enabled: config.visual_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { visual_enabled: config.visual_enabled ? 0 : 1 });
         } else if (data === "vis_sync") {
-            db.updateGuildConfig(ctx.chat.id, { visual_sync_global: config.visual_sync_global ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { visual_sync_global: config.visual_sync_global ? 0 : 1 });
         } else if (data === "vis_thr") {
             let thr = config.visual_hamming_threshold || 5;
             thr = thr >= 15 ? 1 : thr + 1;
-            db.updateGuildConfig(ctx.chat.id, { visual_hamming_threshold: thr });
+            await db.updateGuildConfig(ctx.chat.id, { visual_hamming_threshold: thr });
         } else if (data === "vis_act") {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.visual_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { visual_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { visual_action: nextAct });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

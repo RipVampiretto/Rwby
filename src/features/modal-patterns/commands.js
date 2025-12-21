@@ -41,19 +41,19 @@ function registerCommands(bot, db) {
         if (data === "mdl_close") return ctx.deleteMessage();
 
         if (data === "mdl_toggle") {
-            db.updateGuildConfig(ctx.chat.id, { modal_enabled: config.modal_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { modal_enabled: config.modal_enabled ? 0 : 1 });
         } else if (data === "mdl_act") {
             const acts = ['report_only', 'delete', 'ban'];
             let cur = config.modal_action || 'report_only';
             if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
         } else if (data === "mdl_tier") {
             const tiers = [0, 1, 2, 3, -1];
             let cur = config.modal_tier_bypass ?? 2;
             const idx = tiers.indexOf(cur);
             const nextTier = tiers[(idx + 1) % tiers.length];
-            db.updateGuildConfig(ctx.chat.id, { modal_tier_bypass: nextTier });
+            await db.updateGuildConfig(ctx.chat.id, { modal_tier_bypass: nextTier });
         } else if (data === "mdl_list") {
             await ui.sendModalListUI(ctx, db, true, fromSettings);
             return;
