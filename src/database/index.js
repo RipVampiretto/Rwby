@@ -8,27 +8,32 @@ const guildRepo = require('./repos/guild');
  * Initialize database connection and create tables
  */
 async function init() {
-    const db = await connection.init();
+    // Initialize connection pool
+    await connection.init();
 
     // Create tables
-    schema.createTables(db);
+    await schema.createTables();
 
     // Run migrations
-    migrations.runMigrations(db);
+    await migrations.runMigrations();
 
-    return db;
+    return connection.getPool();
 }
 
 module.exports = {
     init,
-    getDb: connection.getDb,
+    getPool: connection.getPool,
+    getDb: connection.getDb, // Compatibility wrapper for legacy code
+    query: connection.query,
+    queryOne: connection.queryOne,
+    queryAll: connection.queryAll,
 
-    // User Repository
+    // User Repository (async)
     getUser: userRepo.getUser,
     upsertUser: userRepo.upsertUser,
     setUserGlobalBan: userRepo.setUserGlobalBan,
 
-    // Guild Repository
+    // Guild Repository (async)
     getGuildConfig: guildRepo.getGuildConfig,
     updateGuildConfig: guildRepo.updateGuildConfig,
     upsertGuild: guildRepo.upsertGuild

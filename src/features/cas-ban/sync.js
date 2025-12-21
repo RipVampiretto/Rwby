@@ -11,7 +11,7 @@ let db = null;
 let _botInstance = null;
 
 const CAS_EXPORT_URL = 'https://api.cas.chat/export.csv';
-const BATCH_SIZE = 10000; // Insert 10K rows per transaction for efficiency
+const BATCH_SIZE = 10000;
 
 function init(database, bot) {
     db = database;
@@ -36,9 +36,8 @@ async function syncCasBans() {
         logger.info(`[cas-ban] Parsed ${users.length} users from CSV`);
 
         // Find existing users to detect new ones
-        const existingIds = new Set(
-            db.getDb().prepare('SELECT user_id FROM cas_bans').all().map(r => r.user_id)
-        );
+        const existingRows = await db.queryAll('SELECT user_id FROM cas_bans');
+        const existingIds = new Set(existingRows.map(r => r.user_id));
 
         // Filter new users
         const newUsers = users.filter(u => !existingIds.has(u.user_id));
@@ -48,7 +47,7 @@ async function syncCasBans() {
         await bulkInsert(users);
 
         // Update detection cache
-        detection.reloadCache();
+        await detection.reloadCache();
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         const message = `✅ **CAS Sync Completata**\n\n` +
@@ -72,7 +71,6 @@ async function syncCasBans() {
 
 /**
  * Download CSV from CAS API
- * @returns {Promise<string>}
  */
 function downloadCsv() {
     return new Promise((resolve, reject) => {
@@ -93,8 +91,6 @@ function downloadCsv() {
 
 /**
  * Parse CAS CSV format: user_id,offenses,timestamp
- * @param {string} csvData 
- * @returns {Array<{user_id: number, offenses: number, time_added: string}>}
  */
 function parseCsv(csvData) {
     const lines = csvData.split('\n');
@@ -103,8 +99,6 @@ function parseCsv(csvData) {
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-
-        // Skip header if present
         if (line.startsWith('user_id') || line.startsWith('id')) continue;
 
         const parts = line.split(',');
@@ -124,27 +118,30 @@ function parseCsv(csvData) {
 }
 
 /**
- * Bulk insert users with transaction batching
- * @param {Array} users 
+ * Bulk insert users with batching (PostgreSQL)
  */
 async function bulkInsert(users) {
-    const dbInstance = db.getDb();
-    const insertStmt = dbInstance.prepare(`
-        INSERT OR REPLACE INTO cas_bans (user_id, offenses, time_added, imported_at)
-        VALUES (?, ?, ?, datetime('now'))
-    `);
-
     // Process in batches
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
         const batch = users.slice(i, i + BATCH_SIZE);
 
-        const transaction = dbInstance.transaction((batchUsers) => {
-            for (const user of batchUsers) {
-                insertStmt.run(user.user_id, user.offenses, user.time_added);
-            }
-        });
+        // Build bulk INSERT with ON CONFLICT
+        const values = [];
+        const placeholders = batch.map((user, idx) => {
+            const offset = idx * 3;
+            values.push(user.user_id, user.offenses, user.time_added);
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, NOW())`;
+        }).join(', ');
 
-        transaction(batch);
+        await db.query(`
+            INSERT INTO cas_bans (user_id, offenses, time_added, imported_at)
+            VALUES ${placeholders}
+            ON CONFLICT (user_id) DO UPDATE SET
+                offenses = EXCLUDED.offenses,
+                time_added = EXCLUDED.time_added,
+                imported_at = NOW()
+        `, values);
+
         logger.debug(`[cas-ban] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}`);
     }
 }

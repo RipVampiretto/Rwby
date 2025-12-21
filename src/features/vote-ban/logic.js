@@ -1,45 +1,53 @@
-function createVote(db, params) {
+async function createVote(db, params) {
     const { target, chat, initiator, reason, required, expires, voters } = params;
-    const insertResult = db.getDb().prepare(`INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at, votes_yes, voters) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-        target.id, target.username || target.first_name, chat.id, initiator.id, reason, required, expires, new Date().toISOString(),
-        1, JSON.stringify(voters)
+    const result = await db.query(
+        `INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at, votes_yes, voters) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9) RETURNING vote_id`,
+        [target.id, target.username || target.first_name, chat.id, initiator.id, reason, required, expires, 1, JSON.stringify(voters)]
     );
-    return insertResult.lastInsertRowid;
+    return result.rows[0].vote_id;
 }
 
-function getVote(db, voteId) {
-    return db.getDb().prepare("SELECT * FROM active_votes WHERE vote_id = ?").get(voteId);
+async function getVote(db, voteId) {
+    return await db.queryOne("SELECT * FROM active_votes WHERE vote_id = $1", [voteId]);
 }
 
-function getActiveVoteForUser(db, chatId, userId) {
-    return db.getDb().prepare("SELECT * FROM active_votes WHERE chat_id = ? AND target_user_id = ? AND status = 'active'").get(chatId, userId);
+async function getActiveVoteForUser(db, chatId, userId) {
+    return await db.queryOne(
+        "SELECT * FROM active_votes WHERE chat_id = $1 AND target_user_id = $2 AND status = 'active'",
+        [chatId, userId]
+    );
 }
 
-function getExpiredVotes(db) {
+async function getExpiredVotes(db) {
     const now = new Date();
-    return db.getDb().prepare("SELECT * FROM active_votes WHERE status = 'active'").all().filter(v => new Date(v.expires_at) < now);
-    // Note: SQL filtering is generally better but this matches original somewhat or improves strictly speaking.
-    // Original: db.getDb().prepare("SELECT * FROM active_votes WHERE status = 'active'").all(); then loop check.
-    // I will stick to JS filter for compatibility if time zones are tricky, but SQL `expires_at < CURRENT_TIMESTAMP` relies on consistent timezone. 
-    // Given previous modules iterate, let's just return all active then JS filter in actions if we want to be safe, OR just return all active and let caller filter.
-    // Actually, let's mimic original behavior: `getExpiredVotes` implies we filter here.
+    const votes = await db.queryAll("SELECT * FROM active_votes WHERE status = 'active'");
+    return votes.filter(v => new Date(v.expires_at) < now);
 }
 
-function getAllActiveVotes(db) {
-    return db.getDb().prepare("SELECT * FROM active_votes WHERE status = 'active'").all();
+async function getAllActiveVotes(db) {
+    return await db.queryAll("SELECT * FROM active_votes WHERE status = 'active'");
 }
 
-function updateVote(db, voteId, yes, no, voters) {
-    db.getDb().prepare("UPDATE active_votes SET votes_yes = ?, votes_no = ?, voters = ? WHERE vote_id = ?")
-        .run(yes, no, JSON.stringify(voters), voteId);
+async function updateVote(db, voteId, yes, no, voters) {
+    await db.query(
+        "UPDATE active_votes SET votes_yes = $1, votes_no = $2, voters = $3 WHERE vote_id = $4",
+        [yes, no, JSON.stringify(voters), voteId]
+    );
 }
 
-function setPollMessageId(db, voteId, messageId) {
-    db.getDb().prepare("UPDATE active_votes SET poll_message_id = ? WHERE vote_id = ?").run(messageId, voteId);
+async function setPollMessageId(db, voteId, messageId) {
+    await db.query(
+        "UPDATE active_votes SET poll_message_id = $1 WHERE vote_id = $2",
+        [messageId, voteId]
+    );
 }
 
-function closeVote(db, voteId, status) {
-    db.getDb().prepare("UPDATE active_votes SET status = ? WHERE vote_id = ?").run(status, voteId);
+async function closeVote(db, voteId, status) {
+    await db.query(
+        "UPDATE active_votes SET status = $1 WHERE vote_id = $2",
+        [status, voteId]
+    );
 }
 
 module.exports = {

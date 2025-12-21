@@ -5,15 +5,14 @@ function init(database) {
 }
 
 function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Heuristic scam patterns - loaded from DB
-function getScamPatterns() {
+async function getScamPatterns() {
     if (!db) return [];
-    const rows = db.getDb().prepare(
+    const rows = await db.queryAll(
         "SELECT word, is_regex FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'"
-    ).all();
+    );
     return rows.map(r => r.is_regex ? new RegExp(r.word, 'i') : new RegExp(escapeRegExp(r.word), 'i'));
 }
 
@@ -22,26 +21,17 @@ function extractLinks(text) {
     return text.match(urlRegex) || [];
 }
 
-/**
- * Scan a message for Tier 0 violations.
- * @param {object} ctx - Telegram context
- * @param {object} config - Guild config
- * @returns {object|null} - Violation detected { action, reason, content } or null
- */
 async function scanMessage(ctx, config) {
     const text = ctx.message.text || ctx.message.caption || "";
 
     // 1. Link Check
     const links = extractLinks(text);
     if (links.length > 0) {
-        // Unknown links from Tier 0 are suspicious
-        // Logic: if not whitelisted locally or globally -> SUSPICIOUS
-        // Load whitelist from database (global entries have guild_id = 0)
         let whitelist = [];
         if (db) {
-            const whitelistRows = db.getDb().prepare(
+            const whitelistRows = await db.queryAll(
                 "SELECT value FROM intel_data WHERE type = 'global_whitelist_domain' AND status = 'active'"
-            ).all();
+            );
             whitelist = whitelistRows.map(r => r.value);
         }
 
@@ -69,7 +59,7 @@ async function scanMessage(ctx, config) {
 
     // 3. Pattern Check
     let patternScore = 0;
-    const scamPatterns = getScamPatterns();
+    const scamPatterns = await getScamPatterns();
     for (const p of scamPatterns) {
         if (p.test(text)) patternScore++;
     }

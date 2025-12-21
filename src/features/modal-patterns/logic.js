@@ -5,20 +5,17 @@ let db = null;
 // Cache for loaded modals (refresh every 5 minutes)
 let modalCache = [];
 let modalCacheTime = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 
 function init(database) {
     db = database;
 }
 
-function refreshCache() {
+async function refreshCache() {
     modalCacheTime = 0;
-    // Force reload by calling with wildcard
     if (db) {
         try {
-            modalCache = db.getDb().prepare(
-                "SELECT * FROM spam_modals WHERE enabled = 1"
-            ).all();
+            modalCache = await db.queryAll("SELECT * FROM spam_modals WHERE enabled = TRUE");
             modalCacheTime = Date.now();
         } catch (e) {
             logger.error(`[modal-patterns] Failed to load modals: ${e.message}`);
@@ -30,18 +27,16 @@ function refreshCache() {
 /**
  * Load modals for specified languages (with caching)
  */
-function getModalsForLanguages(languages) {
+async function getModalsForLanguages(languages) {
     if (!db) return [];
 
-    // Check cache existence and validity
     if (Date.now() - modalCacheTime < CACHE_TTL && modalCache.length > 0) {
         return modalCache.filter(m =>
             languages.includes(m.language) || m.language === '*'
         );
     }
 
-    // Reload from DB if expired or empty
-    refreshCache();
+    await refreshCache();
 
     return modalCache.filter(m =>
         languages.includes(m.language) || m.language === '*'
@@ -49,22 +44,22 @@ function getModalsForLanguages(languages) {
 }
 
 function safeJsonParse(str, defaultVal) {
+    if (typeof str === 'object' && str !== null) return str;
     try { return JSON.parse(str); } catch (e) { return defaultVal; }
 }
 
 /**
  * Check if a modal is enabled for a specific guild
  */
-function isModalEnabledForGuild(guildId, modalId) {
+async function isModalEnabledForGuild(guildId, modalId) {
     if (!db) return true;
     try {
-        const override = db.getDb().prepare(
-            "SELECT enabled FROM guild_modal_overrides WHERE guild_id = ? AND modal_id = ?"
-        ).get(guildId, modalId);
-
-        // No override = enabled by default
+        const override = await db.queryOne(
+            "SELECT enabled FROM guild_modal_overrides WHERE guild_id = $1 AND modal_id = $2",
+            [guildId, modalId]
+        );
         if (!override) return true;
-        return override.enabled === 1;
+        return override.enabled === true;
     } catch (e) {
         return true;
     }
@@ -90,21 +85,19 @@ function jaccardSimilarity(text1, text2) {
  */
 async function checkMessageAgainstModals(ctx, config) {
     const text = (ctx.message.text || '').toLowerCase().trim();
-    if (text.length < 10) return null; // Skip very short messages
+    if (text.length < 10) return null;
 
-    // Get group's allowed languages
-    let allowedLangs = ['en']; // Default
+    let allowedLangs = ['en'];
     try {
-        const parsed = JSON.parse(config.allowed_languages || '[]');
+        const parsed = safeJsonParse(config.allowed_languages, []);
         if (parsed.length > 0) allowedLangs = parsed;
     } catch (e) { }
 
-    // Load modals (cached) and filter by guild overrides
-    const modals = getModalsForLanguages(allowedLangs);
+    const modals = await getModalsForLanguages(allowedLangs);
     const guildId = ctx.chat.id;
 
     for (const modal of modals) {
-        if (!isModalEnabledForGuild(guildId, modal.id)) continue;
+        if (!(await isModalEnabledForGuild(guildId, modal.id))) continue;
 
         const patterns = safeJsonParse(modal.patterns, []);
         for (const pattern of patterns) {

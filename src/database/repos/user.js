@@ -1,32 +1,30 @@
-const { getDb } = require('../connection');
+const { queryOne, query } = require('../connection');
 
 /**
- * Get or create user in cache
+ * Get user from cache
  * @param {number} userId - The user ID to retrieve
+ * @returns {Promise<object|null>}
  */
-function getUser(userId) {
-    const db = getDb();
-    return db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
+async function getUser(userId) {
+    return await queryOne('SELECT * FROM users WHERE user_id = $1', [userId]);
 }
 
 /**
  * Update or insert user info (called on every message to keep cache fresh)
  * @param {object} userInfo - User information object
  */
-function upsertUser(userInfo) {
-    const db = getDb();
+async function upsertUser(userInfo) {
     const { id, username, first_name, last_name, is_bot, language_code } = userInfo;
-    db.prepare(`
+    await query(`
         INSERT INTO users (user_id, username, first_name, last_name, is_bot, language_code, last_seen)
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(user_id) DO UPDATE SET
-            username = ?,
-            first_name = ?,
-            last_name = ?,
-            language_code = ?,
-            last_seen = CURRENT_TIMESTAMP
-    `).run(id, username, first_name, last_name, is_bot ? 1 : 0, language_code,
-        username, first_name, last_name, language_code);
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+            username = EXCLUDED.username,
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
+            language_code = EXCLUDED.language_code,
+            last_seen = NOW()
+    `, [id, username, first_name, last_name, is_bot || false, language_code]);
 }
 
 /**
@@ -34,9 +32,8 @@ function upsertUser(userInfo) {
  * @param {number} userId - The user ID
  * @param {boolean} isBanned - Ban status
  */
-function setUserGlobalBan(userId, isBanned) {
-    const db = getDb();
-    db.prepare('UPDATE users SET is_banned_global = ? WHERE user_id = ?').run(isBanned ? 1 : 0, userId);
+async function setUserGlobalBan(userId, isBanned) {
+    await query('UPDATE users SET is_banned_global = $1 WHERE user_id = $2', [isBanned, userId]);
 }
 
 module.exports = {

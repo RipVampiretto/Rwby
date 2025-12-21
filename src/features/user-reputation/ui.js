@@ -70,9 +70,9 @@ async function sendMyFlux(ctx, db) {
 
     const userId = ctx.from.id;
     const guildId = ctx.chat.id;
-    const localFlux = logic.getLocalFlux(db, userId, guildId);
-    const globalFlux = logic.getGlobalFlux(db, userId);
-    const tier = logic.getUserTier(db, userId, guildId);
+    const localFlux = await logic.getLocalFlux(db, userId, guildId);
+    const globalFlux = await logic.getGlobalFlux(db, userId);
+    const tier = await logic.getUserTier(db, userId, guildId);
     const tierInfo = logic.TIER_INFO[tier];
 
     const nextTierFlux = tier < 3 ? logic.TIER_THRESHOLDS[`TIER_${tier + 1}`] : null;
@@ -102,16 +102,16 @@ async function sendGlobalFluxOverview(ctx, db) {
     const userId = ctx.from.id;
 
     // Get Global Flux
-    const globalFlux = logic.getGlobalFlux(db, userId);
+    const globalFlux = await logic.getGlobalFlux(db, userId);
 
-    // Get all Guilds Flux
-    const rows = db.getDb().prepare(`
+    // Get all Guilds Flux (async PostgreSQL)
+    const rows = await db.queryAll(`
         SELECT g.guild_name, u.guild_id, u.local_flux 
         FROM user_trust_flux u 
         JOIN guild_config g ON u.guild_id = g.guild_id 
-        WHERE u.user_id = ? 
+        WHERE u.user_id = $1 
         ORDER BY u.local_flux DESC
-    `).all(userId);
+    `, [userId]);
 
     const title = ctx.t('tier_system.my_flux.title');
     let text = `${title}\n\n`;
@@ -121,7 +121,7 @@ async function sendGlobalFluxOverview(ctx, db) {
     } else {
         for (const row of rows) {
             const flux = row.local_flux;
-            // Calculate Tier manually since getUserTier uses Guild ID from context which we iterate here
+            // Calculate Tier manually
             let tier = 0;
             if (flux >= logic.TIER_THRESHOLDS.TIER_3) tier = 3;
             else if (flux >= logic.TIER_THRESHOLDS.TIER_2) tier = 2;
@@ -130,7 +130,6 @@ async function sendGlobalFluxOverview(ctx, db) {
             const tierInfo = logic.TIER_INFO[tier];
             const tierName = ctx.t(`tier_system.tiers.${tier}.name`);
             const nextTierFlux = tier < 3 ? logic.TIER_THRESHOLDS[`TIER_${tier + 1}`] : 0;
-            // Cap progress bar at 100% (10 chars) if max tier or flux > next
             let progress = 10;
             if (tier < 3 && nextTierFlux > 0) {
                 progress = Math.min(10, Math.max(0, Math.floor((flux / nextTierFlux) * 10)));
@@ -154,8 +153,6 @@ async function sendGlobalFluxOverview(ctx, db) {
         ]
     };
 
-    // If context type is private, usually we reply or edit. 
-    // If called from /myflux in private, reply. If callback, edit.
     if (ctx.callbackQuery) {
         try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
     } else {

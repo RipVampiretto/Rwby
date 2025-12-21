@@ -12,7 +12,10 @@ async function scanMessage(ctx) {
     if (!db) return null;
 
     const text = ctx.message.text;
-    const rules = db.getDb().prepare('SELECT * FROM word_filters WHERE guild_id = ? OR guild_id = 0').all(ctx.chat.id);
+    const rules = await db.queryAll(
+        'SELECT * FROM word_filters WHERE guild_id = $1 OR guild_id = 0',
+        [ctx.chat.id]
+    );
 
     for (const rule of rules) {
         if (rule.bypass_tier && ctx.userTier >= rule.bypass_tier) continue;
@@ -46,5 +49,5 @@ async function scanMessage(ctx) {
 module.exports = {
     init,
     scanMessage,
-    escapeRegExp // Export for testing if needed
+    escapeRegExp
 };

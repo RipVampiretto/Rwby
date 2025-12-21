@@ -8,28 +8,32 @@ function init(database) {
     setInterval(cleanupSnapshots, 3600000);
 }
 
-function saveSnapshot(message) {
+async function saveSnapshot(message) {
     if (!db) return;
     try {
         const hasLink = /(https?:\/\/[^\s]+)/.test(message.text || '');
-        db.getDb().prepare(`
+        await db.query(`
             INSERT INTO message_snapshots (message_id, chat_id, user_id, original_text, original_has_link, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(message.message_id, message.chat.id, message.from.id, message.text, hasLink ? 1 : 0, new Date().toISOString());
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            ON CONFLICT (message_id, chat_id) DO NOTHING
+        `, [message.message_id, message.chat.id, message.from.id, message.text, hasLink]);
     } catch (e) {
         // Ignore unique constraint or other minor errors
     }
 }
 
-function getSnapshot(messageId, chatId) {
+async function getSnapshot(messageId, chatId) {
     if (!db) return null;
-    return db.getDb().prepare('SELECT * FROM message_snapshots WHERE message_id = ? AND chat_id = ?').get(messageId, chatId);
+    return await db.queryOne(
+        'SELECT * FROM message_snapshots WHERE message_id = $1 AND chat_id = $2',
+        [messageId, chatId]
+    );
 }
 
-function cleanupSnapshots() {
+async function cleanupSnapshots() {
     if (!db) return;
     try {
-        db.getDb().prepare("DELETE FROM message_snapshots WHERE created_at < datetime('now', '-1 day')").run();
+        await db.query("DELETE FROM message_snapshots WHERE created_at < NOW() - INTERVAL '1 day'");
     } catch (e) {
         handleCriticalError('anti-edit-abuse', 'cleanupSnapshots', e);
     }

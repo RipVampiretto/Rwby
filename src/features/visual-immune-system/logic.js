@@ -25,14 +25,14 @@ async function processVisual(ctx, db, config) {
 
     try {
         const hash = await imghash.hash(localPath, 16);
-        const match = findMatch(db, hash, ctx.chat.id, config.visual_hamming_threshold || 5);
+        const match = await findMatch(db, hash, ctx.chat.id, config.visual_hamming_threshold || 5);
         if (match && match.type === 'ban') {
             await actions.executeAction(ctx, db, config.visual_action || 'delete', match, hash);
         }
     } catch (e) {
         handleCriticalError('visual-immune', 'processVisual', e, ctx);
     } finally {
-        try { fs.unlinkSync(localPath); } catch (e) { /* cleanup - ignore */ }
+        try { fs.unlinkSync(localPath); } catch (e) { }
     }
 }
 
@@ -45,19 +45,23 @@ async function addToDb(ctx, db, msg, type, category) {
     await downloadFile(downloadUrl, localPath);
     try {
         const hash = await imghash.hash(localPath);
-        db.getDb().prepare(`INSERT INTO visual_hashes (phash, type, category, guild_id, match_count, created_at) VALUES (?, ?, ?, ?, 0, ?)`)
-            .run(hash, type, category, ctx.chat.id, new Date().toISOString());
+        await db.query(
+            `INSERT INTO visual_hashes (phash, type, category, guild_id, match_count, created_at) VALUES ($1, $2, $3, $4, 0, NOW())`,
+            [hash, type, category, ctx.chat.id]
+        );
         await ctx.reply(`✅ Immagine salvata come **${type}** (${category}). Hash: \`${hash}\``, { parse_mode: 'Markdown' });
     } catch (e) {
         await ctx.reply("❌ Errore: " + e.message);
     } finally {
-        try { fs.unlinkSync(localPath); } catch (e) { /* cleanup - ignore */ }
+        try { fs.unlinkSync(localPath); } catch (e) { }
     }
 }
 
-function findMatch(db, targetHash, guildId, threshold) {
-    const stmt = db.getDb().prepare(`SELECT * FROM visual_hashes WHERE guild_id = ? OR guild_id = 0`);
-    const hashes = stmt.all(guildId);
+async function findMatch(db, targetHash, guildId, threshold) {
+    const hashes = await db.queryAll(
+        `SELECT * FROM visual_hashes WHERE guild_id = $1 OR guild_id = 0`,
+        [guildId]
+    );
 
     let bestMatch = null;
     let minDist = Infinity;
@@ -74,8 +78,6 @@ function findMatch(db, targetHash, guildId, threshold) {
 }
 
 function hammingDistance(h1, h2) {
-    let count = 0;
-    // imghash returns hex string.
     let dist = 0;
     for (let i = 0; i < h1.length; i++) {
         let v1 = parseInt(h1[i], 16);

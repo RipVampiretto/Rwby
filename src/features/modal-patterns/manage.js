@@ -11,17 +11,17 @@ function init(database) {
 // GUILD MODAL OVERRIDES
 // ============================================================================
 
-function toggleGuildModal(guildId, modalId) {
+async function toggleGuildModal(guildId, modalId) {
     if (!db) return null;
     try {
-        const current = logic.isModalEnabledForGuild(guildId, modalId);
-        const newState = current ? 0 : 1;
+        const current = await logic.isModalEnabledForGuild(guildId, modalId);
+        const newState = !current;
 
-        db.getDb().prepare(`
+        await db.query(`
             INSERT INTO guild_modal_overrides (guild_id, modal_id, enabled)
-            VALUES (?, ?, ?)
-            ON CONFLICT(guild_id, modal_id) DO UPDATE SET enabled = ?
-        `).run(guildId, modalId, newState, newState);
+            VALUES ($1, $2, $3)
+            ON CONFLICT(guild_id, modal_id) DO UPDATE SET enabled = $3
+        `, [guildId, modalId, newState]);
 
         return newState;
     } catch (e) {
@@ -34,106 +34,108 @@ function toggleGuildModal(guildId, modalId) {
 // SUPERADMIN MODAL MANAGEMENT
 // ============================================================================
 
-function listModals(language = null) {
+async function listModals(language = null) {
     if (!db) return [];
-    let query = "SELECT * FROM spam_modals ORDER BY language, category";
-    let modals;
-
     if (language) {
-        query = "SELECT * FROM spam_modals WHERE language = ? ORDER BY category";
-        modals = db.getDb().prepare(query).all(language);
-    } else {
-        modals = db.getDb().prepare(query).all();
+        return await db.queryAll(
+            "SELECT * FROM spam_modals WHERE language = $1 ORDER BY category",
+            [language]
+        );
     }
-    return modals;
+    return await db.queryAll("SELECT * FROM spam_modals ORDER BY language, category");
 }
 
-function getModal(language, category) {
+async function getModal(language, category) {
     if (!db) return null;
-    return db.getDb().prepare(
-        "SELECT * FROM spam_modals WHERE language = ? AND category = ?"
-    ).get(language, category);
+    return await db.queryOne(
+        "SELECT * FROM spam_modals WHERE language = $1 AND category = $2",
+        [language, category]
+    );
 }
 
-function upsertModal(language, category, patterns, action = 'report_only', threshold = 0.6, createdBy = null) {
+async function upsertModal(language, category, patterns, action = 'report_only', threshold = 0.6, createdBy = null) {
     if (!db) return;
     const patternsJson = JSON.stringify(patterns);
 
-    db.getDb().prepare(`
+    await db.query(`
         INSERT INTO spam_modals (language, category, patterns, action, similarity_threshold, created_by)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT(language, category) DO UPDATE SET
-            patterns = ?,
-            action = ?,
-            similarity_threshold = ?,
-            updated_at = CURRENT_TIMESTAMP
-    `).run(language, category, patternsJson, action, threshold, createdBy,
-        patternsJson, action, threshold);
+            patterns = $3,
+            action = $4,
+            similarity_threshold = $5,
+            updated_at = NOW()
+    `, [language, category, patternsJson, action, threshold, createdBy]);
 
-    logic.refreshCache();
+    await logic.refreshCache();
 }
 
-function addPatternsToModal(language, category, newPatterns) {
-    const modal = getModal(language, category);
+async function addPatternsToModal(language, category, newPatterns) {
+    const modal = await getModal(language, category);
     if (!modal) return false;
 
     const existing = logic.safeJsonParse(modal.patterns, []);
     const combined = [...new Set([...existing, ...newPatterns])];
 
-    db.getDb().prepare(
-        "UPDATE spam_modals SET patterns = ?, updated_at = CURRENT_TIMESTAMP WHERE language = ? AND category = ?"
-    ).run(JSON.stringify(combined), language, category);
+    await db.query(
+        "UPDATE spam_modals SET patterns = $1, updated_at = NOW() WHERE language = $2 AND category = $3",
+        [JSON.stringify(combined), language, category]
+    );
 
-    logic.refreshCache();
+    await logic.refreshCache();
     return true;
 }
 
-function removePatternsFromModal(language, category, patternsToRemove) {
-    const modal = getModal(language, category);
+async function removePatternsFromModal(language, category, patternsToRemove) {
+    const modal = await getModal(language, category);
     if (!modal) return false;
 
     const existing = logic.safeJsonParse(modal.patterns, []);
     const filtered = existing.filter(p => !patternsToRemove.includes(p));
 
-    db.getDb().prepare(
-        "UPDATE spam_modals SET patterns = ?, updated_at = CURRENT_TIMESTAMP WHERE language = ? AND category = ?"
-    ).run(JSON.stringify(filtered), language, category);
+    await db.query(
+        "UPDATE spam_modals SET patterns = $1, updated_at = NOW() WHERE language = $2 AND category = $3",
+        [JSON.stringify(filtered), language, category]
+    );
 
-    logic.refreshCache();
+    await logic.refreshCache();
     return true;
 }
 
-function deleteModal(language, category) {
+async function deleteModal(language, category) {
     if (!db) return false;
-    const result = db.getDb().prepare(
-        "DELETE FROM spam_modals WHERE language = ? AND category = ?"
-    ).run(language, category);
+    const result = await db.query(
+        "DELETE FROM spam_modals WHERE language = $1 AND category = $2",
+        [language, category]
+    );
 
-    logic.refreshCache();
-    return result.changes > 0;
+    await logic.refreshCache();
+    return result.rowCount > 0;
 }
 
-function toggleModal(language, category) {
+async function toggleModal(language, category) {
     if (!db) return null;
-    const modal = getModal(language, category);
+    const modal = await getModal(language, category);
     if (!modal) return null;
 
-    const newState = modal.enabled ? 0 : 1;
-    db.getDb().prepare(
-        "UPDATE spam_modals SET enabled = ? WHERE language = ? AND category = ?"
-    ).run(newState, language, category);
+    const newState = !modal.enabled;
+    await db.query(
+        "UPDATE spam_modals SET enabled = $1 WHERE language = $2 AND category = $3",
+        [newState, language, category]
+    );
 
-    logic.refreshCache();
+    await logic.refreshCache();
     return newState;
 }
 
-function updateModalAction(language, category, action) {
+async function updateModalAction(language, category, action) {
     if (!db) return;
-    db.getDb().prepare(
-        "UPDATE spam_modals SET action = ?, updated_at = CURRENT_TIMESTAMP WHERE language = ? AND category = ?"
-    ).run(action, language, category);
+    await db.query(
+        "UPDATE spam_modals SET action = $1, updated_at = NOW() WHERE language = $2 AND category = $3",
+        [action, language, category]
+    );
 
-    logic.refreshCache();
+    await logic.refreshCache();
 }
 
 module.exports = {

@@ -43,12 +43,12 @@ const i18n = require("./src/i18n");
 // GLOBAL MIDDLEWARE - Logging & User Cache
 // ============================================================================
 bot.use(async (ctx, next) => {
-    // Cache user info
+    // Cache user info (async)
     if (ctx.from) {
-        db.upsertUser(ctx.from);
+        await db.upsertUser(ctx.from);
     }
     if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
-        db.upsertGuild(ctx.chat);
+        await db.upsertGuild(ctx.chat);
     }
 
     // Log message
@@ -192,14 +192,20 @@ bot.catch((err) => {
 // ============================================================================
 // START BOT
 // ============================================================================
+const backup = require('./src/database/backup');
+
 async function start() {
     // Init database
     await db.init();
-    logger.info("Database initialized");
+    logger.info("Database initialized (PostgreSQL)");
 
     // Init i18n
     i18n.init(db);
     logger.info("i18n initialized");
+
+    // Start backup scheduler
+    backup.startScheduler();
+    logger.info("Backup scheduler started");
 
     // Start bot
     logger.info("🚀 Bot avviato...");
@@ -210,3 +216,4 @@ start().catch(err => {
     logger.error("Failed to start bot:", err);
     process.exit(1);
 });
+

@@ -16,7 +16,6 @@ async function executeAction(ctx, action, trigger) {
     const user = ctx.from;
     logger.info(`[anti-spam] Trigger: ${trigger} Action: ${action} User: ${user.id}`);
 
-    // Log Logic using adminLogger if available
     const logParams = {
         guildId: ctx.chat.id,
         eventType: 'spam',
@@ -36,7 +35,7 @@ async function executeAction(ctx, action, trigger) {
 
         if (banned) {
             await ctx.reply(`🚫 **BANNED**\nHas been banned for spam.`);
-            userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'spam_ban');
+            await userReputation.modifyFlux(db, user.id, ctx.chat.id, -100, 'spam_ban');
             await forwardBanToSuperAdmin(ctx, user, trigger);
 
             logParams.eventType = 'ban';
@@ -45,8 +44,7 @@ async function executeAction(ctx, action, trigger) {
         }
     }
     else if (action === 'report_only') {
-        // Send to Staff Queue
-        staffCoordination.reviewQueue({
+        await staffCoordination.reviewQueue(_botInstance, db, {
             guildId: ctx.chat.id,
             source: 'Anti-Spam',
             user: user,
@@ -59,10 +57,10 @@ async function executeAction(ctx, action, trigger) {
 
 async function forwardBanToSuperAdmin(ctx, user, trigger) {
     try {
-        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
         if (!globalConfig || !globalConfig.parliament_group_id) return;
 
-        const flux = userReputation.getLocalFlux(user.id, ctx.chat.id);
+        const flux = await userReputation.getLocalFlux(db, user.id, ctx.chat.id);
 
         const text = `🔨 **BAN ESEGUITO**\n\n` +
             `🏛️ Gruppo: ${ctx.chat.title} (@${ctx.chat.username || 'private'})\n` +

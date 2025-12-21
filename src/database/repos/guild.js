@@ -1,4 +1,4 @@
-const { getDb } = require('../connection');
+const { queryOne, query } = require('../connection');
 const logger = require('../../middlewares/logger');
 
 /**
@@ -40,12 +40,9 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass',
     // CAS Ban / Global Blacklist
     'casban_enabled',
-    // CAS Ban / Global Blacklist
-    'casban_enabled',
     // Welcome & Captcha System
     'welcome_enabled', 'welcome_msg_enabled', 'welcome_message', 'welcome_buttons', 'captcha_enabled', 'captcha_mode', 'kick_timeout',
     'welcome_autodelete_timer', 'rules_enabled', 'rules_link', 'captcha_logs_enabled',
-    // UI Language
     // UI Language
     'ui_language'
 ]);
@@ -53,13 +50,13 @@ const GUILD_CONFIG_COLUMNS = new Set([
 /**
  * Get or create guild config
  * @param {number} guildId - Guild ID
+ * @returns {Promise<object>}
  */
-function getGuildConfig(guildId) {
-    const db = getDb();
-    let config = db.prepare('SELECT * FROM guild_config WHERE guild_id = ?').get(guildId);
+async function getGuildConfig(guildId) {
+    let config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
     if (!config) {
-        db.prepare('INSERT INTO guild_config (guild_id) VALUES (?)').run(guildId);
-        config = db.prepare('SELECT * FROM guild_config WHERE guild_id = ?').get(guildId);
+        await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
+        config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
     }
     return config;
 }
@@ -69,9 +66,7 @@ function getGuildConfig(guildId) {
  * @param {number} guildId - Guild ID
  * @param {object} updates - Object with column:value pairs to update
  */
-function updateGuildConfig(guildId, updates) {
-    const db = getDb();
-
+async function updateGuildConfig(guildId, updates) {
     // Filter only valid column names (SQL injection protection)
     const validKeys = Object.keys(updates).filter(k => GUILD_CONFIG_COLUMNS.has(k));
 
@@ -86,28 +81,36 @@ function updateGuildConfig(guildId, updates) {
         logger.warn(`[database] updateGuildConfig ignored invalid columns: ${invalidKeys.join(', ')}`);
     }
 
-    const setClause = validKeys.map(k => `${k} = ?`).join(', ');
-    const values = validKeys.map(k => updates[k]);
+    // Build parameterized query
+    const setClauses = validKeys.map((k, i) => `${k} = $${i + 1}`);
+    const values = validKeys.map(k => {
+        const val = updates[k];
+        // Convert arrays/objects to JSON for JSONB columns
+        if (typeof val === 'object' && val !== null) {
+            return JSON.stringify(val);
+        }
+        return val;
+    });
     values.push(guildId);
 
-    db.prepare(`UPDATE guild_config SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE guild_id = ?`).run(...values);
+    const sql = `UPDATE guild_config SET ${setClauses.join(', ')}, updated_at = NOW() WHERE guild_id = $${values.length}`;
+    await query(sql, values);
 }
 
 /**
  * Ensure guild exists and update name
  * @param {object} chat - Telegram chat object
  */
-function upsertGuild(chat) {
-    const db = getDb();
+async function upsertGuild(chat) {
     const { id, title } = chat;
     if (!title) return; // Should have title if group/supergroup
 
-    db.prepare(`
-        INSERT INTO guild_config (guild_id, guild_name) VALUES (?, ?)
-        ON CONFLICT(guild_id) DO UPDATE SET 
-        guild_name = excluded.guild_name,
-        updated_at = CURRENT_TIMESTAMP
-    `).run(id, title);
+    await query(`
+        INSERT INTO guild_config (guild_id, guild_name) VALUES ($1, $2)
+        ON CONFLICT (guild_id) DO UPDATE SET 
+            guild_name = EXCLUDED.guild_name,
+            updated_at = NOW()
+    `, [id, title]);
 }
 
 module.exports = {

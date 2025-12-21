@@ -18,14 +18,13 @@ function getDomain(url) {
     }
 }
 
-function checkIntel(domain) {
+async function checkIntel(domain) {
     if (!db) return 'unknown';
-    // Check intel_data for domain
-    const res = db.getDb().prepare(`
+    const res = await db.queryOne(`
         SELECT type FROM intel_data 
         WHERE (type = 'whitelist_domain' OR type = 'blacklist_domain') 
-        AND value = ? AND status = 'active'
-    `).get(domain);
+        AND value = $1 AND status = 'active'
+    `, [domain]);
 
     if (res) {
         return res.type === 'whitelist_domain' ? 'whitelist' : 'blacklist';
@@ -33,12 +32,6 @@ function checkIntel(domain) {
     return 'unknown';
 }
 
-/**
- * Scan message for links and verify against Intel Network
- * @param {object} ctx 
- * @param {object} config 
- * @returns {object|null} Verdict { type: 'blacklist'|'unknown', domain, link } or null if safe/no links
- */
 async function scanMessage(ctx, config) {
     const links = extractLinks(ctx.message.text);
     if (links.length === 0) return null;
@@ -47,12 +40,11 @@ async function scanMessage(ctx, config) {
         const domain = getDomain(link);
         if (!domain) continue;
 
-        // Check Global Intel only if sync is enabled
         if (config.link_sync_global) {
-            const intelCheck = checkIntel(domain);
+            const intelCheck = await checkIntel(domain);
 
             if (intelCheck === 'whitelist') {
-                continue; // Safe
+                continue;
             }
 
             if (intelCheck === 'blacklist') {
@@ -60,7 +52,6 @@ async function scanMessage(ctx, config) {
             }
         }
 
-        // If not blacklisted/whitelisted (or sync off), it's unknown
         return { type: 'unknown', domain, link };
     }
 

@@ -7,7 +7,7 @@ async function reviewQueue(bot, db, params) {
         return false;
     }
 
-    const config = db.getGuildConfig(params.guildId);
+    const config = await db.getGuildConfig(params.guildId);
     if (!config || !config.staff_group_id) {
         logger.debug(`[staff-coordination] No staff group set for guild ${params.guildId} - report_only disabled`);
         return false;
@@ -16,7 +16,9 @@ async function reviewQueue(bot, db, params) {
     let threadId = null;
     if (config.staff_topics) {
         try {
-            const topics = JSON.parse(config.staff_topics);
+            const topics = typeof config.staff_topics === 'string'
+                ? JSON.parse(config.staff_topics)
+                : config.staff_topics;
             threadId = topics.reports;
         } catch (e) { }
     }
@@ -56,29 +58,26 @@ async function reviewQueue(bot, db, params) {
 }
 
 async function addNote(db, ctx, targetId, noteText, staffGroupId) {
-    const sqlite = db.getDb();
-    sqlite.prepare(`
+    await db.query(`
         INSERT INTO staff_notes (user_id, staff_group_id, note_text, created_by)
-        VALUES (?, ?, ?, ?)
-    `).run(targetId, staffGroupId, noteText, ctx.from.id);
+        VALUES ($1, $2, $3, $4)
+    `, [targetId, staffGroupId, noteText, ctx.from.id]);
 }
 
-function getNotes(db, targetId, staffGroupId) {
-    const sqlite = db.getDb();
-    return sqlite.prepare(`
+async function getNotes(db, targetId, staffGroupId) {
+    return await db.queryAll(`
         SELECT * FROM staff_notes 
-        WHERE user_id = ? AND staff_group_id = ?
+        WHERE user_id = $1 AND staff_group_id = $2
         ORDER BY created_at DESC 
         LIMIT 10
-    `).all(targetId, staffGroupId);
+    `, [targetId, staffGroupId]);
 }
 
 async function setStaffGroup(db, ctx, bot, staffId) {
-    // Test permission
     const testMsg = await bot.api.sendMessage(staffId, "✅ Test connessione Staff Group riuscito.");
     await bot.api.deleteMessage(staffId, testMsg.message_id);
 
-    db.updateGuildConfig(ctx.chat.id, { staff_group_id: staffId });
+    await db.updateGuildConfig(ctx.chat.id, { staff_group_id: staffId });
 }
 
 async function handleStaffAction(ctx, bot, action, data) {
@@ -101,7 +100,6 @@ async function handleStaffAction(ctx, bot, action, data) {
             });
         }
 
-        // Log staff action
         if (adminLogger.getLogEvent()) {
             adminLogger.getLogEvent()({
                 guildId: originalGuildId,
@@ -116,7 +114,6 @@ async function handleStaffAction(ctx, bot, action, data) {
         await ctx.answerCallbackQuery("✅ Ignorato");
         await ctx.deleteMessage();
 
-        // Log staff dismiss
         if (adminLogger.getLogEvent()) {
             adminLogger.getLogEvent()({
                 guildId: ctx.chat.id,
@@ -139,7 +136,6 @@ async function handleStaffAction(ctx, bot, action, data) {
                     caption: ctx.callbackQuery.message.caption + "\n\n✅ **DELETED by Staff**"
                 });
 
-                // Log staff delete
                 if (adminLogger.getLogEvent()) {
                     adminLogger.getLogEvent()({
                         guildId: origChatId,

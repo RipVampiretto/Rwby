@@ -16,32 +16,26 @@ function init(database, bot) {
 
 /**
  * Handle a message from a CAS-banned user
- * @param {Context} ctx 
  */
 async function handleCasBan(ctx) {
     const user = ctx.from;
     logger.info(`[cas-ban] CAS banned user detected: ${user.id} (${user.first_name})`);
 
     try {
-        // 1. Delete the message
         await safeDelete(ctx, 'cas-ban');
-
-        // 2. Ban from group
         const banned = await safeBan(ctx, user.id, 'cas-ban');
 
         if (banned) {
-            // 3. Log to admin-logger
             if (adminLogger.getLogEvent()) {
                 adminLogger.getLogEvent()({
                     guildId: ctx.chat.id,
                     eventType: 'ban',
                     targetUser: user,
-                    executorAdmin: null, // System ban
+                    executorAdmin: null,
                     reason: 'CAS Ban (Combot Anti-Spam)',
                     isGlobal: false
                 });
             }
-
             logger.info(`[cas-ban] Banned user ${user.id} from chat ${ctx.chat.id}`);
         }
     } catch (e) {
@@ -51,19 +45,17 @@ async function handleCasBan(ctx) {
 
 /**
  * Process newly discovered CAS bans - execute global bans and notify Parliament
- * @param {Array<{user_id: number, offenses: number}>} newUsers 
  */
 async function processNewCasBans(newUsers) {
     if (!_botInstance) return;
 
     logger.info(`[cas-ban] Processing ${newUsers.length} new CAS bans...`);
 
-    // Get all guilds for global ban
-    const guilds = db.getDb().prepare('SELECT guild_id FROM guild_config').all();
+    // Get all guilds for global ban (async PostgreSQL)
+    const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
     let globalBanCount = 0;
     let failedBans = 0;
 
-    // Limit global bans to avoid rate limits (process max 100 new users)
     const usersToProcess = newUsers.slice(0, 100);
 
     for (const user of usersToProcess) {
@@ -72,20 +64,16 @@ async function processNewCasBans(newUsers) {
                 await _botInstance.api.banChatMember(guild.guild_id, user.user_id);
                 globalBanCount++;
             } catch (e) {
-                // User might already be banned or not in group - that's fine
                 failedBans++;
             }
         }
 
-        // Small delay to avoid rate limits
         if (usersToProcess.indexOf(user) % 10 === 9) {
             await new Promise(r => setTimeout(r, 1000));
         }
     }
 
     logger.info(`[cas-ban] Global bans executed: ${globalBanCount}, failed: ${failedBans}`);
-
-    // Send summary to Parliament
     await notifyParliament(newUsers, globalBanCount, guilds.length);
 }
 
@@ -96,14 +84,15 @@ async function notifyParliament(newUsers, banCount, guildCount) {
     if (!_botInstance) return;
 
     try {
-        const globalConfig = db.getDb().prepare('SELECT * FROM global_config WHERE id = 1').get();
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
         if (!globalConfig || !globalConfig.parliament_group_id) return;
 
-        // Get topic ID for bans if forum
         let topicId = null;
         if (globalConfig.global_topics) {
             try {
-                const topics = JSON.parse(globalConfig.global_topics);
+                const topics = typeof globalConfig.global_topics === 'string'
+                    ? JSON.parse(globalConfig.global_topics)
+                    : globalConfig.global_topics;
                 topicId = topics.bans;
             } catch (e) { }
         }

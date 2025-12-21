@@ -3,12 +3,6 @@ const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
-const logic = require('./logic'); // Circular dependency warning, but logic doesn't require actions at top level so might be ok. 
-// Actually logic calls executeAction. So actions cannot require logic if logic requires actions.
-// Solution: Pass hammingDistance as utility or duplicate it. logic exports hammingDistance.
-// Actions needs logic only for hammingDistance in log message. 
-// Let's defer require or move hammingDistance to utils if needed. 
-// For now, logic exports hammingDistance and it is pure function.
 
 async function executeAction(ctx, db, action, match, currentHash) {
     const user = ctx.from;
@@ -22,7 +16,7 @@ async function executeAction(ctx, db, action, match, currentHash) {
     };
 
     try {
-        db.getDb().prepare("UPDATE visual_hashes SET match_count = match_count + 1 WHERE id = ?").run(match.id);
+        await db.query("UPDATE visual_hashes SET match_count = match_count + 1 WHERE id = $1", [match.id]);
     } catch (e) { }
 
     if (action === 'delete') {
@@ -33,21 +27,19 @@ async function executeAction(ctx, db, action, match, currentHash) {
         const banned = await safeBan(ctx, user.id, 'visual-immune');
 
         if (banned) {
-            userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'visual_ban');
+            await userReputation.modifyFlux(db, user.id, ctx.chat.id, -100, 'visual_ban');
 
             if (superAdmin.forwardBanToParliament) {
-                // We need hamming distance here.
-                // We can import the pure function easily or just calculate it?
-                // logic.js exports it.
                 const dist = calculateDistance(currentHash, match.phash);
+                const flux = await userReputation.getLocalFlux(db, user.id, ctx.chat.id);
 
-                superAdmin.forwardBanToParliament({
+                await superAdmin.forwardBanToParliament(ctx.api, db, {
                     user: user,
                     guildName: ctx.chat.title,
                     guildId: ctx.chat.id,
                     reason: `Visual Ban: ${match.category} (Dist: ${dist})`,
                     evidence: `Hash: ${currentHash}`,
-                    flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
+                    flux: flux
                 });
             }
 
@@ -56,7 +48,7 @@ async function executeAction(ctx, db, action, match, currentHash) {
         }
     }
     else if (action === 'report_only') {
-        staffCoordination.reviewQueue({
+        await staffCoordination.reviewQueue(ctx.api, db, {
             guildId: ctx.chat.id,
             source: 'Visual-Immune',
             user: user,
@@ -67,13 +59,7 @@ async function executeAction(ctx, db, action, match, currentHash) {
     }
 }
 
-// Duplicated for simplicity to avoid circular require with logic.js if necessary, 
-// OR simpler: assume logic.js is loaded. logic.js requires actions.js. actions.js requires logic.js?
-// Cycle: logic -> actions -> logic.
-// Logic uses actions.executeAction. Actions uses logic.hammingDistance (optional, just for logging).
-// I will implement helper here to break cycle.
 function calculateDistance(h1, h2) {
-    let count = 0;
     let dist = 0;
     for (let i = 0; i < h1.length; i++) {
         let v1 = parseInt(h1[i], 16);

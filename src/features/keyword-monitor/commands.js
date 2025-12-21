@@ -11,26 +11,24 @@ function registerCommands(bot, db) {
             const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
             if (wizard.WIZARD_SESSIONS.has(sessionKey)) {
                 await wizard.handleWizardStep(ctx, sessionKey);
-                return; // Stop propagation
+                return;
             }
             return next();
         }
 
-        // Handle wizard in group
         const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
         if (wizard.WIZARD_SESSIONS.has(sessionKey)) {
             await wizard.handleWizardStep(ctx, sessionKey);
             return;
         }
 
-        // Skip for admins
         if (await isAdmin(ctx, 'keyword-monitor')) return next();
         if (ctx.userTier >= 2) return next();
 
         const match = await logic.scanMessage(ctx);
         if (match) {
             await actions.executeAction(ctx, match.action, match.word, match.fullText);
-            return; // Stop processing
+            return;
         }
 
         await next();
@@ -46,7 +44,7 @@ function registerCommands(bot, db) {
         if (data === "wrd_close") return ctx.deleteMessage();
 
         if (data === "wrd_list") {
-            const rules = db.getDb().prepare('SELECT * FROM word_filters WHERE guild_id = ?').all(ctx.chat.id);
+            const rules = await db.queryAll('SELECT * FROM word_filters WHERE guild_id = $1', [ctx.chat.id]);
             let msg = "📜 **Word Rules**\n";
             if (rules.length === 0) msg += "Nessuna regola.";
             else rules.slice(0, 20).forEach(r => msg += `- \`${r.word}\` (${r.action})\n`);
@@ -67,14 +65,13 @@ function registerCommands(bot, db) {
             await ctx.answerCallbackQuery();
             return;
         } else if (data.startsWith("wrd_wiz_")) {
-            // Wizard callback handling
             const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
             if (!wizard.WIZARD_SESSIONS.has(sessionKey)) return ctx.answerCallbackQuery("Sessione scaduta.");
 
             const session = wizard.WIZARD_SESSIONS.get(sessionKey);
             if (session.step === 2) {
-                if (data === "wrd_wiz_regex_yes") session.is_regex = 1;
-                else session.is_regex = 0;
+                if (data === "wrd_wiz_regex_yes") session.is_regex = true;
+                else session.is_regex = false;
 
                 session.step = 3;
                 await ctx.editMessageText(`Azione per \`${session.word}\`?`, {
@@ -89,19 +86,19 @@ function registerCommands(bot, db) {
                 const act = data.split('_act_')[1];
                 session.action = act;
 
-                // Save
-                db.getDb().prepare(`INSERT INTO word_filters (guild_id, word, is_regex, action, severity, match_whole_word, bypass_tier) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-                    .run(ctx.chat.id, session.word, session.is_regex, session.action, 3, session.is_regex ? 0 : 1, 2);
+                await db.query(
+                    `INSERT INTO word_filters (guild_id, word, is_regex, action, severity, match_whole_word, bypass_tier) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [ctx.chat.id, session.word, session.is_regex, session.action, 3, !session.is_regex, 2]
+                );
 
                 wizard.WIZARD_SESSIONS.delete(sessionKey);
                 await ctx.editMessageText(`✅ Regola aggiunta: \`${session.word}\` -> ${session.action}`, { parse_mode: 'Markdown' });
-                // Return to appropriate menu using saved state
                 await ui.sendConfigUI(ctx, db, false, session.fromSettings || false);
             }
         } else if (data === "wrd_sync") {
-            const config = db.getGuildConfig(ctx.chat.id);
-            const newValue = config.keyword_sync_global ? 0 : 1;
-            db.updateGuildConfig(ctx.chat.id, { keyword_sync_global: newValue });
+            const config = await db.getGuildConfig(ctx.chat.id);
+            const newValue = !config.keyword_sync_global;
+            await db.updateGuildConfig(ctx.chat.id, { keyword_sync_global: newValue });
             return ui.sendConfigUI(ctx, db, true, fromSettings);
         }
     });

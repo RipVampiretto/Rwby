@@ -1,15 +1,13 @@
 const logic = require('./logic');
 const ui = require('./ui');
-const { isSuperAdmin } = require('../../utils/error-handlers');
+const { isSuperAdmin, safeJsonParse } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 const modalPatterns = require('../modal-patterns');
-const { safeJsonParse } = require('../../utils/error-handlers');
 
 // Wizard Session Management
 const WIZARD_SESSIONS = new Map();
-const WIZARD_SESSION_TTL = 300000; // 5 minutes
+const WIZARD_SESSION_TTL = 300000;
 
-// Cleanup expired sessions
 setInterval(() => {
     const now = Date.now();
     for (const [key, session] of WIZARD_SESSIONS.entries()) {
@@ -24,7 +22,7 @@ function registerCommands(bot, db) {
     bot.command("gpanel", async (ctx) => {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
         try {
-            const stats = logic.getStats(db);
+            const stats = await logic.getStats(db);
             await ui.sendGovernancePanel(ctx, stats);
         } catch (e) {
             ctx.reply("❌ Error fetching stats");
@@ -58,10 +56,10 @@ function registerCommands(bot, db) {
     // Command: /setglog
     bot.command("setglog", async (ctx) => {
         if (!isSuperAdmin(ctx.from.id)) return;
-        db.getDb().prepare(`
-            INSERT INTO global_config (id, global_log_channel) VALUES (1, ?)
-            ON CONFLICT(id) DO UPDATE SET global_log_channel = ?
-        `).run(ctx.chat.id, ctx.chat.id);
+        await db.query(`
+            INSERT INTO global_config (id, global_log_channel) VALUES (1, $1)
+            ON CONFLICT(id) DO UPDATE SET global_log_channel = $1
+        `, [ctx.chat.id]);
         await ctx.reply("✅ Global Log Channel impostato.");
     });
 
@@ -70,13 +68,13 @@ function registerCommands(bot, db) {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
 
         const args = ctx.message.text.split(' ').slice(1);
-        const action = args[0]; // add, remove, list
+        const action = args[0];
         const domain = args[1];
 
         if (!action || action === 'list') {
-            const items = db.getDb().prepare(
+            const items = await db.queryAll(
                 "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND status = 'active'"
-            ).all();
+            );
 
             if (items.length === 0) {
                 return ctx.reply("🔗 **WHITELIST DOMINI GLOBALE**\n\nNessun dominio in whitelist.");
@@ -91,29 +89,32 @@ function registerCommands(bot, db) {
         }
 
         if (action === 'add' && domain) {
-            const existing = db.getDb().prepare(
-                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND value = ?"
-            ).get(domain);
+            const existing = await db.queryOne(
+                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND value = $1",
+                [domain]
+            );
 
             if (existing) {
                 if (existing.status === 'active') {
                     return ctx.reply(`⚠️ \`${domain}\` è già in whitelist.`, { parse_mode: 'Markdown' });
                 }
-                db.getDb().prepare("UPDATE intel_data SET status = 'active' WHERE id = ?").run(existing.id);
+                await db.query("UPDATE intel_data SET status = 'active' WHERE id = $1", [existing.id]);
             } else {
-                db.getDb().prepare(
-                    "INSERT INTO intel_data (type, value, added_by_user) VALUES ('global_whitelist_domain', ?, ?)"
-                ).run(domain, ctx.from.id);
+                await db.query(
+                    "INSERT INTO intel_data (type, value, added_by_user) VALUES ('global_whitelist_domain', $1, $2)",
+                    [domain, ctx.from.id]
+                );
             }
             return ctx.reply(`✅ \`${domain}\` aggiunto alla whitelist globale.`, { parse_mode: 'Markdown' });
         }
 
         if (action === 'remove' && domain) {
-            const result = db.getDb().prepare(
-                "UPDATE intel_data SET status = 'removed' WHERE type = 'global_whitelist_domain' AND value = ?"
-            ).run(domain);
+            const result = await db.query(
+                "UPDATE intel_data SET status = 'removed' WHERE type = 'global_whitelist_domain' AND value = $1",
+                [domain]
+            );
 
-            if (result.changes > 0) return ctx.reply(`🗑️ \`${domain}\` rimosso dalla whitelist globale.`, { parse_mode: 'Markdown' });
+            if (result.rowCount > 0) return ctx.reply(`🗑️ \`${domain}\` rimosso dalla whitelist globale.`, { parse_mode: 'Markdown' });
             return ctx.reply(`⚠️ \`${domain}\` non trovato in whitelist.`, { parse_mode: 'Markdown' });
         }
 
@@ -128,9 +129,9 @@ function registerCommands(bot, db) {
         const domain = args[1];
 
         if (!action || action === 'list') {
-            const items = db.getDb().prepare(
+            const items = await db.queryAll(
                 "SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND status = 'active'"
-            ).all();
+            );
             if (items.length === 0) return ctx.reply("🚫 **BLACKLIST DOMINI GLOBALE**\n\nNessun dominio in blacklist.");
 
             let msg = "🚫 **BLACKLIST DOMINI GLOBALE**\n\n";
@@ -140,19 +141,18 @@ function registerCommands(bot, db) {
         }
 
         if (action === 'add' && domain) {
-            // ...implementation similar to original
-            const existing = db.getDb().prepare("SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND value = ?").get(domain);
+            const existing = await db.queryOne("SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND value = $1", [domain]);
             if (existing) {
                 if (existing.status === 'active') return ctx.reply(`⚠️ \`${domain}\` già in blacklist.`);
-                db.getDb().prepare("UPDATE intel_data SET status='active' WHERE id=?").run(existing.id);
+                await db.query("UPDATE intel_data SET status='active' WHERE id=$1", [existing.id]);
             } else {
-                db.getDb().prepare("INSERT INTO intel_data (type, value, added_by_user) VALUES ('blacklist_domain', ?, ?)").run(domain, ctx.from.id);
+                await db.query("INSERT INTO intel_data (type, value, added_by_user) VALUES ('blacklist_domain', $1, $2)", [domain, ctx.from.id]);
             }
             return ctx.reply(`✅ \`${domain}\` aggiunto blacklist.`);
         }
 
         if (action === 'remove' && domain) {
-            db.getDb().prepare("UPDATE intel_data SET status='removed' WHERE type='blacklist_domain' AND value=?").run(domain);
+            await db.query("UPDATE intel_data SET status='removed' WHERE type='blacklist_domain' AND value=$1", [domain]);
             return ctx.reply(`🗑️ \`${domain}\` rimosso.`);
         }
 
@@ -161,14 +161,13 @@ function registerCommands(bot, db) {
 
     // Command: /gscam
     bot.command("gscam", async (ctx) => {
-        // simplified for brevity in this file, logic is same as original
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply("❌ Accesso negato");
         const args = ctx.message.text.split(' ').slice(1);
         const action = args[0];
         const pattern = args.slice(1).join(' ');
 
         if (!action || action === 'list') {
-            const items = db.getDb().prepare("SELECT * FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'").all();
+            const items = await db.queryAll("SELECT * FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'");
             if (items.length === 0) return ctx.reply("🎯 **SCAM PATTERNS GLOBALI**\n\nNessun pattern.");
             let msg = "🎯 **SCAM PATTERNS GLOBALI**\n\n";
             items.forEach((item, i) => msg += `${i + 1}. \`${item.word}\`\n`);
@@ -176,16 +175,16 @@ function registerCommands(bot, db) {
         }
 
         if ((action === 'add' || action === 'addregex') && pattern) {
-            const isRegex = action === 'addregex' ? 1 : 0;
+            const isRegex = action === 'addregex';
             if (isRegex) { try { new RegExp(pattern); } catch (e) { return ctx.reply("Regex invalida"); } }
             try {
-                db.getDb().prepare("INSERT INTO word_filters (guild_id, word, is_regex, category, action, bypass_tier) VALUES (0, ?, ?, 'scam_pattern', 'report_only', 2)").run(pattern, isRegex);
+                await db.query("INSERT INTO word_filters (guild_id, word, is_regex, category, action, bypass_tier) VALUES (0, $1, $2, 'scam_pattern', 'report_only', 2)", [pattern, isRegex]);
                 return ctx.reply(`✅ Pattern aggiunto.`);
             } catch (e) { return ctx.reply("⚠️ Possibile duplicato."); }
         }
 
         if (action === 'remove' && pattern) {
-            db.getDb().prepare("DELETE FROM word_filters WHERE guild_id=0 AND category='scam_pattern' AND word=?").run(pattern);
+            await db.query("DELETE FROM word_filters WHERE guild_id=0 AND category='scam_pattern' AND word=$1", [pattern]);
             return ctx.reply("🗑️ Rimosso.");
         }
         return ctx.reply("❓ Uso: /gscam [list|add|addregex|remove] [pattern]");
@@ -200,22 +199,20 @@ function registerCommands(bot, db) {
         const category = args[2];
 
         if (!action || action === 'list') {
-            const modals = modalPatterns.listModals(lang || null);
+            const modals = await modalPatterns.listModals(lang || null);
             if (modals.length === 0) return ctx.reply("📋 Nessun modal.");
-            // ... formatting logic ...
-            return ctx.reply(`📋 Trovati ${modals.length} modals (vedi logs o usa dettagli)`); // simplified for brevity
+            return ctx.reply(`📋 Trovati ${modals.length} modals (vedi logs o usa dettagli)`);
         }
 
         if (action === 'add') {
             const modalAction = args[3] || 'report_only';
-            modalPatterns.upsertModal(lang.toLowerCase(), category.toLowerCase(), [], modalAction, 0.6, ctx.from.id);
+            await modalPatterns.upsertModal(lang.toLowerCase(), category.toLowerCase(), [], modalAction, 0.6, ctx.from.id);
             return ctx.reply(`✅ Modal ${lang}/${category} creato.`);
         }
 
-        // ... other actions addpattern, remove, toggle ...
         if (action === 'addpattern') {
             const pattern = args.slice(3).join(' ');
-            modalPatterns.addPatternsToModal(lang.toLowerCase(), category.toLowerCase(), [pattern]);
+            await modalPatterns.addPatternsToModal(lang.toLowerCase(), category.toLowerCase(), [pattern]);
             return ctx.reply("✅ Pattern aggiunto.");
         }
     });
@@ -224,7 +221,6 @@ function registerCommands(bot, db) {
     bot.on("callback_query:data", async (ctx, next) => {
         const data = ctx.callbackQuery.data;
 
-        // Security check for super-admin actions
         const protectedPrefixes = ["gban", "g_", "bl_", "gwl_"];
         if (protectedPrefixes.some(p => data.startsWith(p)) && !isSuperAdmin(ctx.from.id)) {
             return ctx.answerCallbackQuery("❌ Accesso negato");
@@ -234,14 +230,14 @@ function registerCommands(bot, db) {
 
         if (data === "g_menu") {
             try {
-                const stats = logic.getStats(db);
+                const stats = await logic.getStats(db);
                 await ui.sendGovernancePanel(ctx, stats);
             } catch (e) { await ctx.answerCallbackQuery("Error reloading"); }
             return;
         }
 
         if (data === "g_stats") {
-            const stats = logic.getStats(db);
+            const stats = await logic.getStats(db);
             await ui.sendFullStats(ctx, stats);
             return;
         }
@@ -255,7 +251,6 @@ function registerCommands(bot, db) {
         if (data.startsWith("gban_skip:")) {
             await ctx.answerCallbackQuery("✅ Skipped");
             await ctx.deleteMessage();
-            // In logic we could also delete from pending_deletions immediately
         }
 
         if (data.startsWith("bl_link:")) {
@@ -277,13 +272,10 @@ function registerCommands(bot, db) {
         }
         else if (data.startsWith("gwl_add:")) {
             const domain = data.split(":")[1];
-            // Auto-add to whitelist
-            db.getDb().prepare("INSERT OR REPLACE INTO intel_data (type, value, added_by_user, status) VALUES ('global_whitelist_domain', ?, ?, 'active')").run(domain, ctx.from.id);
+            await db.query("INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('global_whitelist_domain', $1, $2, 'active') ON CONFLICT DO NOTHING", [domain, ctx.from.id]);
             await ctx.answerCallbackQuery("✅ Whitelisted");
             await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ **Aggiunto alla Whitelist**`, { parse_mode: 'Markdown' });
         }
-
-        // ... g_bills, g_config ...
         else return next();
     });
 
@@ -298,7 +290,7 @@ function registerCommands(bot, db) {
 
         try {
             if (type === 'link') {
-                db.getDb().prepare("INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_domain', ?, ?, 'active')").run(input, userId);
+                await db.query("INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_domain', $1, $2, 'active')", [input, userId]);
                 await ctx.reply(`✅ Dominio \`${input}\` aggiunto alla Blacklist Globale.`);
                 logger.info(`[super-admin] Global domain blacklist added: ${input}`);
 
@@ -306,7 +298,7 @@ function registerCommands(bot, db) {
                     try { await bot.api.deleteMessage(session.origGuildId, session.origMsgId); } catch (e) { }
                 }
             } else if (type === 'word') {
-                db.getDb().prepare("INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_word', ?, ?, 'active')").run(input, userId);
+                await db.query("INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_word', $1, $2, 'active')", [input, userId]);
                 await ctx.reply(`✅ Parola \`${input}\` aggiunta alla Blacklist Globale.`);
             }
             WIZARD_SESSIONS.delete(userId);

@@ -52,44 +52,45 @@ const TIER_INFO = {
     }
 };
 
-function getUserTier(db, userId, guildId) {
-    const flux = getLocalFlux(db, userId, guildId);
+async function getUserTier(db, userId, guildId) {
+    const flux = await getLocalFlux(db, userId, guildId);
     if (flux >= TIER_THRESHOLDS.TIER_3) return 3;
     if (flux >= TIER_THRESHOLDS.TIER_2) return 2;
     if (flux >= TIER_THRESHOLDS.TIER_1) return 1;
     return 0;
 }
 
-function getLocalFlux(db, userId, guildId) {
-    const row = db.getDb().prepare(
-        'SELECT local_flux, last_activity, created_at FROM user_trust_flux WHERE user_id = ? AND guild_id = ?'
-    ).get(userId, guildId);
-
+async function getLocalFlux(db, userId, guildId) {
+    const row = await db.queryOne(
+        'SELECT local_flux, last_activity, created_at FROM user_trust_flux WHERE user_id = $1 AND guild_id = $2',
+        [userId, guildId]
+    );
     return row?.local_flux || 0;
 }
 
-function getGlobalFlux(db, userId) {
-    const row = db.getDb().prepare(
-        'SELECT global_flux FROM user_global_flux WHERE user_id = ?'
-    ).get(userId);
+async function getGlobalFlux(db, userId) {
+    const row = await db.queryOne(
+        'SELECT global_flux FROM user_global_flux WHERE user_id = $1',
+        [userId]
+    );
     return row?.global_flux || 0;
 }
 
-function modifyFlux(db, userId, guildId, delta, reason) {
-    const current = getLocalFlux(db, userId, guildId);
+async function modifyFlux(db, userId, guildId, delta, reason) {
+    const current = await getLocalFlux(db, userId, guildId);
     const newFlux = Math.max(-1000, Math.min(1000, current + delta));
 
-    db.getDb().prepare(`
+    await db.query(`
         INSERT INTO user_trust_flux (user_id, guild_id, local_flux, last_activity)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, NOW())
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
-            local_flux = ?,
-            last_activity = CURRENT_TIMESTAMP
-    `).run(userId, guildId, newFlux, newFlux);
+            local_flux = $3,
+            last_activity = NOW()
+    `, [userId, guildId, newFlux]);
 }
 
 function getTierName(tier) {
-    return TIER_INFO[tier]?.name || TIER_INFO[3].name; // Note: 'name' is in i18n, but this access just checks object existence or fallback
+    return TIER_INFO[tier]?.name || TIER_INFO[3].name;
 }
 
 module.exports = {

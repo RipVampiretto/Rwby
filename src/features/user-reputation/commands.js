@@ -8,18 +8,21 @@ function registerCommands(bot, db) {
             const userId = ctx.from.id;
             const guildId = ctx.chat.id;
 
-            // Calc & Attach Tier (passing db now)
-            ctx.userTier = logic.getUserTier(db, userId, guildId);
-            ctx.userFlux = logic.getLocalFlux(db, userId, guildId);
+            // Calc & Attach Tier (async now)
+            ctx.userTier = await logic.getUserTier(db, userId, guildId);
+            ctx.userFlux = await logic.getLocalFlux(db, userId, guildId);
 
             // Active Reward: Message (Max 1 per 6 mins)
             if (ctx.message) {
                 const now = Date.now();
-                const row = db.getDb().prepare('SELECT last_activity FROM user_trust_flux WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+                const row = await db.queryOne(
+                    'SELECT last_activity FROM user_trust_flux WHERE user_id = $1 AND guild_id = $2',
+                    [userId, guildId]
+                );
                 const lastTime = row ? new Date(row.last_activity).getTime() : 0;
 
                 if (now - lastTime > 360000) { // 6 mins
-                    logic.modifyFlux(db, userId, guildId, 1, 'activity');
+                    await logic.modifyFlux(db, userId, guildId, 1, 'activity');
                 }
             }
         }
@@ -61,7 +64,6 @@ function registerCommands(bot, db) {
         }
 
         if (data === "tier_flux_calc" || data === "tier_explainer") {
-            // If explainer from start menu, go back to start. If direct calc, no back (shows close).
             const back = data === "tier_explainer" ? "back_to_start" : null;
             await ui.sendFluxCalculation(ctx, true, back);
             return;
