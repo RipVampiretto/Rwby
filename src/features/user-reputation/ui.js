@@ -39,7 +39,7 @@ async function sendTierDetail(ctx, tierNum) {
     } catch (e) { }
 }
 
-async function sendFluxCalculation(ctx, isEdit = false) {
+async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     const p = 'tier_system.flux_calc.';
     const text = `${ctx.t(p + 'title')}\n\n` +
         `${ctx.t(p + 'intro')}\n\n` +
@@ -49,10 +49,14 @@ async function sendFluxCalculation(ctx, isEdit = false) {
         `${ctx.t(p + 'cap')}`;
 
     const keyboard = {
-        inline_keyboard: [
-            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
-        ]
+        inline_keyboard: []
     };
+
+    if (backCallback) {
+        keyboard.inline_keyboard.push([{ text: ctx.t('common.back'), callback_data: backCallback }]);
+    } else {
+        keyboard.inline_keyboard.push([{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]);
+    }
 
     if (isEdit) {
         try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
@@ -93,9 +97,76 @@ async function sendMyFlux(ctx, db) {
     await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
 }
 
+async function sendGlobalFluxOverview(ctx, db) {
+    if (!ctx.from) return;
+    const userId = ctx.from.id;
+
+    // Get Global Flux
+    const globalFlux = logic.getGlobalFlux(db, userId);
+
+    // Get all Guilds Flux
+    const rows = db.getDb().prepare(`
+        SELECT g.guild_name, u.guild_id, u.local_flux 
+        FROM user_trust_flux u 
+        JOIN guild_config g ON u.guild_id = g.guild_id 
+        WHERE u.user_id = ? 
+        ORDER BY u.local_flux DESC
+    `).all(userId);
+
+    const title = ctx.t('tier_system.my_flux.title');
+    let text = `${title}\n\n`;
+
+    if (rows.length === 0) {
+        text += ctx.t('tier_system.my_flux.no_data');
+    } else {
+        for (const row of rows) {
+            const flux = row.local_flux;
+            // Calculate Tier manually since getUserTier uses Guild ID from context which we iterate here
+            let tier = 0;
+            if (flux >= logic.TIER_THRESHOLDS.TIER_3) tier = 3;
+            else if (flux >= logic.TIER_THRESHOLDS.TIER_2) tier = 2;
+            else if (flux >= logic.TIER_THRESHOLDS.TIER_1) tier = 1;
+
+            const tierInfo = logic.TIER_INFO[tier];
+            const tierName = ctx.t(`tier_system.tiers.${tier}.name`);
+            const nextTierFlux = tier < 3 ? logic.TIER_THRESHOLDS[`TIER_${tier + 1}`] : 0;
+            // Cap progress bar at 100% (10 chars) if max tier or flux > next
+            let progress = 10;
+            if (tier < 3 && nextTierFlux > 0) {
+                progress = Math.min(10, Math.max(0, Math.floor((flux / nextTierFlux) * 10)));
+            }
+            const progressBar = '█'.repeat(progress) + '░'.repeat(10 - progress);
+            const target = tier < 3 ? nextTierFlux : 'MAX';
+
+            text += `🏘 **${row.guild_name || 'Unknown Group'}**\n`;
+            text += `${ctx.t('tier_system.menu.your_rank', { emoji: tierInfo.emoji, name: tierName })}\n`;
+            text += `🏠 Flux: ${flux}\n`;
+            text += `${progressBar} ${flux}/${target}\n\n`;
+        }
+    }
+
+    text += `**Global**\n🌍 Totale: ${globalFlux}`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: `${ctx.t('tier_system.menu.buttons.flux_works')}`, callback_data: "tier_explainer:overview" }],
+            [{ text: ctx.t('common.back'), callback_data: "back_to_start" }]
+        ]
+    };
+
+    // If context type is private, usually we reply or edit. 
+    // If called from /myflux in private, reply. If callback, edit.
+    if (ctx.callbackQuery) {
+        try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
+    } else {
+        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+    }
+}
+
 module.exports = {
     sendTierMenu,
     sendTierDetail,
     sendFluxCalculation,
-    sendMyFlux
+    sendMyFlux,
+    sendGlobalFluxOverview
 };

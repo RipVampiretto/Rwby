@@ -15,7 +15,12 @@
         "report_only": "REPORT",
         "start": {
             "greeting": "👋 Hello! I'm the moderation bot for Telegram groups.",
-            "instructions": "Use /help to see available commands or /settings for the complete control panel."
+            "instructions": "Use /help to see available commands or /settings for the complete control panel.",
+            "buttons": {
+                "add_group": "➕ Add to Group",
+                "my_flux": "📊 My Flux",
+                "tier_info": "ℹ️ Tier Info"
+            }
         },
         "help": {
             "title": "📚 **AVAILABLE COMMANDS**",
@@ -256,7 +261,7 @@
     "tier_system": {
         "menu": {
             "title": "🏛️ **TRUST SYSTEM**",
-            "your_rank": "Your level: {emoji} **{name}**",
+            "your_rank": "{emoji} **{name}**",
             "select_tier": "Choose a level to see details:",
             "buttons": {
                 "view_details": "📖 View Details",

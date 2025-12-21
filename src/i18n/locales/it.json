@@ -15,7 +15,12 @@
         "report_only": "SEGNALA",
         "start": {
             "greeting": "👋 Ciao! Sono il bot di moderazione per gruppi Telegram.",
-            "instructions": "Usa /help per vedere i comandi disponibili o /settings per il pannello di controllo completo."
+            "instructions": "Usa /help per vedere i comandi disponibili o /settings per il pannello di controllo completo.",
+            "buttons": {
+                "add_group": "➕ Aggiungi al Gruppo",
+                "my_flux": "📊 Il mio Flux",
+                "tier_info": "ℹ️ Info Livelli"
+            }
         },
         "help": {
             "title": "📚 **COMANDI DISPONIBILI**",
@@ -256,7 +261,7 @@
     "tier_system": {
         "menu": {
             "title": "🏛️ **SISTEMA DI FIDUCIA**",
-            "your_rank": "Il tuo livello: {emoji} **{name}**",
+            "your_rank": "{emoji} **{name}**",
             "select_tier": "Scegli un livello per vedere i dettagli:",
             "buttons": {
                 "view_details": "📖 Vedi Dettagli",
@@ -328,7 +333,8 @@
         },
         "my_flux": {
             "title": "📊 **I TUOI PUNTI**",
-            "local_global": "🏠 In questo gruppo: {local} | 🌍 Totale: {global}"
+            "local_global": "🏠 In questo gruppo: {local} | 🌍 Totale: {global}",
+            "no_data": "Nessun dato trovato. Unisciti a un gruppo dove sono attivo e inizia a chatttare!"
         }
     },
     "welcome": {

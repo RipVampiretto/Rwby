@@ -93,7 +93,25 @@ function updateGuildConfig(guildId, updates) {
     db.prepare(`UPDATE guild_config SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE guild_id = ?`).run(...values);
 }
 
+/**
+ * Ensure guild exists and update name
+ * @param {object} chat - Telegram chat object
+ */
+function upsertGuild(chat) {
+    const db = getDb();
+    const { id, title } = chat;
+    if (!title) return; // Should have title if group/supergroup
+
+    db.prepare(`
+        INSERT INTO guild_config (guild_id, guild_name) VALUES (?, ?)
+        ON CONFLICT(guild_id) DO UPDATE SET 
+        guild_name = excluded.guild_name,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(id, title);
+}
+
 module.exports = {
     getGuildConfig,
-    updateGuildConfig
+    updateGuildConfig,
+    upsertGuild
 };

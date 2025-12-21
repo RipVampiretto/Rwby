@@ -28,7 +28,11 @@ function registerCommands(bot, db) {
 
     // Command: /myflux
     bot.command("myflux", async (ctx) => {
-        await ui.sendMyFlux(ctx, db);
+        if (ctx.chat.type === 'private') {
+            await ui.sendGlobalFluxOverview(ctx, db);
+        } else {
+            await ui.sendMyFlux(ctx, db);
+        }
     });
 
     // Command: /tier
@@ -56,8 +60,20 @@ function registerCommands(bot, db) {
             return;
         }
 
-        if (data === "tier_flux_calc") {
-            await ui.sendFluxCalculation(ctx);
+        if (data === "tier_flux_calc" || data === "tier_explainer") {
+            // If explainer from start menu, go back to start. If direct calc, no back (shows close).
+            const back = data === "tier_explainer" ? "back_to_start" : null;
+            await ui.sendFluxCalculation(ctx, true, back);
+            return;
+        }
+
+        if (data === "tier_explainer:overview") {
+            await ui.sendFluxCalculation(ctx, true, "my_flux_overview");
+            return;
+        }
+
+        if (data === "my_flux_overview") {
+            await ui.sendGlobalFluxOverview(ctx, db);
             return;
         }
 

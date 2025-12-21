@@ -47,6 +47,9 @@ bot.use(async (ctx, next) => {
     if (ctx.from) {
         db.upsertUser(ctx.from);
     }
+    if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
+        db.upsertGuild(ctx.chat);
+    }
 
     // Log message
     const user = ctx.from?.first_name || 'System';
@@ -107,14 +110,31 @@ settingsMenu.register(bot, db);
 
 // COMMANDS - Basic
 // ============================================================================
-bot.command("start", (ctx) => {
+const sendStartMenu = (ctx) => {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
-    ctx.reply(
-        `${t('common.start.greeting')}\n\n` +
-        `${t('common.start.instructions')}`
-    );
-});
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: t('common.start.buttons.add_group'), url: `https://t.me/${ctx.me.username}?startgroup=true` }],
+            [
+                { text: t('common.start.buttons.my_flux'), callback_data: "my_flux_overview" },
+                { text: t('common.start.buttons.tier_info'), callback_data: "tier_explainer" }
+            ]
+        ]
+    };
+
+    const text = `${t('common.start.greeting')}\n\n${t('common.start.instructions')}`;
+
+    if (ctx.callbackQuery) {
+        return ctx.editMessageText(text, { reply_markup: keyboard }).catch(() => { });
+    } else {
+        return ctx.reply(text, { reply_markup: keyboard });
+    }
+};
+
+bot.command("start", (ctx) => sendStartMenu(ctx));
+bot.callbackQuery("back_to_start", (ctx) => sendStartMenu(ctx));
 
 bot.command("help", async (ctx) => {
     const guildId = ctx.chat.id;
