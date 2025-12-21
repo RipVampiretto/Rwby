@@ -1,4 +1,5 @@
 const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
@@ -20,15 +21,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `Azione Pattern: ${actPat}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "prf_close" };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: "prf_close" };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🔍 Profiler: ${enabled}`, callback_data: "prf_toggle" }],
-            [{ text: `🔗 Link: ${actLink}`, callback_data: "prf_act_link" }],
-            [{ text: `📤 Forward: ${actFwd}`, callback_data: "prf_act_fwd" }],
-            [{ text: `📝 Pattern: ${actPat}`, callback_data: "prf_act_pat" }],
+            [{ text: `${t('profiler.buttons.profiler')}: ${enabled}`, callback_data: "prf_toggle" }],
+            [{ text: `${t('profiler.buttons.link')}: ${actLink}`, callback_data: "prf_act_link" }],
+            [{ text: `${t('profiler.buttons.forward')}: ${actFwd}`, callback_data: "prf_act_fwd" }],
+            [{ text: `${t('profiler.buttons.pattern')}: ${actPat}`, callback_data: "prf_act_pat" }],
             [closeBtn]
         ]
     };

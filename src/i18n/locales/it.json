@@ -308,5 +308,220 @@
             "title": "📊 **I TUOI PUNTI**",
             "local_global": "🏠 In questo gruppo: {local} | 🌍 Totale: {global}"
         }
+    },
+    "welcome": {
+        "title": "👋 **Sistema di Benvenuto & Captcha**",
+        "captcha": "🛡️ **Captcha:**",
+        "welcome_msg": "📨 **Benvenuto:**",
+        "mode": "🎮 **Modalità:**",
+        "timeout": "⏳ **Kick Timeout:**",
+        "autodelete": "⏱ **Autodistruzione:**",
+        "rules": "📜 **Regolamento:**",
+        "logs_label": "🚨 **Log Admin:**",
+        "on_no_msg": "✅ ON (No Msg)",
+        "minutes": "{count} min",
+        "seconds": "{count} sec",
+        "modes_active": "{count} attive",
+        "buttons": {
+            "captcha_toggle": "🛡️ Captcha: {status}",
+            "msg_toggle": "📨 Msg: {status}",
+            "rules_toggle": "📜 Rules: {status}",
+            "logs_toggle": "🚨 Logs: {status}",
+            "set_rules": "📝 Imposta Link Regolamento",
+            "timeout": "⏳ Timeout: {time}m",
+            "autodelete": "⏱ AutoDel: {time}",
+            "choose_mode": "🎮 Scegli Modalità Captcha",
+            "set_welcome": "✏️ Imposta Benvenuto",
+            "remove_welcome": "🗑️ Rimuovi Benvenuto",
+            "preview": "👀 Anteprima Completa",
+            "back_to_menu": "🔙 Torna al menu"
+        },
+        "modes": {
+            "title": "🎮 **Seleziona Modalità Captcha**",
+            "subtitle": "Puoi attivare più modalità contemporaneamente. Il bot ne sceglierà una a caso per ogni nuovo utente.",
+            "descriptions": {
+                "button": "**1. Button** - Clicca 'Non sono un robot'",
+                "math": "**2. Math** - Operazioni (+, -, x)",
+                "char": "**3. Char** - Conta caratteri",
+                "emoji": "**4. Emoji** - Trova l'emoji corretta",
+                "color": "**5. Color** - Trova il colore corretto",
+                "logic": "**6. Logic** - Sequenze logiche",
+                "reverse": "**7. Reverse** - Parole al contrario"
+            },
+            "active": "Attive: `{modes}`"
+        },
+        "captcha_messages": {
+            "welcome": "👋 Benvenuto {name}!",
+            "solve_captcha": "Accedi al gruppo risolvendo il captcha:",
+            "complete_verification": "Accedi al gruppo completando questa verifica:",
+            "click_emoji": "Accedi al gruppo cliccando l'emoji giusta:",
+            "select_color": "Accedi al gruppo selezionando il colore giusto:",
+            "show_attention": "Accedi al gruppo dimostrando la tua attenzione:",
+            "complete_sequence": "Accedi al gruppo completando la sequenza logica:",
+            "confirm_human": "Clicca il pulsante qui sotto per confermare che sei umano.",
+            "timeout": "Hai {minutes} minuti di tempo.",
+            "math_question": "** Quanto fa {a} {op} {b}? **",
+            "char_question": "** Quante {char} contiene la parola: {word}? **",
+            "emoji_question": "** Clicca su: {emoji} **",
+            "color_question": "** Clicca sul cerchio {color} **",
+            "reverse_question": "** Qual è il contrario di: {word}? **",
+            "logic_question": "** {sequence} **"
+        },
+        "rules_prompt": {
+            "title": "📜 **Imposta Link Regolamento**",
+            "instruction": "Invia ora il link al regolamento (es. `https://t.me/...` o `http://...`).",
+            "usage": "Questo link verrà usato nel bottone 'Leggi Regolamento'.",
+            "cancel": "🔴 *Scrivi 'cancel' per annullare.*",
+            "button_cancel": "❌ Annulla"
+        },
+        "rules_message": {
+            "title": "📜 **Leggi il Regolamento**",
+            "instruction": "Prima di accedere, conferma di aver letto le regole del gruppo."
+        },
+        "wizard": {
+            "title": "✏️ **Imposta Messaggio di Benvenuto**",
+            "instruction": "Invia ora il messaggio che vuoi impostare.",
+            "user_data": "**Dati Utente**",
+            "group_data": "**Dati Gruppo**",
+            "special_functions": "**Funzioni Speciali**",
+            "custom_buttons": "**Per i bottoni personalizzati:**",
+            "placeholders": {
+                "mention": "`{mention}` - Link cliccabile al nome",
+                "user": "`{user}` - Nome visualizzato",
+                "username": "`{username}` - @Username (o \"-\")",
+                "first_name": "`{first_name}` - Nome proprio",
+                "last_name": "`{last_name}` - Cognome",
+                "id": "`{id}` - ID Utente",
+                "mention_group": "`{mention_group}` - Nome gruppo cliccabile",
+                "chat_title": "`{chat_title}` - Nome gruppo",
+                "chat_username": "`{chat_username}` - @Tag gruppo (o \"-\")",
+                "chat_id": "`{chat_id}` - ID Gruppo",
+                "custom_link": "`{Testo|URL}` - Link personalizzato (es. `{Regole|https://google.com}`)"
+            },
+            "buttons_format": "Aggiungi `||` alla fine del testo seguito dalla configurazione.",
+            "buttons_example": "Es: `Messaggio... || Label,URL | Label2,URL`",
+            "cancel": "🔴 *Scrivi 'cancel' per annullare.*"
+        },
+        "preview": {
+            "no_message": "⚠️ Nessun messaggio da visualizzare."
+        },
+        "logs": {
+            "new_user": "⏱ #CAPTCHA #NUOVO_UTENTE",
+            "verification_solved": "⏱ #CAPTCHA #VERIFICA_RISOLTA",
+            "verification_failed": "⏱ #CAPTCHA #VERIFICA_FALLITA",
+            "verification_expired": "⏱ #CAPTCHA #VERIFICA_SCADUTA"
+        }
+    },
+    "antispam": {
+        "title": "🛡️ **ANTI-SPAM**",
+        "description": "Blocca chi invia troppi messaggi veloci o copia-incolla ripetuti. Protegge il gruppo da flood e bot.",
+        "info_title": "ℹ️ **Info:**",
+        "info_items": {
+            "sensitivity": "• Sensibilità: Regola quanto deve essere severo",
+            "detects": "• Rileva: Messaggi a raffica e ripetizioni",
+            "trusted": "• Utenti fidati vengono ignorati"
+        },
+        "status": "Stato",
+        "sensitivity": "Sensibilità",
+        "sensitivity_values": {
+            "low": "BASSA",
+            "medium": "MEDIA",
+            "high": "ALTA"
+        },
+        "buttons": {
+            "monitor": "🛡️ Monitor",
+            "sensitivity": "🌡️ Sens",
+            "action_flood": "⚡ Flood",
+            "action_repeat": "🔁 Repeat"
+        }
+    },
+    "profiler": {
+        "title": "🔍 **PROFILER NUOVI UTENTI**",
+        "description": "Analizza i nuovi arrivati per bloccare bot e spammer istantanei. Smette di controllare gli utenti appena diventano fidati.",
+        "info_title": "ℹ️ **Info:**",
+        "info_items": {
+            "checks": "• Controlla se inviano subito Link o Inoltrati",
+            "detects": "• Rileva frasi tipiche da bot (\"guadagna subito\", ecc)",
+            "protects": "• Protegge dalle ondate di account falsi"
+        },
+        "status": "Stato",
+        "action_link": "Azione Link",
+        "action_forward": "Azione Fwd",
+        "action_pattern": "Azione Pattern",
+        "buttons": {
+            "profiler": "🔍 Profiler",
+            "link": "🔗 Link",
+            "forward": "📤 Forward",
+            "pattern": "📝 Pattern"
+        }
+    },
+    "visual": {
+        "title": "🧬 **IMMUNITÀ VISIVA**",
+        "description": "Riconosce e blocca le immagini che sono già state segnalate in passato. Anche se vengono leggermente modificate, il bot le riconosce lo stesso.",
+        "info_title": "ℹ️ **Info:**",
+        "info_items": {
+            "blocks": "• Blocca meme spam o immagini raid ricorrenti",
+            "shares": "• Condivide le \"impronte\" delle immagini cattive con altri gruppi",
+            "fast": "• Molto veloce ed efficace"
+        },
+        "status": "Stato",
+        "global": "Globale",
+        "action_label": "Azione",
+        "precision": "Precisione",
+        "buttons": {
+            "system": "🧬 Sys",
+            "sync": "🌐 Sync",
+            "action": "👮 Azione",
+            "threshold": "🎯 Soglia"
+        }
+    },
+    "superadmin": {
+        "title": "🌍 **GLOBAL GOVERNANCE PANEL**",
+        "description": "Pannello di controllo per la supervisione globale della rete.",
+        "groups_monitored": "👥 **Gruppi monitorati:** {count}",
+        "total_users": "🌍 **Utenti totali:** {count}",
+        "active_bills": "📋 **Bill attive:** {count}",
+        "buttons": {
+            "stats": "📊 Statistiche",
+            "bills": "📜 Bills",
+            "actions": "⚖️ Azioni"
+        },
+        "stats": {
+            "title": "📊 **NETWORK STATISTICS**",
+            "total_groups": "👥 Gruppi: {count}",
+            "total_users": "🧑 Utenti unici: {count}",
+            "active_modules": "⚙️ Moduli attivi: {list}",
+            "recent_actions": "🚨 Azioni recenti (24h): {count}"
+        },
+        "ban_executed": {
+            "title": "🔨 **BAN ESEGUITO**",
+            "user": "👤 Utente: {user}",
+            "reason": "📝 Motivo: {reason}",
+            "groups": "🌐 Ban applicato a {count} gruppi"
+        },
+        "global_log": {
+            "title": "📋 **GLOBAL LOG: {type}**",
+            "details": "Dettagli evento globale"
+        }
+    },
+    "intel": {
+        "title": "🌐 **INTEL NETWORK STATUS**",
+        "description": "Sistema di intelligence condivisa tra i gruppi della rete.",
+        "sharing_enabled": "🔄 Condivisione: {status}",
+        "reports_sent": "📤 Report inviati: {count}",
+        "reports_received": "📥 Report ricevuti: {count}",
+        "buttons": {
+            "toggle": "🌐 Toggle Network",
+            "stats": "📊 Statistiche"
+        },
+        "bill": {
+            "title": "📜 **NUOVO BILL #{id}**",
+            "submitted": "Proposta inviata al Parliament per revisione."
+        },
+        "report": {
+            "title": "📥 **REVIEW REQUEST**",
+            "from_group": "da {group}",
+            "requires_review": "Richiede revisione da parte dello staff."
+        }
     }
 }

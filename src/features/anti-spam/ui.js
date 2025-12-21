@@ -1,4 +1,5 @@
 const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const config = db.getGuildConfig(ctx.chat.id);
@@ -21,15 +22,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const s = fromSettings ? ':1' : ':0';
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: `spam_close${s}` };
+        ? { text: t('common.back'), callback_data: "settings_main" }
+        : { text: t('common.close'), callback_data: `spam_close${s}` };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🛡️ Monitor: ${enabled}`, callback_data: `spam_toggle${s}` }],
-            [{ text: `🌡️ Sens: ${sens}`, callback_data: `spam_sens${s}` }],
-            [{ text: `⚡ Flood: ${actVol}`, callback_data: `spam_act_vol${s}` }],
-            [{ text: `🔁 Repeat: ${actRep}`, callback_data: `spam_act_rep${s}` }],
+            [{ text: `${t('antispam.buttons.monitor')}: ${enabled}`, callback_data: `spam_toggle${s}` }],
+            [{ text: `${t('antispam.buttons.sensitivity')}: ${sensLabel}`, callback_data: `spam_sens${s}` }],
+            [{ text: `${t('antispam.buttons.action_flood')}: ${actVol}`, callback_data: `spam_act_vol${s}` }],
+            [{ text: `${t('antispam.buttons.action_repeat')}: ${actRep}`, callback_data: `spam_act_rep${s}` }],
             [closeBtn]
         ]
     };

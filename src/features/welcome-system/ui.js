@@ -7,62 +7,67 @@ const { replaceWildcards, parseButtonConfig } = require('./utils');
  */
 async function sendWelcomeMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
     const config = getGuildConfig(guildId) || {};
 
     const captchaEnabled = config.captcha_enabled === 1;
     const msgEnabled = config.welcome_msg_enabled === 1;
     const modes = (config.captcha_mode || 'button').split(',');
-    const modeDisplay = modes.length > 1 ? `${modes.length} attive` : modes[0];
+    const modeDisplay = modes.length > 1 ? t('welcome.modes_active', { count: modes.length }) : modes[0];
     const timeout = config.kick_timeout || 5;
 
     const autoDelete = config.welcome_autodelete_timer || 0;
     const rulesEnabled = config.rules_enabled === 1;
     const logsEnabled = config.captcha_logs_enabled === 1;
 
-    let text = "👋 **Sistema di Benvenuto & Captcha**\n\n";
-    text += `🛡️ **Captcha:** ${captchaEnabled ? '✅ ON' : '❌ OFF'}\n`;
-    text += `📨 **Benvenuto:** ${msgEnabled ? (config.welcome_message ? '✅ ON' : '⚠️ ON (No Msg)') : '❌ OFF'}\n`;
-    text += `🎮 **Modalità:** \`${modeDisplay}\`\n`;
-    text += `⏳ **Kick Timeout:** \`${timeout} min\`\n`;
-    text += `⏱ **Autodistruzione:** \`${autoDelete === 0 ? 'OFF' : autoDelete + ' sec'}\`\n`;
-    text += `📜 **Regolamento:** ${rulesEnabled ? '✅ ON' : '❌ OFF'}\n`;
-    text += `🚨 **Log Admin:** ${logsEnabled ? '✅ ON' : '❌ OFF'}\n\n`;
+    const onOff = (enabled) => enabled ? t('common.on') : t('common.off');
+
+    let text = t('welcome.title') + "\n\n";
+    text += `${t('welcome.captcha')} ${onOff(captchaEnabled)}\n`;
+    text += `${t('welcome.welcome_msg')} ${msgEnabled ? (config.welcome_message ? t('common.on') : t('welcome.on_no_msg')) : t('common.off')}\n`;
+    text += `${t('welcome.mode')} \`${modeDisplay}\`\n`;
+    text += `${t('welcome.timeout')} \`${t('welcome.minutes', { count: timeout })}\`\n`;
+    text += `${t('welcome.autodelete')} \`${autoDelete === 0 ? t('common.off') : t('welcome.seconds', { count: autoDelete })}\`\n`;
+    text += `${t('welcome.rules')} ${onOff(rulesEnabled)}\n`;
+    text += `${t('welcome.logs_label')} ${onOff(logsEnabled)}\n\n`;
+
+    const onOffLabel = (enabled) => enabled ? 'ON' : 'OFF';
 
     const keyboard = {
         inline_keyboard: [
             // Row 1: Toggles
             [
-                { text: `🛡️ Captcha: ${captchaEnabled ? 'ON' : 'OFF'}`, callback_data: `wc_toggle:captcha:${captchaEnabled ? 0 : 1}` },
-                { text: `📨 Msg: ${msgEnabled ? 'ON' : 'OFF'}`, callback_data: `wc_toggle:msg:${msgEnabled ? 0 : 1}` }
+                { text: t('welcome.buttons.captcha_toggle', { status: onOffLabel(captchaEnabled) }), callback_data: `wc_toggle:captcha:${captchaEnabled ? 0 : 1}` },
+                { text: t('welcome.buttons.msg_toggle', { status: onOffLabel(msgEnabled) }), callback_data: `wc_toggle:msg:${msgEnabled ? 0 : 1}` }
             ],
             // Row 2: Advanced Toggles
             [
-                { text: `📜 Rules: ${rulesEnabled ? 'ON' : 'OFF'}`, callback_data: `wc_toggle:rules:${rulesEnabled ? 0 : 1}` },
-                { text: `🚨 Logs: ${logsEnabled ? 'ON' : 'OFF'}`, callback_data: `wc_toggle:logs:${logsEnabled ? 0 : 1}` }
+                { text: t('welcome.buttons.rules_toggle', { status: onOffLabel(rulesEnabled) }), callback_data: `wc_toggle:rules:${rulesEnabled ? 0 : 1}` },
+                { text: t('welcome.buttons.logs_toggle', { status: onOffLabel(logsEnabled) }), callback_data: `wc_toggle:logs:${logsEnabled ? 0 : 1}` }
             ],
             // Row 2b: Rules Link (Conditional)
-            ...(rulesEnabled ? [[{ text: "📝 Imposta Link Regolamento", callback_data: "wc_set_rules" }]] : []),
+            ...(rulesEnabled ? [[{ text: t('welcome.buttons.set_rules'), callback_data: "wc_set_rules" }]] : []),
             // Row 3: Timers
             [
-                { text: `⏳ Timeout: ${timeout}m`, callback_data: `wc_cycle:timeout:${timeout}` },
-                { text: `⏱ AutoDel: ${autoDelete === 0 ? 'OFF' : autoDelete + 's'}`, callback_data: `wc_cycle:autodelete:${autoDelete}` }
+                { text: t('welcome.buttons.timeout', { time: timeout }), callback_data: `wc_cycle:timeout:${timeout}` },
+                { text: t('welcome.buttons.autodelete', { time: autoDelete === 0 ? t('common.off') : autoDelete + 's' }), callback_data: `wc_cycle:autodelete:${autoDelete}` }
             ],
             // Row 4: Mode
             [
-                { text: `🎮 Scegli Modalità Captcha`, callback_data: `wc_goto:modes` }
+                { text: t('welcome.buttons.choose_mode'), callback_data: `wc_goto:modes` }
             ],
             // Row 5: Actions
             [
-                { text: "✏️ Imposta Benvenuto", callback_data: "wc_set_msg" },
-                { text: "🗑️ Rimuovi Benvenuto", callback_data: "wc_del_msg" }
+                { text: t('welcome.buttons.set_welcome'), callback_data: "wc_set_msg" },
+                { text: t('welcome.buttons.remove_welcome'), callback_data: "wc_del_msg" }
             ],
             // Row 4: Preview
             [
-                { text: "👀 Anteprima Completa", callback_data: "wc_goto:preview" }
+                { text: t('welcome.buttons.preview'), callback_data: "wc_goto:preview" }
             ],
             // Row 5: Back
             [
-                { text: "🔙 Torna indietro", callback_data: "settings_main" }
+                { text: t('common.back'), callback_data: "settings_main" }
             ]
         ]
     };
@@ -78,24 +83,26 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
  * Send Captcha Mode Submenu
  */
 async function sendCaptchaModeMenu(ctx) {
-    const config = getGuildConfig(ctx.chat.id) || {};
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+    const config = getGuildConfig(guildId) || {};
     const currentModes = (config.captcha_mode || 'button').split(',');
 
     const isModeActive = (mode) => currentModes.includes(mode);
     const getMark = (mode) => isModeActive(mode) ? '✅' : '';
 
-    let text = "🎮 **Seleziona Modalità Captcha**\n\n";
-    text += "Puoi attivare più modalità contemporaneamente. Il bot ne sceglierà una a caso per ogni nuovo utente.\n\n";
+    let text = t('welcome.modes.title') + "\n\n";
+    text += t('welcome.modes.subtitle') + "\n\n";
 
-    text += "**1. Button** - Clicca 'Non sono un robot'\n";
-    text += "**2. Math** - Operazioni (+, -, x)\n";
-    text += "**3. Char** - Conta caratteri\n";
-    text += "**4. Emoji** - Trova l'emoji corretta\n";
-    text += "**5. Color** - Trova il colore corretto\n";
-    text += "**6. Logic** - Sequenze logiche\n";
-    text += "**7. Reverse** - Parole al contrario\n\n";
+    text += t('welcome.modes.descriptions.button') + "\n";
+    text += t('welcome.modes.descriptions.math') + "\n";
+    text += t('welcome.modes.descriptions.char') + "\n";
+    text += t('welcome.modes.descriptions.emoji') + "\n";
+    text += t('welcome.modes.descriptions.color') + "\n";
+    text += t('welcome.modes.descriptions.logic') + "\n";
+    text += t('welcome.modes.descriptions.reverse') + "\n\n";
 
-    text += `Attive: \`${currentModes.join(', ')}\``;
+    text += t('welcome.modes.active', { modes: currentModes.join(', ') });
 
     const keyboard = {
         inline_keyboard: [
@@ -115,7 +122,7 @@ async function sendCaptchaModeMenu(ctx) {
                 { text: `${getMark('reverse')} Reverse`, callback_data: "wc_toggle_mode:reverse" }
             ],
             [
-                { text: "🔙 Indietro", callback_data: "wc_goto:main" }
+                { text: t('common.back'), callback_data: "wc_goto:main" }
             ]
         ]
     };
@@ -132,9 +139,11 @@ async function sendCaptchaModeMenu(ctx) {
  * Send Preview View
  */
 async function sendPreview(ctx) {
-    const config = getGuildConfig(ctx.chat.id);
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+    const config = getGuildConfig(guildId);
     if (!config.welcome_message) {
-        return ctx.answerCallbackQuery("⚠️ Nessun messaggio da visualizzare.");
+        return ctx.answerCallbackQuery(t('welcome.preview.no_message'));
     }
 
     const { replaceWildcards, parseButtonConfig } = require('./utils');
@@ -148,7 +157,7 @@ async function sendPreview(ctx) {
         buttons.forEach(row => previewKeyboard.push(row));
     }
     // Add Back Button
-    previewKeyboard.push([{ text: "🔙 Torna al menu", callback_data: "wc_goto:main" }]);
+    previewKeyboard.push([{ text: t('welcome.buttons.back_to_menu'), callback_data: "wc_goto:main" }]);
 
     try {
         await ctx.editMessageText(finalText, {
@@ -165,14 +174,16 @@ async function sendPreview(ctx) {
  * Send Rules Wizard Prompt
  */
 async function sendRulesWizardPrompt(ctx) {
-    const text = "📜 **Imposta Link Regolamento**\n\n" +
-        "Invia ora il link al regolamento (es. `https://t.me/...` o `http://...`).\n" +
-        "Questo link verrà usato nel bottone 'Leggi Regolamento'.\n\n" +
-        "🔴 *Scrivi 'cancel' per annullare.*";
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+    const text = t('welcome.rules_prompt.title') + "\n\n" +
+        t('welcome.rules_prompt.instruction') + "\n" +
+        t('welcome.rules_prompt.usage') + "\n\n" +
+        t('welcome.rules_prompt.cancel');
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: "❌ Annulla", callback_data: "wc_cancel_wizard" }]
+            [{ text: t('welcome.rules_prompt.button_cancel'), callback_data: "wc_cancel_wizard" }]
         ]
     };
 
@@ -185,30 +196,32 @@ async function sendRulesWizardPrompt(ctx) {
  * Send Wizard Prompt (Edit)
  */
 async function sendWizardPrompt(ctx) {
-    const text = "✏️ **Imposta Messaggio di Benvenuto**\n\n" +
-        "Invia ora il messaggio che vuoi impostare.\n\n" +
-        "**Dati Utente**\n" +
-        "`{mention}` - Link cliccabile al nome\n" +
-        "`{user}` - Nome visualizzato\n" +
-        "`{username}` - @Username (o \"-\")\n" +
-        "`{first_name}` - Nome proprio\n" +
-        "`{last_name}` - Cognome\n" +
-        "`{id}` - ID Utente\n\n" +
-        "**Dati Gruppo**\n" +
-        "`{mention_group}` - Nome gruppo cliccabile\n" +
-        "`{chat_title}` - Nome gruppo\n" +
-        "`{chat_username}` - @Tag gruppo (o \"-\")\n" +
-        "`{chat_id}` - ID Gruppo\n\n" +
-        "**Funzioni Speciali**\n" +
-        "`{Testo|URL}` - Link personalizzato (es. `{Regole|https://google.com}`)\n\n" +
-        "**Per i bottoni personalizzati:**\n" +
-        "Aggiungi `||` alla fine del testo seguito dalla configurazione.\n" +
-        "Es: `Messaggio... || Label,URL | Label2,URL`\n\n" +
-        "🔴 *Scrivi 'cancel' per annullare.*";
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+    const text = t('welcome.wizard.title') + "\n\n" +
+        t('welcome.wizard.instruction') + "\n\n" +
+        t('welcome.wizard.user_data') + "\n" +
+        t('welcome.wizard.placeholders.mention') + "\n" +
+        t('welcome.wizard.placeholders.user') + "\n" +
+        t('welcome.wizard.placeholders.username') + "\n" +
+        t('welcome.wizard.placeholders.first_name') + "\n" +
+        t('welcome.wizard.placeholders.last_name') + "\n" +
+        t('welcome.wizard.placeholders.id') + "\n\n" +
+        t('welcome.wizard.group_data') + "\n" +
+        t('welcome.wizard.placeholders.mention_group') + "\n" +
+        t('welcome.wizard.placeholders.chat_title') + "\n" +
+        t('welcome.wizard.placeholders.chat_username') + "\n" +
+        t('welcome.wizard.placeholders.chat_id') + "\n\n" +
+        t('welcome.wizard.special_functions') + "\n" +
+        t('welcome.wizard.placeholders.custom_link') + "\n\n" +
+        t('welcome.wizard.custom_buttons') + "\n" +
+        t('welcome.wizard.buttons_format') + "\n" +
+        t('welcome.wizard.buttons_example') + "\n\n" +
+        t('welcome.wizard.cancel');
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: "❌ Annulla", callback_data: "wc_cancel_wizard" }]
+            [{ text: t('welcome.rules_prompt.button_cancel'), callback_data: "wc_cancel_wizard" }]
         ]
     };
 

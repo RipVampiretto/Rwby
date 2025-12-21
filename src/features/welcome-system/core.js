@@ -2,6 +2,7 @@ const { getGuildConfig } = require('../../database/repos/guild');
 const logger = require('../../middlewares/logger');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
 const { InlineKeyboard } = require("grammy");
+const i18n = require('../../i18n');
 
 // Track pending captchas for timeout: userId:chatId -> timeoutHandle
 const PENDING_CAPTCHAS = new Map();
@@ -53,38 +54,36 @@ function getRandomInt(min, max) {
 async function logWelcomeEvent(ctx, type, details, config) {
     if (config.captcha_logs_enabled !== 1) return;
 
-    // We need to fetch the admin logger module to send logs? 
-    // Or just send to log_channel_id if configured.
-    // The admin-logger feature usually handles this, but we can't easily import it if it's not exposing a sender.
-    // We can use the simple ctx.api.sendMessage to the log channel found in config.
     const logChannelId = config.log_channel_id;
     if (!logChannelId) return;
 
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
     const user = ctx.from;
     const chat = ctx.chat;
     let text = '';
 
     if (type === 'JOIN') {
-        text = `⏱ #CAPTCHA #NUOVO_UTENTE\n`;
+        text = `${t('welcome.logs.new_user')}\n`;
         text += `• Di: ${user.first_name} [${user.id}]\n`;
         text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
         text += `• ID Gruppo: ${chat.id}\n`;
         text += `#id${user.id}`;
     } else if (type === 'SUCCESS') {
-        text = `⏱ #CAPTCHA #VERIFICA_RISOLTA\n`;
+        text = `${t('welcome.logs.verification_solved')}\n`;
         text += `• Di: ${user.first_name} [${user.id}]\n`;
         text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
         text += `• ID Gruppo: ${chat.id}\n`;
         text += `#id${user.id}`;
     } else if (type === 'FAIL') {
-        text = `⏱ #CAPTCHA #VERIFICA_FALLITA\n`;
+        text = `${t('welcome.logs.verification_failed')}\n`;
         text += `• Di: ${user.first_name} [${user.id}]\n`;
         text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
         text += `• ID Gruppo: ${chat.id}\n`;
         text += `• Motivo: Errore captcha\n`;
         text += `#id${user.id}`;
     } else if (type === 'TIMEOUT') {
-        text = `⏱ #CAPTCHA #VERIFICA_SCADUTA\n`;
+        text = `${t('welcome.logs.verification_expired')}\n`;
         text += `• Di: ${user.first_name} [${user.id}]\n`;
         text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
         text += `• ID Gruppo: ${chat.id}\n`;
@@ -175,6 +174,8 @@ async function processUserJoin(ctx, user, config) {
     }
 
     // 2. Prepare Captcha
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
     const mode = config.captcha_mode || 'button';
     const timeoutMins = config.kick_timeout || 5;
     let text = '';
@@ -194,8 +195,7 @@ async function processUserJoin(ctx, user, config) {
                 a = getRandomInt(1, 10); b = getRandomInt(1, 10); ans = a + b;
             }
 
-            text = `👋 Benvenuto ${user.first_name}!\nAccedi al gruppo risolvendo il captcha:\n\n** Quanto fa ${a} ${op} ${b}? **\n\nHai ${timeoutMins} minuti di tempo.`;
-            text = text.replace('*', 'x'); // Visual fix
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.solve_captcha')}\n\n${t('welcome.captcha_messages.math_question', { a, op: op === '*' ? 'x' : op, b })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
             while (options.size < 4) {
@@ -211,7 +211,7 @@ async function processUserJoin(ctx, user, config) {
             const char = word.charAt(Math.floor(Math.random() * word.length));
             const ans = word.split(char).length - 1;
 
-            text = `👋 Benvenuto ${user.first_name}!\nAccedi al gruppo completando questa verifica:\n\n** Quante ${char} contiene la parola: ${word}? **\n\nHai ${timeoutMins} minuti di tempo.`;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_verification')}\n\n${t('welcome.captcha_messages.char_question', { char, word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
             while (options.size < 4) {
@@ -223,7 +223,7 @@ async function processUserJoin(ctx, user, config) {
         } else if (mode === 'emoji') {
             const correctItem = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
             const ans = correctItem.emoji;
-            text = `👋 Benvenuto ${user.first_name}!\nAccedi al gruppo cliccando l'emoji giusta:\n\n** Clicca su: ${correctItem.name} **\n\nHai ${timeoutMins} minuti di tempo.`;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.click_emoji')}\n\n${t('welcome.captcha_messages.emoji_question', { emoji: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
             while (options.size < 4) {
@@ -235,7 +235,7 @@ async function processUserJoin(ctx, user, config) {
         } else if (mode === 'color') {
             const correctItem = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
             const ans = correctItem.emoji;
-            text = `👋 Benvenuto ${user.first_name}!\nAccedi al gruppo selezionando il colore giusto:\n\n** Clicca sul cerchio ${correctItem.name} **\n\nHai ${timeoutMins} minuti di tempo.`;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.select_color')}\n\n${t('welcome.captcha_messages.color_question', { color: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
             while (options.size < 4) {
@@ -247,7 +247,7 @@ async function processUserJoin(ctx, user, config) {
         } else if (mode === 'reverse') {
             const word = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
             const ans = word.split('').reverse().join('');
-            text = `👋 Benvenuto ${user.first_name}!\nAccedi al gruppo dimostrando la tua attenzione:\n\n** Qual è il contrario di: ${word}? **\n\nHai ${timeoutMins} minuti di tempo.`;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.show_attention')}\n\n${t('welcome.captcha_messages.reverse_question', { word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
             while (options.size < 4) {
@@ -260,7 +260,7 @@ async function processUserJoin(ctx, user, config) {
         } else if (mode === 'logic') {
             const puzzle = LOGIC_SEQUENCES[Math.floor(Math.random() * LOGIC_SEQUENCES.length)];
             const ans = puzzle.ans;
-            text = `👋 Benvenuto ${user.first_name}!\nAccedi al gruppo completando la sequenza logica:\n\n** ${puzzle.seq} **\n\nHai ${timeoutMins} minuti di tempo.`;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_sequence')}\n\n${t('welcome.captcha_messages.logic_question', { sequence: puzzle.seq })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
             const isNum = !isNaN(ans);
@@ -279,7 +279,7 @@ async function processUserJoin(ctx, user, config) {
 
         } else {
             // Button mode (Default)
-            text = `👋 Benvenuto ${user.first_name}!\nClicca il pulsante qui sotto per confermare che sei umano.\n\nHai ${timeoutMins} minuti di tempo.`;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.confirm_human')}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
             keyboard.text("✅ Non sono un robot", `wc:b:${user.id}`);
         }
 
@@ -379,8 +379,10 @@ async function handleCaptchaCallback(ctx) {
 
         // Check Rules
         if (config.rules_enabled === 1) {
+            const guildId = ctx.chat.id;
+            const t = (key, params) => i18n.t(guildId, key, params);
             const rulesLink = config.rules_link || 'https://t.me/telegram'; // Fallback
-            const text = "📜 **Leggi il Regolamento**\n\nPrima di accedere, conferma di aver letto le regole del gruppo.";
+            const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
             try {
                 await ctx.editMessageText(text, {
                     parse_mode: 'Markdown',
