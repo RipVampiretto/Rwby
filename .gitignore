@@ -5,3 +5,5 @@ npm-debug.log
 *.log
 package-lock.json
 *.db*
+*.db
+*.sql

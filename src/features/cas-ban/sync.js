@@ -1,5 +1,5 @@
 // ============================================================================
-// CAS BAN SYNC - Download and import CAS ban list
+// CAS BAN SYNC - Download and import CAS ban list (OPTIMIZED)
 // ============================================================================
 
 const https = require('https');
@@ -19,48 +19,56 @@ function init(database, bot) {
 }
 
 /**
- * Download and sync CAS ban list
- * @returns {Promise<{success: boolean, message: string, newBans: number}>}
+ * Download and sync CAS ban list (OPTIMIZED - incremental sync)
  */
 async function syncCasBans() {
     const startTime = Date.now();
     logger.info('[cas-ban] Starting CAS sync...');
 
     try {
-        // Download CSV
+        // 1. Get the highest user_id we already have
+        const lastRow = await db.queryOne('SELECT MAX(user_id) as max_id FROM cas_bans');
+        const lastKnownId = lastRow?.max_id || 0;
+        logger.info(`[cas-ban] Last known CAS ID in DB: ${lastKnownId}`);
+
+        // 2. Download CSV
         const csvData = await downloadCsv();
         logger.info(`[cas-ban] Downloaded ${csvData.length} bytes`);
 
-        // Parse CSV
-        const users = parseCsv(csvData);
-        logger.info(`[cas-ban] Parsed ${users.length} users from CSV`);
+        // 3. Parse CSV and filter only NEW users (ID > lastKnownId)
+        const allUsers = parseCsv(csvData);
+        const newUsers = allUsers.filter(u => u.user_id > lastKnownId);
 
-        // Find existing users to detect new ones
-        const existingRows = await db.queryAll('SELECT user_id FROM cas_bans');
-        const existingIds = new Set(existingRows.map(r => r.user_id));
+        logger.info(`[cas-ban] Parsed ${allUsers.length} total users, ${newUsers.length} are new (ID > ${lastKnownId})`);
 
-        // Filter new users
-        const newUsers = users.filter(u => !existingIds.has(u.user_id));
-        logger.info(`[cas-ban] Found ${newUsers.length} new CAS bans`);
+        if (newUsers.length === 0) {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            logger.info(`[cas-ban] No new CAS bans, sync completed in ${elapsed}s`);
+            return {
+                success: true,
+                message: `✅ **CAS Sync Completata**\n\nNessun nuovo ban da aggiungere.`,
+                newBans: 0
+            };
+        }
 
-        // Bulk insert with batching
-        await bulkInsert(users);
+        // 4. Bulk insert ONLY new users
+        await bulkInsert(newUsers);
 
-        // Update detection cache
+        // 5. Update detection cache
         await detection.reloadCache();
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         const message = `✅ **CAS Sync Completata**\n\n` +
-            `📊 Totale: ${users.length.toLocaleString()} utenti\n` +
-            `🆕 Nuovi: ${newUsers.length.toLocaleString()}\n` +
+            `📊 Totale nel file: ${allUsers.length.toLocaleString()}\n` +
+            `🆕 Nuovi aggiunti: ${newUsers.length.toLocaleString()}\n` +
             `⏱️ Tempo: ${elapsed}s`;
 
-        // If there are new bans, execute global bans and notify
+        // 6. If there are new bans, execute global bans and notify
         if (newUsers.length > 0) {
             await actions.processNewCasBans(newUsers);
         }
 
-        logger.info(`[cas-ban] Sync completed in ${elapsed}s`);
+        logger.info(`[cas-ban] Sync completed in ${elapsed}s - added ${newUsers.length} new bans`);
         return { success: true, message, newBans: newUsers.length };
 
     } catch (e) {
@@ -91,6 +99,7 @@ function downloadCsv() {
 
 /**
  * Parse CAS CSV format: user_id,offenses,timestamp
+ * Returns users SORTED by user_id ascending for efficient incremental sync
  */
 function parseCsv(csvData) {
     const lines = csvData.split('\n');
@@ -114,18 +123,23 @@ function parseCsv(csvData) {
         }
     }
 
+    // Sort by user_id for consistent ordering
+    users.sort((a, b) => a.user_id - b.user_id);
     return users;
 }
 
 /**
  * Bulk insert users with batching (PostgreSQL)
+ * Uses INSERT ... ON CONFLICT DO NOTHING for efficiency
  */
 async function bulkInsert(users) {
-    // Process in batches
+    if (users.length === 0) return;
+
+    let inserted = 0;
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
         const batch = users.slice(i, i + BATCH_SIZE);
 
-        // Build bulk INSERT with ON CONFLICT
+        // Build bulk INSERT with ON CONFLICT DO NOTHING
         const values = [];
         const placeholders = batch.map((user, idx) => {
             const offset = idx * 3;
@@ -133,17 +147,17 @@ async function bulkInsert(users) {
             return `($${offset + 1}, $${offset + 2}, $${offset + 3}, NOW())`;
         }).join(', ');
 
-        await db.query(`
+        const result = await db.query(`
             INSERT INTO cas_bans (user_id, offenses, time_added, imported_at)
             VALUES ${placeholders}
-            ON CONFLICT (user_id) DO UPDATE SET
-                offenses = EXCLUDED.offenses,
-                time_added = EXCLUDED.time_added,
-                imported_at = NOW()
+            ON CONFLICT (user_id) DO NOTHING
         `, values);
 
-        logger.debug(`[cas-ban] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}`);
+        inserted += result.rowCount || batch.length;
+        logger.debug(`[cas-ban] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);
     }
+
+    logger.info(`[cas-ban] Inserted ${inserted} new CAS bans`);
 }
 
 module.exports = {
