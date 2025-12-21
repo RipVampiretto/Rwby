@@ -204,11 +204,56 @@
         "action": "Azione",
         "threshold": "Sensibilità",
         "check_types": "Controlla",
+        "blocked_categories": "Categorie bloccate",
         "buttons": {
             "monitor": "🔞 Monitor",
             "tier": "👤 Bypass Tier",
             "action": "👮 Azione",
-            "threshold": "📊 Soglia"
+            "threshold": "📊 Soglia",
+            "categories": "🚫 Configura Categorie"
+        },
+        "categories_ui": {
+            "title": "🚫 <b>CATEGORIE CONTENUTI</b>",
+            "subtitle": "Seleziona quali tipi di contenuti bloccare. Quelli selezionati verranno rilevati e verrà eseguita l'azione configurata.",
+            "legend_title": "<b>Legenda:</b>",
+            "legend_blocked": "✅ = Bloccata (verrà segnalata/eliminata)",
+            "legend_always": "🔒 = Sempre bloccata (non modificabile)",
+            "back": "⬅️ Torna indietro",
+            "noop": "🔒 Questa categoria non può essere modificata"
+        },
+        "categories": {
+            "suggestive": {
+                "name": "Pose Provocanti",
+                "desc": "Vestiti rivelatori, pose sexy (es. influencer in bikini)"
+            },
+            "ecchi": {
+                "name": "Anime Sexy",
+                "desc": "Anime/manga con contenuti sexy ma senza nudità esplicita"
+            },
+            "figures_nsfw": {
+                "name": "Figure/Statuine",
+                "desc": "Action figures, statuine o oggetti da collezione a tema adulto"
+            },
+            "real_nudity": {
+                "name": "Nudità Reale",
+                "desc": "Foto/video con nudità di persone reali"
+            },
+            "real_sex": {
+                "name": "Atti Sessuali",
+                "desc": "Foto/video di atti sessuali reali (pornografia)"
+            },
+            "hentai": {
+                "name": "Hentai",
+                "desc": "Anime/manga con contenuti sessuali espliciti"
+            },
+            "gore": {
+                "name": "Violenza/Gore",
+                "desc": "Sangue, ferite, violenza grafica"
+            },
+            "minors": {
+                "name": "Minori (CSAM)",
+                "desc": "Qualsiasi contenuto sessualizzato con minori - SEMPRE BLOCCATO"
+            }
         }
     },
     "ai": {

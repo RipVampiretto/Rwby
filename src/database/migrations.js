@@ -17,6 +17,16 @@ async function runMigrations() {
     const migrations = [
         // Add migrations here as needed
         // { name: 'add_some_column', up: async () => { await query('ALTER TABLE...'); } }
+        {
+            name: 'add_nsfw_blocked_categories',
+            up: async () => {
+                await query(`
+                    ALTER TABLE guild_config 
+                    ADD COLUMN IF NOT EXISTS nsfw_blocked_categories JSONB 
+                    DEFAULT '["real_nudity","real_sex","hentai","gore","minors"]'::jsonb
+                `);
+            }
+        }
     ];
 
     for (const migration of migrations) {

@@ -89,6 +89,56 @@ function registerCommands(bot, db) {
 
         if (data === "nsf_close") return ctx.deleteMessage();
 
+        // No-op for non-clickable buttons
+        if (data === "nsf_noop") {
+            const i18n = require('../../i18n');
+            return ctx.answerCallbackQuery(i18n.t(ctx.chat.id, 'nsfw.categories_ui.noop'));
+        }
+
+        // Categories submenu
+        if (data === "nsf_categories") {
+            await ui.sendCategoriesUI(ctx, db, fromSettings);
+            return;
+        }
+
+        // Back from categories
+        if (data === "nsf_back" || data === "nsf_back_settings") {
+            await ui.sendConfigUI(ctx, db, true, data === "nsf_back_settings");
+            return;
+        }
+
+        // Toggle category
+        if (data.startsWith("nsf_cat_")) {
+            const categoryId = data.replace("nsf_cat_", "");
+
+            // Get current blocked categories
+            let blockedCategories = config.nsfw_blocked_categories;
+            if (!blockedCategories || !Array.isArray(blockedCategories)) {
+                try {
+                    blockedCategories = typeof blockedCategories === 'string'
+                        ? JSON.parse(blockedCategories)
+                        : logic.getDefaultBlockedCategories();
+                } catch (e) {
+                    blockedCategories = logic.getDefaultBlockedCategories();
+                }
+            }
+
+            // Toggle the category
+            const index = blockedCategories.indexOf(categoryId);
+            if (index === -1) {
+                blockedCategories.push(categoryId);
+            } else {
+                blockedCategories.splice(index, 1);
+            }
+
+            // Save
+            db.updateGuildConfig(ctx.chat.id, { nsfw_blocked_categories: blockedCategories });
+
+            // Refresh categories UI
+            await ui.sendCategoriesUI(ctx, db, fromSettings);
+            return;
+        }
+
         if (data === "nsf_toggle") {
             db.updateGuildConfig(ctx.chat.id, { nsfw_enabled: config.nsfw_enabled ? 0 : 1 });
         } else if (data === "nsf_test") {

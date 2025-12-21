@@ -64,7 +64,7 @@ const GUILD_CONFIG_COLUMNS = new Set([
     // NSFW Monitor
     'nsfw_enabled', 'nsfw_action', 'nsfw_threshold', 'nsfw_check_photos',
     'nsfw_check_videos', 'nsfw_check_gifs', 'nsfw_check_stickers',
-    'nsfw_frame_interval_percent', 'nsfw_tier_bypass',
+    'nsfw_frame_interval_percent', 'nsfw_tier_bypass', 'nsfw_blocked_categories',
     // Visual Immune System
     'visual_enabled', 'visual_action', 'visual_sync_global', 'visual_hamming_threshold',
     // Vote Ban
