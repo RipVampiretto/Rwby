@@ -48,8 +48,8 @@ async function runBackup(type = 'hourly') {
         password: process.env.POSTGRES_PASSWORD
     };
 
-    // pg_dump command with password via environment
-    const cmd = `PGPASSWORD="${config.password}" pg_dump -h ${config.host} -p ${config.port} -U ${config.user} -d ${config.db} -F p -f "${filepath}"`;
+    // Use pg_dump from Docker container to avoid version mismatch
+    const cmd = `docker exec rwby_postgres pg_dump -U ${config.user} -d ${config.db} > "${filepath}"`;
 
     return new Promise((resolve, reject) => {
         exec(cmd, (error, stdout, stderr) => {
@@ -58,15 +58,19 @@ async function runBackup(type = 'hourly') {
                 reject(error);
                 return;
             }
-            if (stderr && !stderr.includes('warning')) {
+            if (stderr) {
                 logger.warn(`[backup] ${type} stderr: ${stderr}`);
             }
 
             // Get file size
-            const stats = fs.statSync(filepath);
-            const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+            try {
+                const stats = fs.statSync(filepath);
+                const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+                logger.info(`[backup] ${type} backup created: ${filename} (${sizeMB} MB)`);
+            } catch (e) {
+                logger.info(`[backup] ${type} backup created: ${filename}`);
+            }
 
-            logger.info(`[backup] ${type} backup created: ${filename} (${sizeMB} MB)`);
             resolve(filepath);
         });
     });

@@ -6,7 +6,7 @@ const superAdmin = require('../super-admin');
 const logger = require('../../middlewares/logger');
 
 async function finalizeVote(ctx, db, vote, status, admin) {
-    logic.closeVote(db, vote.vote_id, status);
+    await logic.closeVote(db, vote.vote_id, status);
 
     // Prepare log details
     let details = '';
@@ -77,14 +77,15 @@ async function finalizeVote(ctx, db, vote, status, admin) {
 
 async function processExpiredVotes(bot, db) {
     const now = new Date();
-    // Get all active votes directly via logic
-    const votes = logic.getAllActiveVotes(db);
+    // Get all active votes directly via logic (ASYNC!)
+    const votes = await logic.getAllActiveVotes(db);
+    if (!votes || !Array.isArray(votes)) return;
 
     for (const vote of votes) {
         // Check expire
         const expires = new Date(vote.expires_at);
         if (expires < now) {
-            logic.closeVote(db, vote.vote_id, 'expired');
+            await logic.closeVote(db, vote.vote_id, 'expired');
 
             // Prepare details for log and message
             let details = '';
