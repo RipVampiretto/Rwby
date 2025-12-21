@@ -7,3 +7,4 @@ package-lock.json
 *.db*
 *.db
 *.sql
+telegram-bot-api-data

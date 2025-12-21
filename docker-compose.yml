@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -13,10 +15,25 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rwby} -d ${POSTGRES_DB:-rwby_bot}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rwby} -d ${POSTGRES_DB:-rwby_bot}" ]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram-bot-api
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      # Obtain these from https://my.telegram.org
+      TELEGRAM_API_ID: "${TELEGRAM_API_ID}"
+      TELEGRAM_API_HASH: "${TELEGRAM_API_HASH}"
+      TELEGRAM_LOCAL: "true"
+      TELEGRAM_VERBOSITY: 2
+    volumes:
+      - ./telegram-bot-api-data:/var/lib/telegram-bot-api
 
 volumes:
   postgres_data:

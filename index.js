@@ -5,7 +5,16 @@ const logger = require("./src/middlewares/logger");
 // ============================================================================
 // INIT BOT
 // ============================================================================
-const bot = new Bot(process.env.BOT_TOKEN);
+// ============================================================================
+// INIT BOT
+// ============================================================================
+const botConfig = process.env.TELEGRAM_API_URL ? {
+    client: {
+        apiRoot: process.env.TELEGRAM_API_URL
+    }
+} : {};
+
+const bot = new Bot(process.env.BOT_TOKEN, botConfig);
 
 // ============================================================================
 // FEATURE MODULES - Import

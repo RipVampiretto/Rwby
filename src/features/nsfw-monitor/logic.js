@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const http = require('http');
 const fluentFfmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffprobePath = require('@ffprobe-installer/ffprobe').path;
@@ -62,20 +63,104 @@ async function processMedia(ctx, config) {
     }
 
     loggerUtil.info(`[nsfw-monitor] 📁 Getting file info from Telegram - FileId: ${fileId?.substring(0, 20)}...`);
-    const file = await ctx.api.getFile(fileId);
+
+    // SAFETY CHECK: Skip large files or long videos BEFORE getFile to avoid API errors
+    // If using local API server, limit is 2000MB via HTTP, otherwise 20MB
+    const IS_LOCAL_API = !!process.env.TELEGRAM_API_URL;
+    const MAX_FILE_SIZE = IS_LOCAL_API ? 2000 * 1024 * 1024 : 20 * 1024 * 1024;
+    const MAX_VIDEO_DURATION = 300; // 5 minutes
+
+    if (fileSize > MAX_FILE_SIZE) {
+        loggerUtil.warn(`[nsfw-monitor] ⚠️ File too large (${(fileSize / 1024 / 1024).toFixed(2)} MB), limit is ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)} MB. Skipping analysis.`);
+        return;
+    }
+
+    if (type === 'video' && ctx.message.video?.duration > MAX_VIDEO_DURATION) {
+        loggerUtil.warn(`[nsfw-monitor] ⚠️ Video too long (${(ctx.message.video.duration / 60).toFixed(1)} min), skipping analysis`);
+        return;
+    }
+
+    let file;
+    try {
+        file = await ctx.api.getFile(fileId);
+    } catch (err) {
+        // Handle "file is too big" error specifically
+        if (err.description && err.description.includes('file is too big')) {
+            loggerUtil.warn(`[nsfw-monitor] ⚠️ Telegram API Error: File is too big to download via Cloud API. Consider using Local API Server.`);
+            return;
+        }
+        // Re-throw other errors or log and return
+        loggerUtil.error(`[nsfw-monitor] ❌ Error getting file info: ${err.message}`);
+        return;
+    }
+
     loggerUtil.debug(`[nsfw-monitor] 📁 File path: ${file.file_path}`);
 
-    const downloadUrl = `https://api.telegram.org/file/bot***/${file.file_path}`;
+    // Construct download URL or local path
+    let downloadUrl;
+    let directLocalPath = null;
+
+    if (IS_LOCAL_API) {
+        // Local API Server
+        const baseUrl = process.env.TELEGRAM_API_URL;
+
+        // The path from getFile is absolute inside the container (e.g. /var/lib/telegram-bot-api/TOKEN/videos/file.mp4)
+        // We need to map this to our host local path: ./telegram-bot-api-data/TOKEN/videos/file.mp4
+
+        // Check if we can access the file directly on disk
+        // The container maps ./telegram-bot-api-data:/var/lib/telegram-bot-api
+        // So /var/lib/telegram-bot-api/... becomes ./telegram-bot-api-data/...
+
+        if (file.file_path.startsWith('/var/lib/telegram-bot-api/')) {
+            const relativePath = file.file_path.replace('/var/lib/telegram-bot-api/', '');
+            const mappedPath = path.join(process.cwd(), 'telegram-bot-api-data', relativePath);
+
+            if (fs.existsSync(mappedPath)) {
+                directLocalPath = mappedPath;
+                loggerUtil.debug(`[nsfw-monitor] 📂 Local API detected, found direct file at: ${mappedPath}`);
+            }
+        }
+
+        // Fallback or if path structure is different: try to fix path for HTTP download
+        if (!directLocalPath) {
+            // Fix for local API returning absolute paths (e.g. /var/lib/.../botTOKEN/videos/file.mp4)
+            // We need the relative path (videos/file.mp4) to construct the HTTP URL
+            if (file.file_path.startsWith('/')) {
+                const tokenIndex = file.file_path.indexOf(process.env.BOT_TOKEN);
+                if (tokenIndex !== -1) {
+                    // substring from end of token + 1 (for the separator slash)
+                    file.file_path = file.file_path.substring(tokenIndex + process.env.BOT_TOKEN.length + 1);
+                }
+            }
+            downloadUrl = `${baseUrl}/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+        }
+
+    } else {
+        // Cloud API
+        downloadUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+    }
+
     const ext = path.extname(file.file_path) || (type === 'video' ? '.mp4' : '.jpg');
     const localPath = path.join(TEMP_DIR, `${file.file_unique_id}${ext}`);
 
-    loggerUtil.info(`[nsfw-monitor] ⬇️ Downloading file to: ${localPath}`);
     const downloadStart = Date.now();
-    await downloadFile(downloadUrl.replace('***', process.env.BOT_TOKEN), localPath);
+    try {
+        if (directLocalPath) {
+            loggerUtil.info(`[nsfw-monitor] 📂 Copying file from local storage: ${directLocalPath} -> ${localPath}`);
+            fs.copyFileSync(directLocalPath, localPath);
+        } else {
+            loggerUtil.info(`[nsfw-monitor] ⬇️ Downloading file to: ${localPath} (Source: ${IS_LOCAL_API ? 'Local API' : 'Cloud API'})`);
+            loggerUtil.info(`[nsfw-monitor] 🔗 Download URL: ${downloadUrl}`);
+            await downloadFile(downloadUrl, localPath);
+        }
+    } catch (e) {
+        loggerUtil.error(`[nsfw-monitor] ❌ Download/Copy failed: ${e.message}`);
+        return false;
+    }
     const downloadTime = Date.now() - downloadStart;
 
     const actualSize = fs.statSync(localPath).size;
-    loggerUtil.info(`[nsfw-monitor] ✅ Download complete - Size: ${actualSize} bytes, Time: ${downloadTime}ms`);
+    loggerUtil.info(`[nsfw-monitor] ✅ File ready - Size: ${actualSize} bytes, Time: ${downloadTime}ms`);
 
     try {
         let isNsfw = false;
@@ -111,9 +196,11 @@ async function processMedia(ctx, config) {
 
 async function downloadFile(url, dest) {
     loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: Starting download to ${dest}`);
+    const client = url.startsWith('http:') ? http : https;
+
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(dest);
-        https.get(url, (response) => {
+        client.get(url, (response) => {
             loggerUtil.debug(`[nsfw-monitor] ⬇️ downloadFile: Got response, status: ${response.statusCode}`);
             response.pipe(file);
             file.on('finish', () => {
@@ -186,51 +273,76 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
     }
     loggerUtil.info(`[nsfw-monitor] 🎬 Video duration: ${duration.toFixed(2)}s`);
 
-    // Extract frames: every 5%
-    const intervalPct = config.nsfw_frame_interval_percent || 5;
+    // LIMIT: Skip videos longer than 5 minutes
+    const MAX_DURATION = 300; // 5 minutes in seconds
+    if (duration > MAX_DURATION) {
+        loggerUtil.warn(`[nsfw-monitor] ⚠️ Video too long (${(duration / 60).toFixed(1)} min > 5 min), skipping analysis`);
+        return false;
+    }
+
+    // Calculate number of frames to extract
+    // - Short videos (<5s): high density, ~2 frames/sec
+    // - Medium videos (5-60s): ~0.5 frames/sec  
+    // - Long videos (60-300s): ~0.2 frames/sec
+    const MIN_FRAMES = 10;
+    const MAX_FRAMES = 50;
+
+    let targetFrames;
+    if (duration <= 5) {
+        targetFrames = Math.ceil(duration * 2); // 2 frames/sec
+    } else if (duration <= 60) {
+        targetFrames = Math.ceil(duration * 0.5); // 0.5 frames/sec
+    } else {
+        targetFrames = Math.ceil(duration * 0.2); // 0.2 frames/sec
+    }
+
+    // Clamp between min and max
+    targetFrames = Math.max(MIN_FRAMES, Math.min(targetFrames, MAX_FRAMES));
+
+    // Adjust if video is shorter than MIN_FRAMES seconds (can't have more frames than duration in seconds)
+    const actualFrames = Math.min(targetFrames, Math.floor(duration));
+
+    loggerUtil.info(`[nsfw-monitor] 🎬 Duration: ${duration.toFixed(1)}s → Extracting ${actualFrames} frames uniformly`);
+
+    // Generate uniform timestamps
     const timestamps = [];
-    for (let pct = intervalPct; pct < 100; pct += intervalPct) {
-        timestamps.push((pct / 100) * duration);
-    }
-
-    // Safety cap: max 20 frames
-    if (timestamps.length > 20) {
-        loggerUtil.debug(`[nsfw-monitor] 🎬 Capping timestamps from ${timestamps.length} to 20`);
-        timestamps.length = 20;
-    }
-
-    loggerUtil.info(`[nsfw-monitor] 🎬 Will extract ${timestamps.length} frames at ${intervalPct}% intervals`);
-
-    // Generate frame paths
-    const framePaths = timestamps.map((ts, i) =>
-        path.join(TEMP_DIR, `frame_${path.basename(videoPath)}_${i}.jpg`)
-    );
-
-    // OPTIMIZATION 1: Extract ALL frames in parallel
-    loggerUtil.info(`[nsfw-monitor] ⚡ Extracting ${timestamps.length} frames in PARALLEL (scaled 25%)...`);
-    const extractStart = Date.now();
-
-    const extractResults = await Promise.allSettled(
-        timestamps.map((ts, i) => extractFrame(videoPath, ts, framePaths[i]))
-    );
-
-    // Filter successful extractions
-    const validFrames = [];
-    for (let i = 0; i < extractResults.length; i++) {
-        if (extractResults[i].status === 'fulfilled' && fs.existsSync(framePaths[i])) {
-            validFrames.push({ path: framePaths[i], timestamp: timestamps[i], index: i });
+    if (actualFrames >= 1) {
+        const step = duration / (actualFrames + 1);
+        for (let i = 1; i <= actualFrames; i++) {
+            timestamps.push(step * i);
         }
     }
 
-    loggerUtil.info(`[nsfw-monitor] ⚡ Parallel extraction complete: ${validFrames.length}/${timestamps.length} frames in ${Date.now() - extractStart}ms`);
+    // Generate frame paths
+    const framePaths = timestamps.map((ts, i) => ({
+        path: path.join(TEMP_DIR, `frame_${path.basename(videoPath)}_${i}.jpg`),
+        timestamp: ts
+    }));
+
+    // Extract all frames in parallel
+    loggerUtil.info(`[nsfw-monitor] ⚡ Extracting ${timestamps.length} frames in parallel...`);
+    const extractStart = Date.now();
+
+    const extractResults = await Promise.allSettled(
+        timestamps.map((ts, i) => extractFrame(videoPath, ts, framePaths[i].path))
+    );
+
+    // Filter successful extractions
+    const validFrames = framePaths.filter((f, i) =>
+        extractResults[i].status === 'fulfilled' && fs.existsSync(f.path)
+    );
+
+    loggerUtil.info(`[nsfw-monitor] ⚡ Extraction complete: ${validFrames.length}/${timestamps.length} frames in ${Date.now() - extractStart}ms`);
 
     if (validFrames.length === 0) {
         loggerUtil.warn(`[nsfw-monitor] ⚠️ No frames extracted successfully`);
         return false;
     }
 
-    // OPTIMIZATION 2: Batch frames for LLM analysis (5 frames per batch)
-    const BATCH_SIZE = 5;
+    loggerUtil.info(`[nsfw-monitor] 🎬 Final frame count: ${validFrames.length}`);
+
+    // Batch frames for LLM analysis
+    const BATCH_SIZE = parseInt(process.env.LM_STUDIO_BATCH_SIZE) || 5;
     const batches = [];
     for (let i = 0; i < validFrames.length; i += BATCH_SIZE) {
         batches.push(validFrames.slice(i, i + BATCH_SIZE));
@@ -274,6 +386,8 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
     }
 }
 
+
+
 function getVideoDuration(filePath) {
     return new Promise((resolve) => {
         loggerUtil.debug(`[nsfw-monitor] 🎬 ffprobe: Getting duration for ${filePath}`);
@@ -291,11 +405,10 @@ function getVideoDuration(filePath) {
 
 function extractFrame(videoPath, timestamp, outputPath) {
     return new Promise((resolve, reject) => {
-        loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath} (scaled 75%)`);
+        loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath}`);
         fluentFfmpeg(videoPath)
             .seekInput(timestamp)
             .frames(1)
-            .outputOptions(['-vf', 'scale=iw*0.75:ih*0.75'])  // Reduce by 25% (keep 75%)
             .output(outputPath)
             .on('end', () => {
                 loggerUtil.debug(`[nsfw-monitor] 🎬 ffmpeg: Frame extracted successfully`);
@@ -329,7 +442,7 @@ const NSFW_CATEGORIES = {
  * Get default blocked categories
  */
 function getDefaultBlockedCategories() {
-    return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'minors'];
+    return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'drawn_gore', 'minors'];
 }
 
 async function callVisionLLM(base64Image, config, caption = null) {
