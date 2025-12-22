@@ -87,9 +87,7 @@ async function queryOne(sql, params = []) {
  */
 async function queryAll(sql, params = []) {
     if (sql.includes('word_filters')) {
-        return mockData.wordFilters.filter(f =>
-            f.guild_id === params[0] || f.guild_id === 0
-        );
+        return mockData.wordFilters.filter(f => f.guild_id === params[0] || f.guild_id === 0);
     }
     if (sql.includes('cas_bans')) {
         return Array.from(mockData.casBans).map(id => ({ user_id: id }));

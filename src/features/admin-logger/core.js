@@ -20,9 +20,7 @@ async function logEvent(params) {
     let logEvents = {};
     if (config.log_events) {
         try {
-            const parsed = typeof config.log_events === 'string'
-                ? JSON.parse(config.log_events)
-                : config.log_events;
+            const parsed = typeof config.log_events === 'string' ? JSON.parse(config.log_events) : config.log_events;
             if (Array.isArray(parsed)) {
                 parsed.forEach(t => {
                     logEvents[`${t}_delete`] = true;
@@ -31,7 +29,7 @@ async function logEvent(params) {
             } else {
                 logEvents = parsed;
             }
-        } catch (e) { }
+        } catch (e) {}
     }
 
     if (!logEvents[eventType]) return;
@@ -48,7 +46,7 @@ async function logEvent(params) {
     let botInfo = { first_name: 'Bot', username: 'bot', id: 0 };
     try {
         botInfo = await _botInstance.api.getMe();
-    } catch (e) { }
+    } catch (e) {}
 
     const botLink = botInfo.username
         ? `<a href="https://t.me/${botInfo.username}">${botInfo.first_name}</a>`
@@ -75,14 +73,13 @@ async function logEvent(params) {
 
             if (config.staff_group_id && config.staff_topics) {
                 try {
-                    const topics = typeof config.staff_topics === 'string'
-                        ? JSON.parse(config.staff_topics)
-                        : config.staff_topics;
+                    const topics =
+                        typeof config.staff_topics === 'string' ? JSON.parse(config.staff_topics) : config.staff_topics;
                     if (topics.logs) {
                         targetChatId = config.staff_group_id;
                         messageThreadId = topics.logs;
                     }
-                } catch (e) { }
+                } catch (e) {}
             }
 
             await _botInstance.api.sendMessage(targetChatId, text, {
@@ -99,7 +96,7 @@ async function logEvent(params) {
         try {
             const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
             if (globalConfig && globalConfig.global_log_channel) {
-                await _botInstance.api.sendMessage(globalConfig.global_log_channel, text + "\n#GLOBAL", {
+                await _botInstance.api.sendMessage(globalConfig.global_log_channel, text + '\n#GLOBAL', {
                     disable_web_page_preview: true,
                     parse_mode: 'HTML'
                 });

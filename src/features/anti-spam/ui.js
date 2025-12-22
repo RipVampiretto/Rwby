@@ -12,7 +12,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const actVol = (config.spam_action_volume || 'delete').toUpperCase().replace(/_/g, ' ');
     const actRep = (config.spam_action_repetition || 'delete').toUpperCase().replace(/_/g, ' ');
 
-    const statusText = `🛡️ **ANTI-SPAM**\n\n` +
+    const statusText =
+        `🛡️ **ANTI-SPAM**\n\n` +
         `Blocca chi invia troppi messaggi veloci o copia-incolla ripetuti.\n` +
         `Protegge il gruppo da flood e bot.\n\n` +
         `ℹ️ **Info:**\n` +
@@ -26,7 +27,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const s = fromSettings ? ':1' : ':0';
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
+        ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: `spam_close${s}` };
 
     const keyboard = {

@@ -6,7 +6,7 @@ const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
 
 function registerCommands(bot, db) {
     // Middleware: keyword detection
-    bot.on("message:text", async (ctx, next) => {
+    bot.on('message:text', async (ctx, next) => {
         if (ctx.chat.type === 'private') {
             const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
             if (wizard.WIZARD_SESSIONS.has(sessionKey)) {
@@ -35,52 +35,65 @@ function registerCommands(bot, db) {
     });
 
     // UI Handlers
-    bot.on("callback_query:data", async (ctx, next) => {
+    bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
-        if (!data.startsWith("wrd_")) return next();
+        if (!data.startsWith('wrd_')) return next();
 
         const fromSettings = isFromSettingsMenu(ctx);
 
-        if (data === "wrd_close") return ctx.deleteMessage();
+        if (data === 'wrd_close') return ctx.deleteMessage();
 
-        if (data === "wrd_list") {
+        if (data === 'wrd_list') {
             const rules = await db.queryAll('SELECT * FROM word_filters WHERE guild_id = $1', [ctx.chat.id]);
-            let msg = "📜 **Word Rules**\n";
-            if (rules.length === 0) msg += "Nessuna regola.";
-            else rules.slice(0, 20).forEach(r => msg += `- \`${r.word}\` (${r.action})\n`);
+            let msg = '📜 **Word Rules**\n';
+            if (rules.length === 0) msg += 'Nessuna regola.';
+            else rules.slice(0, 20).forEach(r => (msg += `- \`${r.word}\` (${r.action})\n`));
 
             const backBtn = fromSettings
-                ? { text: "🔙 Back to Menu", callback_data: "wrd_back_main" }
-                : { text: "🔙 Back", callback_data: "wrd_back" };
+                ? { text: '🔙 Back to Menu', callback_data: 'wrd_back_main' }
+                : { text: '🔙 Back', callback_data: 'wrd_back' };
 
-            try { await ctx.editMessageText(msg, { reply_markup: { inline_keyboard: [[backBtn]] }, parse_mode: 'Markdown' }); } catch (e) { }
+            try {
+                await ctx.editMessageText(msg, {
+                    reply_markup: { inline_keyboard: [[backBtn]] },
+                    parse_mode: 'Markdown'
+                });
+            } catch (e) {}
             return;
-        } else if (data === "wrd_back") {
+        } else if (data === 'wrd_back') {
             return ui.sendConfigUI(ctx, db, true, false);
-        } else if (data === "wrd_back_main") {
+        } else if (data === 'wrd_back_main') {
             return ui.sendConfigUI(ctx, db, true, true);
-        } else if (data === "wrd_add") {
-            wizard.WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, { step: 1, fromSettings: fromSettings, startedAt: Date.now() });
-            await ctx.reply("✍️ Digita la parola o regex da bloccare:", { reply_markup: { force_reply: true } });
+        } else if (data === 'wrd_add') {
+            wizard.WIZARD_SESSIONS.set(`${ctx.from.id}:${ctx.chat.id}`, {
+                step: 1,
+                fromSettings: fromSettings,
+                startedAt: Date.now()
+            });
+            await ctx.reply('✍️ Digita la parola o regex da bloccare:', { reply_markup: { force_reply: true } });
             await ctx.answerCallbackQuery();
             return;
-        } else if (data.startsWith("wrd_wiz_")) {
+        } else if (data.startsWith('wrd_wiz_')) {
             const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
-            if (!wizard.WIZARD_SESSIONS.has(sessionKey)) return ctx.answerCallbackQuery("Sessione scaduta.");
+            if (!wizard.WIZARD_SESSIONS.has(sessionKey)) return ctx.answerCallbackQuery('Sessione scaduta.');
 
             const session = wizard.WIZARD_SESSIONS.get(sessionKey);
             if (session.step === 2) {
-                if (data === "wrd_wiz_regex_yes") session.is_regex = true;
+                if (data === 'wrd_wiz_regex_yes') session.is_regex = true;
                 else session.is_regex = false;
 
                 session.step = 3;
                 await ctx.editMessageText(`Azione per \`${session.word}\`?`, {
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: "🗑️ Delete", callback_data: "wrd_wiz_act_delete" }, { text: "🔨 Ban", callback_data: "wrd_wiz_act_ban" }],
-                            [{ text: "⚠️ Report", callback_data: "wrd_wiz_act_report" }]
+                            [
+                                { text: '🗑️ Delete', callback_data: 'wrd_wiz_act_delete' },
+                                { text: '🔨 Ban', callback_data: 'wrd_wiz_act_ban' }
+                            ],
+                            [{ text: '⚠️ Report', callback_data: 'wrd_wiz_act_report' }]
                         ]
-                    }, parse_mode: 'Markdown'
+                    },
+                    parse_mode: 'Markdown'
                 });
             } else if (session.step === 3) {
                 const act = data.split('_act_')[1];
@@ -92,10 +105,12 @@ function registerCommands(bot, db) {
                 );
 
                 wizard.WIZARD_SESSIONS.delete(sessionKey);
-                await ctx.editMessageText(`✅ Regola aggiunta: \`${session.word}\` -> ${session.action}`, { parse_mode: 'Markdown' });
+                await ctx.editMessageText(`✅ Regola aggiunta: \`${session.word}\` -> ${session.action}`, {
+                    parse_mode: 'Markdown'
+                });
                 await ui.sendConfigUI(ctx, db, false, session.fromSettings || false);
             }
-        } else if (data === "wrd_sync") {
+        } else if (data === 'wrd_sync') {
             const config = await db.getGuildConfig(ctx.chat.id);
             const newValue = !config.keyword_sync_global;
             await db.updateGuildConfig(ctx.chat.id, { keyword_sync_global: newValue });

@@ -24,7 +24,7 @@ async function isAdmin(ctx, next) {
         }
     } catch (e) {
         logger.error(`Error in isAdmin middleware: ${e.message}`);
-        // Fail safe: allow or block? Better block if unsure for sensitive ops, 
+        // Fail safe: allow or block? Better block if unsure for sensitive ops,
         // but for general use maybe just log.
         return;
     }

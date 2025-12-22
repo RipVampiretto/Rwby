@@ -77,10 +77,7 @@ describe('Guild Repository', () => {
 
             await guildRepo.fetchGuildConfig(-100123);
 
-            expect(query).toHaveBeenCalledWith(
-                expect.stringContaining('INSERT INTO guild_config'),
-                [-100123]
-            );
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO guild_config'), [-100123]);
         });
 
         it('should return default on DB error', async () => {
@@ -129,10 +126,7 @@ describe('Guild Repository', () => {
                 allowed_languages: ['en', 'it']
             });
 
-            expect(query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining(['["en","it"]'])
-            );
+            expect(query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining(['["en","it"]']));
         });
     });
 
@@ -143,10 +137,10 @@ describe('Guild Repository', () => {
 
             await guildRepo.upsertGuild({ id: -100123, title: 'Test Group' });
 
-            expect(query).toHaveBeenCalledWith(
-                expect.stringContaining('INSERT INTO guild_config'),
-                [-100123, 'Test Group']
-            );
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO guild_config'), [
+                -100123,
+                'Test Group'
+            ]);
         });
 
         it('should skip if no title', async () => {

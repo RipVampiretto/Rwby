@@ -5,7 +5,7 @@ const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
 
 function registerCommands(bot, db) {
     // Middleware: link detection
-    bot.on("message:text", async (ctx, next) => {
+    bot.on('message:text', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
 
         // Skip admins
@@ -22,7 +22,7 @@ function registerCommands(bot, db) {
         const verdict = await logic.scanMessage(ctx, config);
         if (verdict) {
             await actions.executeAction(ctx, verdict);
-            // If blacklist, process stops (message deleted). If unknown, it continues? 
+            // If blacklist, process stops (message deleted). If unknown, it continues?
             // Logic in original code: "Only report first unknown link per message" and "next()" was called at the end.
             // Blacklist deletes message so we should probably stop next() if deleted.
             // But existing code called next() after processLinks.
@@ -35,20 +35,20 @@ function registerCommands(bot, db) {
     });
 
     // UI Handlers
-    bot.on("callback_query:data", async (ctx, next) => {
+    bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
-        if (!data.startsWith("lnk_")) return next();
+        if (!data.startsWith('lnk_')) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
-        if (data === "lnk_close") return ctx.deleteMessage();
+        if (data === 'lnk_close') return ctx.deleteMessage();
 
-        if (data === "lnk_toggle") {
+        if (data === 'lnk_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { link_enabled: config.link_enabled ? 0 : 1 });
-        } else if (data === "lnk_sync") {
+        } else if (data === 'lnk_sync') {
             await db.updateGuildConfig(ctx.chat.id, { link_sync_global: config.link_sync_global ? 0 : 1 });
-        } else if (data === "lnk_tier") {
+        } else if (data === 'lnk_tier') {
             const current = config.link_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);

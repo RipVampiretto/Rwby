@@ -12,10 +12,13 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const tierDisplay = tierBypass === -1 ? 'OFF' : `${tierBypass}+`;
 
     let allowed = [];
-    try { allowed = JSON.parse(config.allowed_languages || '[]'); } catch (e) { }
+    try {
+        allowed = JSON.parse(config.allowed_languages || '[]');
+    } catch (e) {}
     if (allowed.length === 0) allowed = ['it', 'en'];
 
-    const text = `${t('language.title')}\n\n` +
+    const text =
+        `${t('language.title')}\n\n` +
         `${t('language.description')}\n\n` +
         `ℹ️ **${t('language.info_title')}:**\n` +
         `• ${t('language.info_1')}\n` +
@@ -37,15 +40,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "lng_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'lng_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('language.buttons.filter')}: ${enabled}`, callback_data: "lng_toggle" }],
-            [{ text: `${t('language.buttons.tier')}: ${tierDisplay}`, callback_data: "lng_tier" }],
+            [{ text: `${t('language.buttons.filter')}: ${enabled}`, callback_data: 'lng_toggle' }],
+            [{ text: `${t('language.buttons.tier')}: ${tierDisplay}`, callback_data: 'lng_tier' }],
             ...langRows,
-            [{ text: `${t('language.buttons.action')}: ${action}`, callback_data: "lng_act" }],
+            [{ text: `${t('language.buttons.action')}: ${action}`, callback_data: 'lng_act' }],
             [closeBtn]
         ]
     };

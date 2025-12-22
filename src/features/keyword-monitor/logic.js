@@ -12,10 +12,7 @@ async function scanMessage(ctx) {
     if (!db) return null;
 
     const text = ctx.message.text;
-    const rules = await db.queryAll(
-        'SELECT * FROM word_filters WHERE guild_id = $1 OR guild_id = 0',
-        [ctx.chat.id]
-    );
+    const rules = await db.queryAll('SELECT * FROM word_filters WHERE guild_id = $1 OR guild_id = 0', [ctx.chat.id]);
 
     for (const rule of rules) {
         if (rule.bypass_tier && ctx.userTier >= rule.bypass_tier) continue;
@@ -25,7 +22,7 @@ async function scanMessage(ctx) {
             try {
                 const regex = new RegExp(rule.word, 'i');
                 if (regex.test(text)) match = true;
-            } catch (e) { }
+            } catch (e) {}
         } else {
             if (rule.match_whole_word) {
                 const regex = new RegExp(`\\b${escapeRegExp(rule.word)}\\b`, 'i');

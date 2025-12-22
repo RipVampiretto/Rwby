@@ -61,10 +61,7 @@ describe('CAS Ban Detection', () => {
 
     describe('isCasBanned()', () => {
         beforeEach(async () => {
-            mockDb.queryAll.mockResolvedValue([
-                { user_id: '123456789' },
-                { user_id: '987654321' }
-            ]);
+            mockDb.queryAll.mockResolvedValue([{ user_id: '123456789' }, { user_id: '987654321' }]);
             await detection.reloadCache();
         });
 
@@ -145,10 +142,7 @@ describe('CAS Ban Detection', () => {
             expect(detection.getCacheSize()).toBe(1);
 
             // Reload with different data
-            mockDb.queryAll.mockResolvedValue([
-                { user_id: '222' },
-                { user_id: '333' }
-            ]);
+            mockDb.queryAll.mockResolvedValue([{ user_id: '222' }, { user_id: '333' }]);
             await detection.reloadCache();
 
             expect(detection.getCacheSize()).toBe(2);

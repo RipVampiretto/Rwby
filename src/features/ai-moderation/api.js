@@ -22,7 +22,7 @@ setInterval(() => {
 function djb2(str) {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i); /* hash * 33 + c */
+        hash = (hash << 5) + hash + str.charCodeAt(i); /* hash * 33 + c */
     }
     return hash;
 }
@@ -33,7 +33,7 @@ async function processWithAI(text, contextMessages, config, model = null) {
     const hash = djb2(text + contextStr + (model || ''));
     const cached = CACHE.get(hash);
 
-    if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
         return cached.res;
     }
 
@@ -50,8 +50,8 @@ async function callLLM(text, contextMessages, config, model = null) {
     // Build context string
     let contextStr = '';
     if (contextMessages.length > 0) {
-        contextStr = '\n\nPrevious messages for context:\n' +
-            contextMessages.map(m => `[${m.username}]: ${m.text}`).join('\n');
+        contextStr =
+            '\n\nPrevious messages for context:\n' + contextMessages.map(m => `[${m.username}]: ${m.text}`).join('\n');
     }
 
     const systemPrompt = `You are a chat moderation AI. Classify the user's message for a Telegram group moderation bot.
@@ -77,8 +77,8 @@ Respond with ONLY a JSON object:
             body: JSON.stringify({
                 model: modelToUse,
                 messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userMessage }
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
                 ],
                 temperature: 0.1,
                 max_tokens: 150
@@ -87,7 +87,7 @@ Respond with ONLY a JSON object:
         });
         clearTimeout(timeout);
 
-        if (!response.ok) throw new Error("API Error");
+        if (!response.ok) throw new Error('API Error');
         const data = await response.json();
         const content = data.choices[0].message.content;
 
@@ -95,11 +95,10 @@ Respond with ONLY a JSON object:
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) return JSON.parse(jsonMatch[0]);
         return JSON.parse(content);
-
     } catch (e) {
         // Fallback to safe
         logger.debug(`[ai-moderation] LLM call failed: ${e.message}`);
-        return { category: "safe", confidence: 1 };
+        return { category: 'safe', confidence: 1 };
     }
 }
 
@@ -110,7 +109,7 @@ async function testConnection(ctx) {
         const timeout = setTimeout(() => controller.abort(), 2000);
         await fetch(`${url}/v1/models`, { signal: controller.signal });
         clearTimeout(timeout);
-        await ctx.reply("✅ Connessione LM Studio con successo!");
+        await ctx.reply('✅ Connessione LM Studio con successo!');
     } catch (e) {
         await ctx.reply(`❌ Errore connessione LM Studio: ${e.message}`);
     }

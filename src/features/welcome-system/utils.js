@@ -35,9 +35,9 @@ function parseButtonConfig(buttonsJson) {
 
 /**
  * Replace wildcards in text
- * @param {string} text 
- * @param {object} user 
- * @param {object} chat 
+ * @param {string} text
+ * @param {object} user
+ * @param {object} chat
  * @returns {string}
  */
 function replaceWildcards(text, user, chat) {
@@ -59,7 +59,6 @@ function replaceWildcards(text, user, chat) {
     // Legacy support (optional, can remove if strict)
     processed = processed.replace(/{fullname}/g, [user.first_name, user.last_name].filter(Boolean).join(' '));
 
-
     // --- Group Data ---
     const chatTitle = chat.title || 'Group';
     const chatUsername = chat.username ? `@${chat.username}` : '-';
@@ -73,7 +72,6 @@ function replaceWildcards(text, user, chat) {
     processed = processed.replace(/{chat_username}/g, chatUsername);
     processed = processed.replace(/{chat_id}/g, chat.id);
     processed = processed.replace(/{group_name}/g, chatTitle); // Legacy alias
-
 
     // --- Special Functions ---
     // {Text|URL} -> <a href="URL">Text</a>

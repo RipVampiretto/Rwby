@@ -4,14 +4,14 @@ const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
 
 function registerCommands(bot, db) {
     // Handler: photos and stickers
-    // NOTE: DISABLED TEMPORARILY IN ORIGINAL CODE. 
+    // NOTE: DISABLED TEMPORARILY IN ORIGINAL CODE.
     // I will preserve the disabled state or logic structure as requested
     // The original code had: "VISUAL IMMUNE SYSTEM DISABLED TEMPORARILY"
     // I should probably keep it disabled if that was the state, effectively doing nothing but calling next().
     // However, for refactoring I should implement the logic but maybe comment out the registration or guard it.
     // The original code has `return next(); // DISABLED` at the top of the handler.
 
-    bot.on(["message:photo", "message:sticker"], async (ctx, next) => {
+    bot.on(['message:photo', 'message:sticker'], async (ctx, next) => {
         return next(); // DISABLED as per original
 
         /* 
@@ -30,25 +30,25 @@ function registerCommands(bot, db) {
     });
 
     // UI Callback
-    bot.on("callback_query:data", async (ctx, next) => {
+    bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
-        if (!data.startsWith("vis_")) return next();
+        if (!data.startsWith('vis_')) return next();
 
         // If config is needed for callback logic
         const config = db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
-        if (data === "vis_close") return ctx.deleteMessage();
+        if (data === 'vis_close') return ctx.deleteMessage();
 
-        if (data === "vis_toggle") {
+        if (data === 'vis_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { visual_enabled: config.visual_enabled ? 0 : 1 });
-        } else if (data === "vis_sync") {
+        } else if (data === 'vis_sync') {
             await db.updateGuildConfig(ctx.chat.id, { visual_sync_global: config.visual_sync_global ? 0 : 1 });
-        } else if (data === "vis_thr") {
+        } else if (data === 'vis_thr') {
             let thr = config.visual_hamming_threshold || 5;
             thr = thr >= 15 ? 1 : thr + 1;
             await db.updateGuildConfig(ctx.chat.id, { visual_hamming_threshold: thr });
-        } else if (data === "vis_act") {
+        } else if (data === 'vis_act') {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.visual_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';

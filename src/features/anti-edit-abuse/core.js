@@ -21,8 +21,8 @@ async function processEdit(ctx, config) {
 
     if (!snapshot) return; // No baseline
 
-    const originalText = snapshot.original_text || "";
-    const newText = editedMsg.text || "";
+    const originalText = snapshot.original_text || '';
+    const newText = editedMsg.text || '';
     const originalHasLink = snapshot.original_has_link === 1;
     const newHasLink = /(https?:\/\/[^\s]+)/.test(newText);
 
@@ -59,7 +59,13 @@ async function processEdit(ctx, config) {
         const sim = detection.similarity(originalText, newText);
         const threshold = config.edit_similarity_threshold || 0.5;
         if (sim < threshold) {
-            await executeAction(ctx, config.edit_abuse_action || 'delete', `Low Similarity (${Math.round(sim * 100)}%)`, originalText, newText);
+            await executeAction(
+                ctx,
+                config.edit_abuse_action || 'delete',
+                `Low Similarity (${Math.round(sim * 100)}%)`,
+                originalText,
+                newText
+            );
             return;
         }
     }
@@ -73,13 +79,12 @@ async function executeAction(ctx, action, reason, original, current) {
         targetUser: user,
         executorAdmin: null,
         reason: `${reason}`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     if (action === 'delete') {
         await safeDelete(ctx, 'anti-edit-abuse');
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'anti-edit-abuse');
         const banned = await safeBan(ctx, user.id, 'anti-edit-abuse');
 
@@ -99,8 +104,7 @@ async function executeAction(ctx, action, reason, original, current) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Edit-Abuse',

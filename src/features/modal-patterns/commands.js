@@ -7,7 +7,7 @@ const logger = require('../../middlewares/logger');
 
 function registerCommands(bot, db) {
     // Middleware: check messages against modals
-    bot.on("message:text", async (ctx, next) => {
+    bot.on('message:text', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
 
         // Skip admins
@@ -31,36 +31,36 @@ function registerCommands(bot, db) {
     });
 
     // UI Handlers
-    bot.on("callback_query:data", async (ctx, next) => {
+    bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
-        if (!data.startsWith("mdl_")) return next();
+        if (!data.startsWith('mdl_')) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
-        if (data === "mdl_close") return ctx.deleteMessage();
+        if (data === 'mdl_close') return ctx.deleteMessage();
 
-        if (data === "mdl_toggle") {
+        if (data === 'mdl_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { modal_enabled: config.modal_enabled ? 0 : 1 });
-        } else if (data === "mdl_act") {
+        } else if (data === 'mdl_act') {
             const acts = ['report_only', 'delete', 'ban'];
             let cur = config.modal_action || 'report_only';
             if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             await db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
-        } else if (data === "mdl_tier") {
+        } else if (data === 'mdl_tier') {
             const tiers = [0, 1, 2, 3, -1];
             const cur = config.modal_tier_bypass ?? 2;
             const idx = tiers.indexOf(cur);
             const nextTier = tiers[(idx + 1) % tiers.length];
             await db.updateGuildConfig(ctx.chat.id, { modal_tier_bypass: nextTier });
-        } else if (data === "mdl_list") {
+        } else if (data === 'mdl_list') {
             await ui.sendModalListUI(ctx, db, true, fromSettings);
             return;
-        } else if (data === "mdl_back") {
+        } else if (data === 'mdl_back') {
             await ui.sendConfigUI(ctx, db, true, fromSettings);
             return;
-        } else if (data.startsWith("mdl_tog:")) {
+        } else if (data.startsWith('mdl_tog:')) {
             const modalId = parseInt(data.split(':')[1]);
             manage.toggleGuildModal(ctx.chat.id, modalId);
             await ui.sendModalListUI(ctx, db, true, fromSettings);

@@ -27,48 +27,42 @@ async function sendMainMenu(ctx, isEdit = false) {
     const keyboard = {
         inline_keyboard: [
             // === FIRST LINE OF DEFENSE ===
+            [{ text: `🛡️ Welcome & Captcha`, callback_data: 'set_goto:welcome' }],
             [
-                { text: `🛡️ Welcome & Captcha`, callback_data: "set_goto:welcome" }
+                { text: `${t('settings.buttons.casban')}`, callback_data: 'set_goto:casban' },
+                { text: `${t('settings.buttons.links')}`, callback_data: 'set_goto:links' }
             ],
             [
-                { text: `${t('settings.buttons.casban')}`, callback_data: "set_goto:casban" },
-                { text: `${t('settings.buttons.links')}`, callback_data: "set_goto:links" }
-            ],
-            [
-                { text: `${t('settings.buttons.lang')}`, callback_data: "set_goto:lang" },
-                { text: `${t('settings.buttons.badwords')}`, callback_data: "set_goto:badwords" }
+                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' },
+                { text: `${t('settings.buttons.badwords')}`, callback_data: 'set_goto:badwords' }
             ],
             // === PATTERN DETECTION ===
             [
-                { text: `${t('settings.buttons.modals')}`, callback_data: "set_goto:modals" },
-                { text: `${t('settings.buttons.nsfw')}`, callback_data: "set_goto:nsfw" }
+                { text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' },
+                { text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' }
             ],
             // === BEHAVIOR DETECTION ===
             [
-                { text: `${t('settings.buttons.antiedit')}`, callback_data: "set_goto:antiedit" },
-                { text: `${t('settings.buttons.voteban')}`, callback_data: "set_goto:voteban" }
+                { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' },
+                { text: `${t('settings.buttons.voteban')}`, callback_data: 'set_goto:voteban' }
             ],
             // === AI (LAST LINE) ===
-            [
-                { text: `${t('settings.buttons.aimod')}`, callback_data: "set_goto:aimod" }
-            ],
+            [{ text: `${t('settings.buttons.aimod')}`, callback_data: 'set_goto:aimod' }],
             // === ADMIN TOOLS ===
             [
-                { text: `${t('settings.buttons.staff')}`, callback_data: "set_goto:staff" },
-                { text: `${t('settings.buttons.logger')}`, callback_data: "set_goto:logger" }
+                { text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' },
+                { text: `${t('settings.buttons.logger')}`, callback_data: 'set_goto:logger' }
             ],
             // === SETTINGS ===
-            [
-                { text: `${t('settings.buttons.ui_language')}`, callback_data: "set_goto:ui_lang" }
-            ],
-            [
-                { text: `${t('settings.main.close')}`, callback_data: "settings_close" }
-            ]
+            [{ text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }],
+            [{ text: `${t('settings.main.close')}`, callback_data: 'settings_close' }]
         ]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -95,13 +89,13 @@ async function sendLanguageUI(ctx) {
     }
 
     // Add back button
-    rows.push([{ text: t('settings.language.back'), callback_data: "settings_main" }]);
+    rows.push([{ text: t('settings.language.back'), callback_data: 'settings_main' }]);
 
     const keyboard = { inline_keyboard: rows };
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 module.exports = {

@@ -45,10 +45,7 @@ describe('Vote Ban Logic', () => {
             const result = await logic.getVote(mockDb, 1);
 
             expect(result).toEqual(vote);
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining('active_votes'),
-                [1]
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining('active_votes'), [1]);
         });
     });
 
@@ -60,10 +57,7 @@ describe('Vote Ban Logic', () => {
             const result = await logic.getActiveVoteForUser(mockDb, -100123, 456);
 
             expect(result).toEqual(vote);
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining("status = 'active'"),
-                [-100123, 456]
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("status = 'active'"), [-100123, 456]);
         });
 
         it('should return null if no active vote', async () => {
@@ -93,9 +87,7 @@ describe('Vote Ban Logic', () => {
 
         it('should return empty array if no votes expired', async () => {
             const futureDate = new Date(Date.now() + 3600000).toISOString();
-            mockDb.queryAll.mockResolvedValue([
-                { vote_id: 1, expires_at: futureDate }
-            ]);
+            mockDb.queryAll.mockResolvedValue([{ vote_id: 1, expires_at: futureDate }]);
 
             const result = await logic.getExpiredVotes(mockDb);
 
@@ -118,10 +110,12 @@ describe('Vote Ban Logic', () => {
         it('should update vote counts and voters', async () => {
             await logic.updateVote(mockDb, 1, 5, 2, [1, 2, 3, 4, 5, 6, 7]);
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('UPDATE active_votes'),
-                [5, 2, JSON.stringify([1, 2, 3, 4, 5, 6, 7]), 1]
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE active_votes'), [
+                5,
+                2,
+                JSON.stringify([1, 2, 3, 4, 5, 6, 7]),
+                1
+            ]);
         });
     });
 
@@ -129,10 +123,7 @@ describe('Vote Ban Logic', () => {
         it('should update poll message ID', async () => {
             await logic.setPollMessageId(mockDb, 1, 12345);
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('poll_message_id'),
-                [12345, 1]
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('poll_message_id'), [12345, 1]);
         });
     });
 
@@ -140,10 +131,7 @@ describe('Vote Ban Logic', () => {
         it('should update vote status', async () => {
             await logic.closeVote(mockDb, 1, 'banned');
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('status'),
-                ['banned', 1]
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('status'), ['banned', 1]);
         });
     });
 });

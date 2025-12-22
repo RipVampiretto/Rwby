@@ -35,7 +35,7 @@ const flags = {
 
 /**
  * Check if a feature is enabled
- * @param {string} featureName 
+ * @param {string} featureName
  * @returns {boolean}
  */
 function isEnabled(featureName) {

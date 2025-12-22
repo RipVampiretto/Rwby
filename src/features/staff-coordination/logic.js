@@ -3,7 +3,7 @@ const adminLogger = require('../admin-logger');
 
 async function reviewQueue(bot, db, params) {
     if (!db) {
-        logger.error("[staff-coordination] DB not initialized in reviewQueue");
+        logger.error('[staff-coordination] DB not initialized in reviewQueue');
         return false;
     }
 
@@ -16,11 +16,10 @@ async function reviewQueue(bot, db, params) {
     let threadId = null;
     if (config.staff_topics) {
         try {
-            const topics = typeof config.staff_topics === 'string'
-                ? JSON.parse(config.staff_topics)
-                : config.staff_topics;
+            const topics =
+                typeof config.staff_topics === 'string' ? JSON.parse(config.staff_topics) : config.staff_topics;
             threadId = topics.reports;
-        } catch (e) { }
+        } catch (e) {}
     }
 
     const { source, user, reason, messageId, content } = params;
@@ -28,17 +27,18 @@ async function reviewQueue(bot, db, params) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: "🔨 Ban", callback_data: `staff_ban:${user.id}:${params.guildId}` },
-                { text: "🗑️ Delete", callback_data: `staff_del:${params.guildId}:${messageId}` }
+                { text: '🔨 Ban', callback_data: `staff_ban:${user.id}:${params.guildId}` },
+                { text: '🗑️ Delete', callback_data: `staff_del:${params.guildId}:${messageId}` }
             ],
             [
-                { text: "✅ Ignora", callback_data: "staff_ign" },
-                { text: "🔍 Profilo", url: `tg://user?id=${user.id}` }
+                { text: '✅ Ignora', callback_data: 'staff_ign' },
+                { text: '🔍 Profilo', url: `tg://user?id=${user.id}` }
             ]
         ]
     };
 
-    const text = `📥 **REVIEW REQUEST**\n` +
+    const text =
+        `📥 **REVIEW REQUEST**\n` +
         `🔧 Source: ${source}\n` +
         `👤 Utente: [${user.first_name}](tg://user?id=${user.id}) (\`${user.id}\`)\n` +
         `📝 Reason: ${reason}\n\n` +
@@ -52,29 +52,35 @@ async function reviewQueue(bot, db, params) {
         });
         return true;
     } else {
-        logger.error("[staff-coordination] Bot instance not available in reviewQueue");
+        logger.error('[staff-coordination] Bot instance not available in reviewQueue');
         return false;
     }
 }
 
 async function addNote(db, ctx, targetId, noteText, staffGroupId) {
-    await db.query(`
+    await db.query(
+        `
         INSERT INTO staff_notes (user_id, staff_group_id, note_text, created_by)
         VALUES ($1, $2, $3, $4)
-    `, [targetId, staffGroupId, noteText, ctx.from.id]);
+    `,
+        [targetId, staffGroupId, noteText, ctx.from.id]
+    );
 }
 
 async function getNotes(db, targetId, staffGroupId) {
-    return await db.queryAll(`
+    return await db.queryAll(
+        `
         SELECT * FROM staff_notes 
         WHERE user_id = $1 AND staff_group_id = $2
         ORDER BY created_at DESC 
         LIMIT 10
-    `, [targetId, staffGroupId]);
+    `,
+        [targetId, staffGroupId]
+    );
 }
 
 async function setStaffGroup(db, ctx, bot, staffId) {
-    const testMsg = await bot.api.sendMessage(staffId, "✅ Test connessione Staff Group riuscito.");
+    const testMsg = await bot.api.sendMessage(staffId, '✅ Test connessione Staff Group riuscito.');
     await bot.api.deleteMessage(staffId, testMsg.message_id);
 
     await db.updateGuildConfig(ctx.chat.id, { staff_group_id: staffId });
@@ -82,21 +88,21 @@ async function setStaffGroup(db, ctx, bot, staffId) {
 
 async function handleStaffAction(ctx, bot, action, data) {
     if (action === 'ban') {
-        const parts = data.split(":");
+        const parts = data.split(':');
         const targetUserId = parts[1];
         const originalGuildId = parts[2];
 
-        await ctx.answerCallbackQuery("🚫 Eseguendo Ban...");
+        await ctx.answerCallbackQuery('🚫 Eseguendo Ban...');
 
         try {
             await bot.api.banChatMember(originalGuildId, targetUserId);
             await ctx.editMessageCaption({
-                caption: ctx.callbackQuery.message.caption + "\n\n✅ **BANNED by " + ctx.from.first_name + "**"
+                caption: ctx.callbackQuery.message.caption + '\n\n✅ **BANNED by ' + ctx.from.first_name + '**'
             });
         } catch (e) {
             logger.error(`[staff-coordination] Ban failed: ${e.message}`);
             await ctx.editMessageCaption({
-                caption: ctx.callbackQuery.message.caption + "\n\n❌ **Ban fallito: " + e.message + "**"
+                caption: ctx.callbackQuery.message.caption + '\n\n❌ **Ban fallito: ' + e.message + '**'
             });
         }
 
@@ -111,7 +117,7 @@ async function handleStaffAction(ctx, bot, action, data) {
             });
         }
     } else if (action === 'dismiss') {
-        await ctx.answerCallbackQuery("✅ Ignorato");
+        await ctx.answerCallbackQuery('✅ Ignorato');
         await ctx.deleteMessage();
 
         if (adminLogger.getLogEvent()) {
@@ -125,15 +131,15 @@ async function handleStaffAction(ctx, bot, action, data) {
             });
         }
     } else if (action === 'delete') {
-        const parts = data.split(":");
+        const parts = data.split(':');
         if (parts.length >= 3) {
             const origChatId = parts[1];
             const msgId = parts[2];
             try {
                 await ctx.api.deleteMessage(origChatId, msgId);
-                await ctx.answerCallbackQuery("🗑️ Messaggio eliminato");
+                await ctx.answerCallbackQuery('🗑️ Messaggio eliminato');
                 await ctx.editMessageCaption({
-                    caption: ctx.callbackQuery.message.caption + "\n\n✅ **DELETED by Staff**"
+                    caption: ctx.callbackQuery.message.caption + '\n\n✅ **DELETED by Staff**'
                 });
 
                 if (adminLogger.getLogEvent()) {
@@ -147,7 +153,7 @@ async function handleStaffAction(ctx, bot, action, data) {
                     });
                 }
             } catch (e) {
-                await ctx.answerCallbackQuery("❌ Errore eliminazione: " + e.message);
+                await ctx.answerCallbackQuery('❌ Errore eliminazione: ' + e.message);
             }
         }
     }

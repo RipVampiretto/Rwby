@@ -16,14 +16,13 @@ async function executeAction(ctx, action, keyword, fullText) {
         eventType: eventType,
         targetUser: user,
         reason: `Keyword: ${keyword}`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     if (action === 'delete') {
         await safeDelete(ctx, 'keyword-monitor');
         if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'keyword-monitor');
         const banned = await safeBan(ctx, user.id, 'keyword-monitor');
 
@@ -44,8 +43,7 @@ async function executeAction(ctx, action, keyword, fullText) {
 
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Keyword',

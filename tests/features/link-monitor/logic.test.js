@@ -103,10 +103,7 @@ describe('Link Monitor Logic', () => {
         it('should query intel_data table with domain', async () => {
             mockDb.queryOne.mockResolvedValue(null);
             await checkIntel('test.com');
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining('intel_data'),
-                ['test.com']
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining('intel_data'), ['test.com']);
         });
     });
 
@@ -160,9 +157,7 @@ describe('Link Monitor Logic', () => {
             mockConfig.link_sync_global = true;
 
             // First call returns whitelist, second returns unknown
-            mockDb.queryOne
-                .mockResolvedValueOnce({ type: 'whitelist_domain' })
-                .mockResolvedValueOnce(null);
+            mockDb.queryOne.mockResolvedValueOnce({ type: 'whitelist_domain' }).mockResolvedValueOnce(null);
 
             const result = await scanMessage(mockCtx, mockConfig);
             expect(result.domain).toBe('unsafe.com'); // Should skip trusted.com

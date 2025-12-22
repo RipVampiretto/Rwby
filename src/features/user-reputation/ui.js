@@ -11,16 +11,16 @@ async function sendTierDetail(ctx, tierNum) {
 
     const tierName = ctx.t(`tier_system.tiers.${tierNum}.name`);
     let text = `**${info.emoji} ${tierName}**\n`;
-    text += ctx.t('tier_system.details.flux_required', { range: info.fluxRange }) + "\n\n";
+    text += ctx.t('tier_system.details.flux_required', { range: info.fluxRange }) + '\n\n';
 
     if (info.restrictions.length > 0) {
         text += `${ctx.t('tier_system.details.restrictions_title')}\n`;
-        info.restrictions.forEach(r => text += `• ${ctx.t('tier_system.details.items.' + r)}\n`);
+        info.restrictions.forEach(r => (text += `• ${ctx.t('tier_system.details.items.' + r)}\n`));
     }
 
     if (info.bypasses.length > 0) {
         text += `\n${ctx.t('tier_system.details.bypasses_title')}\n`;
-        info.bypasses.forEach(b => text += `• ${ctx.t('tier_system.details.items.' + b)}\n`);
+        info.bypasses.forEach(b => (text += `• ${ctx.t('tier_system.details.items.' + b)}\n`));
     } else {
         text += `\n${ctx.t('tier_system.details.bypasses_title')} ${ctx.t('tier_system.details.bypasses_none')}`;
     }
@@ -29,19 +29,20 @@ async function sendTierDetail(ctx, tierNum) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: ctx.t('tier_system.menu.buttons.back'), callback_data: "tier_menu" }],
-            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]
+            [{ text: ctx.t('tier_system.menu.buttons.back'), callback_data: 'tier_menu' }],
+            [{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: 'tier_close' }]
         ]
     };
 
     try {
-        await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard });
-    } catch (e) { }
+        await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: keyboard });
+    } catch (e) {}
 }
 
 async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     const p = 'tier_system.flux_calc.';
-    const text = `${ctx.t(p + 'title')}\n\n` +
+    const text =
+        `${ctx.t(p + 'title')}\n\n` +
         `${ctx.t(p + 'intro')}\n\n` +
         `${ctx.t(p + 'earning_title')}\n${ctx.t(p + 'earning_items')}\n\n` +
         `${ctx.t(p + 'losing_title')}\n${ctx.t(p + 'losing_items')}\n\n` +
@@ -55,13 +56,15 @@ async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     if (backCallback) {
         keyboard.inline_keyboard.push([{ text: ctx.t('common.back'), callback_data: backCallback }]);
     } else {
-        keyboard.inline_keyboard.push([{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: "tier_close" }]);
+        keyboard.inline_keyboard.push([{ text: ctx.t('tier_system.menu.buttons.close'), callback_data: 'tier_close' }]);
     }
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: keyboard });
+        } catch (e) {}
     } else {
-        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+        await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: keyboard });
     }
 }
 
@@ -80,7 +83,10 @@ async function sendMyFlux(ctx, db) {
     const progressBar = '█'.repeat(progress) + '░'.repeat(10 - progress);
 
     const title = ctx.t('tier_system.my_flux.title');
-    const rankText = ctx.t('tier_system.menu.your_rank', { emoji: tierInfo.emoji, name: ctx.t(`tier_system.tiers.${tier}.name`) });
+    const rankText = ctx.t('tier_system.menu.your_rank', {
+        emoji: tierInfo.emoji,
+        name: ctx.t(`tier_system.tiers.${tier}.name`)
+    });
     const locGlob = ctx.t('tier_system.my_flux.local_global', { local: localFlux, global: globalFlux });
 
     let text = `${title}\n\n`;
@@ -94,7 +100,7 @@ async function sendMyFlux(ctx, db) {
         ]
     };
 
-    await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+    await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: keyboard });
 }
 
 async function sendGlobalFluxOverview(ctx, db) {
@@ -105,13 +111,16 @@ async function sendGlobalFluxOverview(ctx, db) {
     const globalFlux = await logic.getGlobalFlux(db, userId);
 
     // Get all Guilds Flux (async PostgreSQL)
-    const rows = await db.queryAll(`
+    const rows = await db.queryAll(
+        `
         SELECT g.guild_name, u.guild_id, u.local_flux 
         FROM user_trust_flux u 
         JOIN guild_config g ON u.guild_id = g.guild_id 
         WHERE u.user_id = $1 
         ORDER BY u.local_flux DESC
-    `, [userId]);
+    `,
+        [userId]
+    );
 
     const title = ctx.t('tier_system.my_flux.title');
     let text = `${title}\n\n`;
@@ -148,15 +157,17 @@ async function sendGlobalFluxOverview(ctx, db) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${ctx.t('tier_system.menu.buttons.flux_works')}`, callback_data: "tier_explainer:overview" }],
-            [{ text: ctx.t('common.back'), callback_data: "back_to_start" }]
+            [{ text: `${ctx.t('tier_system.menu.buttons.flux_works')}`, callback_data: 'tier_explainer:overview' }],
+            [{ text: ctx.t('common.back'), callback_data: 'back_to_start' }]
         ]
     };
 
     if (ctx.callbackQuery) {
-        try { await ctx.editMessageText(text, { parse_mode: "Markdown", reply_markup: keyboard }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: keyboard });
+        } catch (e) {}
     } else {
-        await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+        await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: keyboard });
     }
 }
 

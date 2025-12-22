@@ -4,13 +4,15 @@ let eld = null;
 let eldReady = false;
 
 // Load ELD dynamically (ESM) - block until ready
-const eldPromise = import('eld').then(m => {
-    eld = m.eld;
-    eldReady = true;
-    logger.info('[language-monitor] ELD library loaded successfully');
-}).catch(e => {
-    logger.error(`[language-monitor] Failed to load ELD: ${e.message}`);
-});
+const eldPromise = import('eld')
+    .then(m => {
+        eld = m.eld;
+        eldReady = true;
+        logger.info('[language-monitor] ELD library loaded successfully');
+    })
+    .catch(e => {
+        logger.error(`[language-monitor] Failed to load ELD: ${e.message}`);
+    });
 
 /**
  * Check if text contains non-Latin scripts (Chinese, Arabic, Cyrillic, etc.)

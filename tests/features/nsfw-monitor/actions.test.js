@@ -99,9 +99,7 @@ describe('NSFW Monitor Actions', () => {
             it('should reduce user reputation', async () => {
                 await executeAction(mockCtx, 'ban', 'NSFW content', 'photo');
 
-                expect(userReputation.modifyFlux).toHaveBeenCalledWith(
-                    123, -100123, -100, 'nsfw_ban'
-                );
+                expect(userReputation.modifyFlux).toHaveBeenCalledWith(123, -100123, -100, 'nsfw_ban');
             });
 
             it('should not reduce reputation if ban fails', async () => {

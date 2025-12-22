@@ -7,7 +7,11 @@ jest.mock('../../../src/features/modal-patterns/logic', () => ({
     isModalEnabledForGuild: jest.fn().mockResolvedValue(true),
     refreshCache: jest.fn().mockResolvedValue(undefined),
     safeJsonParse: jest.fn().mockImplementation((str, fallback) => {
-        try { return JSON.parse(str); } catch { return fallback; }
+        try {
+            return JSON.parse(str);
+        } catch {
+            return fallback;
+        }
     })
 }));
 
@@ -62,9 +66,7 @@ describe('Modal Patterns Manage', () => {
             const result = await manage.listModals();
 
             expect(result).toEqual(modals);
-            expect(mockDb.queryAll).toHaveBeenCalledWith(
-                expect.stringContaining('ORDER BY language')
-            );
+            expect(mockDb.queryAll).toHaveBeenCalledWith(expect.stringContaining('ORDER BY language'));
         });
 
         it('should filter by language when specified', async () => {
@@ -74,10 +76,7 @@ describe('Modal Patterns Manage', () => {
             const result = await manage.listModals('it');
 
             expect(result).toEqual(modals);
-            expect(mockDb.queryAll).toHaveBeenCalledWith(
-                expect.stringContaining('language = $1'),
-                ['it']
-            );
+            expect(mockDb.queryAll).toHaveBeenCalledWith(expect.stringContaining('language = $1'), ['it']);
         });
     });
 
@@ -89,10 +88,7 @@ describe('Modal Patterns Manage', () => {
             const result = await manage.getModal('it', 'scam');
 
             expect(result).toEqual(modal);
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining('spam_modals'),
-                ['it', 'scam']
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining('spam_modals'), ['it', 'scam']);
         });
 
         it('should return null if not found', async () => {
@@ -122,10 +118,10 @@ describe('Modal Patterns Manage', () => {
             const result = await manage.deleteModal('it', 'scam');
 
             expect(result).toBe(true);
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('DELETE FROM spam_modals'),
-                ['it', 'scam']
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM spam_modals'), [
+                'it',
+                'scam'
+            ]);
         });
 
         it('should return false if nothing deleted', async () => {
@@ -143,10 +139,7 @@ describe('Modal Patterns Manage', () => {
             const result = await manage.toggleModal('it', 'scam');
 
             expect(result).toBe(false);
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('enabled = $1'),
-                [false, 'it', 'scam']
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('enabled = $1'), [false, 'it', 'scam']);
         });
 
         it('should return null if modal not found', async () => {
@@ -161,10 +154,7 @@ describe('Modal Patterns Manage', () => {
         it('should update action', async () => {
             await manage.updateModalAction('it', 'scam', 'delete');
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('action = $1'),
-                ['delete', 'it', 'scam']
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('action = $1'), ['delete', 'it', 'scam']);
         });
     });
 

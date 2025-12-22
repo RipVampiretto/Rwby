@@ -12,7 +12,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const actGen = i18n.formatAction(guildId, config.edit_abuse_action || 'report_only');
     const tierBypass = config.edit_tier_bypass ?? 2;
 
-    const text = `${t('antiedit.title')}\n\n` +
+    const text =
+        `${t('antiedit.title')}\n\n` +
         `${t('antiedit.description')}\n\n` +
         `ℹ️ **${t('antiedit.info_title')}:**\n` +
         `• ${t('antiedit.info_1')}\n` +
@@ -24,22 +25,24 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('antiedit.action_other')}: ${actGen}`;
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "edt_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'edt_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('antiedit.buttons.monitor')}: ${enabled}`, callback_data: "edt_toggle" }],
-            [{ text: `${t('antiedit.buttons.tier')}: ${tierBypass}+`, callback_data: "edt_tier" }],
-            [{ text: `${t('antiedit.buttons.threshold')}: ${thr}%`, callback_data: "edt_thr" }],
-            [{ text: `${t('antiedit.buttons.action_inj')}: ${actInj}`, callback_data: "edt_act_inj" }],
-            [{ text: `${t('antiedit.buttons.action_gen')}: ${actGen}`, callback_data: "edt_act_gen" }],
+            [{ text: `${t('antiedit.buttons.monitor')}: ${enabled}`, callback_data: 'edt_toggle' }],
+            [{ text: `${t('antiedit.buttons.tier')}: ${tierBypass}+`, callback_data: 'edt_tier' }],
+            [{ text: `${t('antiedit.buttons.threshold')}: ${thr}%`, callback_data: 'edt_thr' }],
+            [{ text: `${t('antiedit.buttons.action_inj')}: ${actInj}`, callback_data: 'edt_act_inj' }],
+            [{ text: `${t('antiedit.buttons.action_gen')}: ${actGen}`, callback_data: 'edt_act_gen' }],
             [closeBtn]
         ]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }

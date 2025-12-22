@@ -30,10 +30,7 @@ describe('Anti-Spam Stats', () => {
             const result = await stats.getStats(123, -100);
 
             expect(result).toEqual(dbStats);
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining('user_active_stats'),
-                [123, -100]
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining('user_active_stats'), [123, -100]);
         });
 
         it('should return default stats for new user', async () => {
@@ -102,13 +99,15 @@ describe('Anti-Spam Stats', () => {
             const freshStats = require('../../../src/features/anti-spam/stats');
             // Don't call init
 
-            await expect(freshStats.updateStats({
-                user_id: 123,
-                guild_id: -100,
-                msg_count_60s: 0,
-                msg_count_10s: 0,
-                duplicate_count: 0
-            })).resolves.not.toThrow();
+            await expect(
+                freshStats.updateStats({
+                    user_id: 123,
+                    guild_id: -100,
+                    msg_count_60s: 0,
+                    msg_count_10s: 0,
+                    duplicate_count: 0
+                })
+            ).resolves.not.toThrow();
         });
     });
 });

@@ -22,10 +22,12 @@ async function executeAction(ctx, verdict) {
 
         // Log to super admin
         if (superAdmin.sendGlobalLog) {
-            superAdmin.sendGlobalLog('link_checks', `🚫 **Link Blacklist**\nGruppo: ${ctx.chat.title}\nUser: @${ctx.from.username || ctx.from.first_name}\nLink: ${link}\nDominio: ${domain}`);
+            superAdmin.sendGlobalLog(
+                'link_checks',
+                `🚫 **Link Blacklist**\nGruppo: ${ctx.chat.title}\nUser: @${ctx.from.username || ctx.from.first_name}\nLink: ${link}\nDominio: ${domain}`
+            );
         }
-    }
-    else if (type === 'unknown') {
+    } else if (type === 'unknown') {
         // Unknown domain - forward to Parliament for review (don't delete)
         if (superAdmin.forwardLinkCheck) {
             superAdmin.forwardLinkCheck({
@@ -39,7 +41,10 @@ async function executeAction(ctx, verdict) {
 
         // Log unknown
         if (superAdmin.sendGlobalLog) {
-            superAdmin.sendGlobalLog('link_checks', `🔗 **Link Unknown**\nGruppo: ${ctx.chat.title}\nUser: @${ctx.from.username || ctx.from.first_name}\nLink: ${link}\nDominio: ${domain}`);
+            superAdmin.sendGlobalLog(
+                'link_checks',
+                `🔗 **Link Unknown**\nGruppo: ${ctx.chat.title}\nUser: @${ctx.from.username || ctx.from.first_name}\nLink: ${link}\nDominio: ${domain}`
+            );
         }
     }
 }

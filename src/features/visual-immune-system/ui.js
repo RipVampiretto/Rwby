@@ -7,7 +7,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const action = (config.visual_action || 'delete').toUpperCase();
     const thr = config.visual_hamming_threshold || 5;
 
-    const text = `🧬 **IMMUNITÀ VISIVA**\n\n` +
+    const text =
+        `🧬 **IMMUNITÀ VISIVA**\n\n` +
         `Riconosce e blocca le immagini che sono già state segnalate in passato.\n` +
         `Anche se vengono leggermente modificate, il bot le riconosce lo stesso.\n\n` +
         `ℹ️ **Info:**\n` +
@@ -20,14 +21,17 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `Precisione: ${thr}`;
 
     const closeBtn = fromSettings
-        ? { text: "🔙 Back", callback_data: "settings_main" }
-        : { text: "❌ Chiudi", callback_data: "vis_close" };
+        ? { text: '🔙 Back', callback_data: 'settings_main' }
+        : { text: '❌ Chiudi', callback_data: 'vis_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🧬 Sys: ${enabled}`, callback_data: "vis_toggle" }, { text: `🌐 Sync: ${sync}`, callback_data: "vis_sync" }],
-            [{ text: `👮 Azione: ${action}`, callback_data: "vis_act" }],
-            [{ text: `🎯 Soglia: ${thr}`, callback_data: "vis_thr" }],
+            [
+                { text: `🧬 Sys: ${enabled}`, callback_data: 'vis_toggle' },
+                { text: `🌐 Sync: ${sync}`, callback_data: 'vis_sync' }
+            ],
+            [{ text: `👮 Azione: ${action}`, callback_data: 'vis_act' }],
+            [{ text: `🎯 Soglia: ${thr}`, callback_data: 'vis_thr' }],
             [closeBtn]
         ]
     };

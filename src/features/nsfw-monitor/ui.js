@@ -7,7 +7,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
 
-    logger.debug(`[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`);
+    logger.debug(
+        `[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`
+    );
 
     try {
         const config = await db.fetchGuildConfig(guildId);
@@ -26,16 +28,18 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         let blockedCategories = config.nsfw_blocked_categories;
         if (!blockedCategories || !Array.isArray(blockedCategories)) {
             try {
-                blockedCategories = typeof blockedCategories === 'string'
-                    ? JSON.parse(blockedCategories)
-                    : getDefaultBlockedCategories();
+                blockedCategories =
+                    typeof blockedCategories === 'string'
+                        ? JSON.parse(blockedCategories)
+                        : getDefaultBlockedCategories();
             } catch (e) {
                 blockedCategories = getDefaultBlockedCategories();
             }
         }
         const blockedCount = blockedCategories.length;
 
-        let text = `${t('nsfw.title')}\n\n` +
+        let text =
+            `${t('nsfw.title')}\n\n` +
             `${t('nsfw.description')}\n\n` +
             `ℹ️ <b>${t('nsfw.info_title')}:</b>\n` +
             `• ${t('nsfw.info_1')}\n` +
@@ -54,17 +58,31 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         }
 
         const closeBtn = fromSettings
-            ? { text: t('common.back'), callback_data: "settings_main" }
-            : { text: t('common.close'), callback_data: "nsf_close" };
+            ? { text: t('common.back'), callback_data: 'settings_main' }
+            : { text: t('common.close'), callback_data: 'nsf_close' };
 
         const keyboard = {
             inline_keyboard: [
-                [{ text: `${t('nsfw.buttons.monitor')}: ${enabled}`, callback_data: "nsf_toggle" }],
-                [{ text: `${t('nsfw.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "nsf_tier" }],
-                [{ text: `${t('nsfw.buttons.action')}: ${action}`, callback_data: "nsf_act" }, { text: `${t('nsfw.buttons.threshold')}: ${thr}%`, callback_data: "nsf_thr" }],
-                [{ text: `📷 ${p}`, callback_data: "nsf_tog_photo" }, { text: `📹 ${v}`, callback_data: "nsf_tog_video" }],
-                [{ text: `🎬 ${g}`, callback_data: "nsf_tog_gif" }, { text: `🪙 ${s}`, callback_data: "nsf_tog_sticker" }],
-                [{ text: `${t('nsfw.buttons.categories')} (${blockedCount})`, callback_data: "nsf_categories" }],
+                [{ text: `${t('nsfw.buttons.monitor')}: ${enabled}`, callback_data: 'nsf_toggle' }],
+                [
+                    {
+                        text: `${t('nsfw.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`,
+                        callback_data: 'nsf_tier'
+                    }
+                ],
+                [
+                    { text: `${t('nsfw.buttons.action')}: ${action}`, callback_data: 'nsf_act' },
+                    { text: `${t('nsfw.buttons.threshold')}: ${thr}%`, callback_data: 'nsf_thr' }
+                ],
+                [
+                    { text: `📷 ${p}`, callback_data: 'nsf_tog_photo' },
+                    { text: `📹 ${v}`, callback_data: 'nsf_tog_video' }
+                ],
+                [
+                    { text: `🎬 ${g}`, callback_data: 'nsf_tog_gif' },
+                    { text: `🪙 ${s}`, callback_data: 'nsf_tog_sticker' }
+                ],
+                [{ text: `${t('nsfw.buttons.categories')} (${blockedCount})`, callback_data: 'nsf_categories' }],
                 [closeBtn]
             ]
         };
@@ -78,7 +96,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         logger.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
-        } catch (e2) { }
+        } catch (e2) {}
     }
 }
 
@@ -95,9 +113,8 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
     let blockedCategories = config.nsfw_blocked_categories;
     if (!blockedCategories || !Array.isArray(blockedCategories)) {
         try {
-            blockedCategories = typeof blockedCategories === 'string'
-                ? JSON.parse(blockedCategories)
-                : getDefaultBlockedCategories();
+            blockedCategories =
+                typeof blockedCategories === 'string' ? JSON.parse(blockedCategories) : getDefaultBlockedCategories();
         } catch (e) {
             blockedCategories = getDefaultBlockedCategories();
         }
@@ -144,20 +161,16 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
         const btnText = statusIcon ? `${statusIcon} ${catName}` : catName;
 
         if (canToggle) {
-            keyboard.inline_keyboard.push([
-                { text: btnText, callback_data: `nsf_cat_${catId}` }
-            ]);
+            keyboard.inline_keyboard.push([{ text: btnText, callback_data: `nsf_cat_${catId}` }]);
         } else {
             // Non-clickable (always blocked)
-            keyboard.inline_keyboard.push([
-                { text: btnText, callback_data: `nsf_noop` }
-            ]);
+            keyboard.inline_keyboard.push([{ text: btnText, callback_data: `nsf_noop` }]);
         }
     }
 
     // Back button
     keyboard.inline_keyboard.push([
-        { text: t('nsfw.categories_ui.back'), callback_data: fromSettings ? "nsf_back_settings" : "nsf_back" }
+        { text: t('nsfw.categories_ui.back'), callback_data: fromSettings ? 'nsf_back_settings' : 'nsf_back' }
     ]);
 
     try {

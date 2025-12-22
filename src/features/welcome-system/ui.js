@@ -20,9 +20,9 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     const rulesEnabled = config.rules_enabled === 1;
     const logsEnabled = config.captcha_logs_enabled === 1;
 
-    const onOff = (enabled) => enabled ? t('common.on') : t('common.off');
+    const onOff = enabled => (enabled ? t('common.on') : t('common.off'));
 
-    let text = t('welcome.title') + "\n\n";
+    let text = t('welcome.title') + '\n\n';
     text += `${t('welcome.captcha')} ${onOff(captchaEnabled)}\n`;
     text += `${t('welcome.welcome_msg')} ${msgEnabled ? (config.welcome_message ? t('common.on') : t('welcome.on_no_msg')) : t('common.off')}\n`;
     text += `${t('welcome.mode')} \`${modeDisplay}\`\n`;
@@ -31,49 +31,62 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     text += `${t('welcome.rules')} ${onOff(rulesEnabled)}\n`;
     text += `${t('welcome.logs_label')} ${onOff(logsEnabled)}\n\n`;
 
-    const onOffLabel = (enabled) => enabled ? 'ON' : 'OFF';
+    const onOffLabel = enabled => (enabled ? 'ON' : 'OFF');
 
     const keyboard = {
         inline_keyboard: [
             // Row 1: Toggles
             [
-                { text: t('welcome.buttons.captcha_toggle', { status: onOffLabel(captchaEnabled) }), callback_data: `wc_toggle:captcha:${captchaEnabled ? 0 : 1}` },
-                { text: t('welcome.buttons.msg_toggle', { status: onOffLabel(msgEnabled) }), callback_data: `wc_toggle:msg:${msgEnabled ? 0 : 1}` }
+                {
+                    text: t('welcome.buttons.captcha_toggle', { status: onOffLabel(captchaEnabled) }),
+                    callback_data: `wc_toggle:captcha:${captchaEnabled ? 0 : 1}`
+                },
+                {
+                    text: t('welcome.buttons.msg_toggle', { status: onOffLabel(msgEnabled) }),
+                    callback_data: `wc_toggle:msg:${msgEnabled ? 0 : 1}`
+                }
             ],
             // Row 2: Advanced Toggles
             [
-                { text: t('welcome.buttons.rules_toggle', { status: onOffLabel(rulesEnabled) }), callback_data: `wc_toggle:rules:${rulesEnabled ? 0 : 1}` },
-                { text: t('welcome.buttons.logs_toggle', { status: onOffLabel(logsEnabled) }), callback_data: `wc_toggle:logs:${logsEnabled ? 0 : 1}` }
+                {
+                    text: t('welcome.buttons.rules_toggle', { status: onOffLabel(rulesEnabled) }),
+                    callback_data: `wc_toggle:rules:${rulesEnabled ? 0 : 1}`
+                },
+                {
+                    text: t('welcome.buttons.logs_toggle', { status: onOffLabel(logsEnabled) }),
+                    callback_data: `wc_toggle:logs:${logsEnabled ? 0 : 1}`
+                }
             ],
             // Row 2b: Rules Link (Conditional)
-            ...(rulesEnabled ? [[{ text: t('welcome.buttons.set_rules'), callback_data: "wc_set_rules" }]] : []),
+            ...(rulesEnabled ? [[{ text: t('welcome.buttons.set_rules'), callback_data: 'wc_set_rules' }]] : []),
             // Row 3: Timers
             [
                 { text: t('welcome.buttons.timeout', { time: timeout }), callback_data: `wc_cycle:timeout:${timeout}` },
-                { text: t('welcome.buttons.autodelete', { time: autoDelete === 0 ? t('common.off') : autoDelete + 's' }), callback_data: `wc_cycle:autodelete:${autoDelete}` }
+                {
+                    text: t('welcome.buttons.autodelete', {
+                        time: autoDelete === 0 ? t('common.off') : autoDelete + 's'
+                    }),
+                    callback_data: `wc_cycle:autodelete:${autoDelete}`
+                }
             ],
             // Row 4: Mode
-            [
-                { text: t('welcome.buttons.choose_mode'), callback_data: `wc_goto:modes` }
-            ],
+            [{ text: t('welcome.buttons.choose_mode'), callback_data: `wc_goto:modes` }],
             // Row 5: Actions
             [
-                { text: t('welcome.buttons.set_welcome'), callback_data: "wc_set_msg" },
-                { text: t('welcome.buttons.remove_welcome'), callback_data: "wc_del_msg" }
+                { text: t('welcome.buttons.set_welcome'), callback_data: 'wc_set_msg' },
+                { text: t('welcome.buttons.remove_welcome'), callback_data: 'wc_del_msg' }
             ],
             // Row 4: Preview
-            [
-                { text: t('welcome.buttons.preview'), callback_data: "wc_goto:preview" }
-            ],
+            [{ text: t('welcome.buttons.preview'), callback_data: 'wc_goto:preview' }],
             // Row 5: Back
-            [
-                { text: t('common.back'), callback_data: "settings_main" }
-            ]
+            [{ text: t('common.back'), callback_data: 'settings_main' }]
         ]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -88,51 +101,49 @@ async function sendCaptchaModeMenu(ctx) {
     const config = getGuildConfig(guildId) || {};
     const currentModes = (config.captcha_mode || 'button').split(',');
 
-    const isModeActive = (mode) => currentModes.includes(mode);
-    const getMark = (mode) => isModeActive(mode) ? '✅' : '';
+    const isModeActive = mode => currentModes.includes(mode);
+    const getMark = mode => (isModeActive(mode) ? '✅' : '');
 
-    let text = t('welcome.modes.title') + "\n\n";
-    text += t('welcome.modes.subtitle') + "\n\n";
+    let text = t('welcome.modes.title') + '\n\n';
+    text += t('welcome.modes.subtitle') + '\n\n';
 
-    text += t('welcome.modes.descriptions.button') + "\n";
-    text += t('welcome.modes.descriptions.math') + "\n";
-    text += t('welcome.modes.descriptions.char') + "\n";
-    text += t('welcome.modes.descriptions.emoji') + "\n";
-    text += t('welcome.modes.descriptions.color') + "\n";
-    text += t('welcome.modes.descriptions.logic') + "\n";
-    text += t('welcome.modes.descriptions.reverse') + "\n\n";
+    text += t('welcome.modes.descriptions.button') + '\n';
+    text += t('welcome.modes.descriptions.math') + '\n';
+    text += t('welcome.modes.descriptions.char') + '\n';
+    text += t('welcome.modes.descriptions.emoji') + '\n';
+    text += t('welcome.modes.descriptions.color') + '\n';
+    text += t('welcome.modes.descriptions.logic') + '\n';
+    text += t('welcome.modes.descriptions.reverse') + '\n\n';
 
     text += t('welcome.modes.active', { modes: currentModes.join(', ') });
 
     const keyboard = {
         inline_keyboard: [
             [
-                { text: `${getMark('button')} Button`, callback_data: "wc_toggle_mode:button" },
-                { text: `${getMark('math')} Math`, callback_data: "wc_toggle_mode:math" }
+                { text: `${getMark('button')} Button`, callback_data: 'wc_toggle_mode:button' },
+                { text: `${getMark('math')} Math`, callback_data: 'wc_toggle_mode:math' }
             ],
             [
-                { text: `${getMark('char')} Char`, callback_data: "wc_toggle_mode:char" },
-                { text: `${getMark('emoji')} Emoji`, callback_data: "wc_toggle_mode:emoji" }
+                { text: `${getMark('char')} Char`, callback_data: 'wc_toggle_mode:char' },
+                { text: `${getMark('emoji')} Emoji`, callback_data: 'wc_toggle_mode:emoji' }
             ],
             [
-                { text: `${getMark('color')} Color`, callback_data: "wc_toggle_mode:color" },
-                { text: `${getMark('logic')} Logic`, callback_data: "wc_toggle_mode:logic" }
+                { text: `${getMark('color')} Color`, callback_data: 'wc_toggle_mode:color' },
+                { text: `${getMark('logic')} Logic`, callback_data: 'wc_toggle_mode:logic' }
             ],
-            [
-                { text: `${getMark('reverse')} Reverse`, callback_data: "wc_toggle_mode:reverse" }
-            ],
-            [
-                { text: t('common.back'), callback_data: "wc_goto:main" }
-            ]
+            [{ text: `${getMark('reverse')} Reverse`, callback_data: 'wc_toggle_mode:reverse' }],
+            [{ text: t('common.back'), callback_data: 'wc_goto:main' }]
         ]
     };
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     } catch (e) {
-        console.error("Edit Mode Menu Error:", e);
+        console.error('Edit Mode Menu Error:', e);
     }
-    try { await ctx.answerCallbackQuery(); } catch (e) { }
+    try {
+        await ctx.answerCallbackQuery();
+    } catch (e) {}
 }
 
 /**
@@ -157,7 +168,7 @@ async function sendPreview(ctx) {
         buttons.forEach(row => previewKeyboard.push(row));
     }
     // Add Back Button
-    previewKeyboard.push([{ text: t('welcome.buttons.back_to_menu'), callback_data: "wc_goto:main" }]);
+    previewKeyboard.push([{ text: t('welcome.buttons.back_to_menu'), callback_data: 'wc_goto:main' }]);
 
     try {
         await ctx.editMessageText(finalText, {
@@ -176,20 +187,22 @@ async function sendPreview(ctx) {
 async function sendRulesWizardPrompt(ctx) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
-    const text = t('welcome.rules_prompt.title') + "\n\n" +
-        t('welcome.rules_prompt.instruction') + "\n" +
-        t('welcome.rules_prompt.usage') + "\n\n" +
+    const text =
+        t('welcome.rules_prompt.title') +
+        '\n\n' +
+        t('welcome.rules_prompt.instruction') +
+        '\n' +
+        t('welcome.rules_prompt.usage') +
+        '\n\n' +
         t('welcome.rules_prompt.cancel');
 
     const keyboard = {
-        inline_keyboard: [
-            [{ text: t('welcome.rules_prompt.button_cancel'), callback_data: "wc_cancel_wizard" }]
-        ]
+        inline_keyboard: [[{ text: t('welcome.rules_prompt.button_cancel'), callback_data: 'wc_cancel_wizard' }]]
     };
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 /**
@@ -198,36 +211,54 @@ async function sendRulesWizardPrompt(ctx) {
 async function sendWizardPrompt(ctx) {
     const guildId = ctx.chat.id;
     const t = (key, params) => i18n.t(guildId, key, params);
-    const text = t('welcome.wizard.title') + "\n\n" +
-        t('welcome.wizard.instruction') + "\n\n" +
-        t('welcome.wizard.user_data') + "\n" +
-        t('welcome.wizard.placeholders.mention') + "\n" +
-        t('welcome.wizard.placeholders.user') + "\n" +
-        t('welcome.wizard.placeholders.username') + "\n" +
-        t('welcome.wizard.placeholders.first_name') + "\n" +
-        t('welcome.wizard.placeholders.last_name') + "\n" +
-        t('welcome.wizard.placeholders.id') + "\n\n" +
-        t('welcome.wizard.group_data') + "\n" +
-        t('welcome.wizard.placeholders.mention_group') + "\n" +
-        t('welcome.wizard.placeholders.chat_title') + "\n" +
-        t('welcome.wizard.placeholders.chat_username') + "\n" +
-        t('welcome.wizard.placeholders.chat_id') + "\n\n" +
-        t('welcome.wizard.special_functions') + "\n" +
-        t('welcome.wizard.placeholders.custom_link') + "\n\n" +
-        t('welcome.wizard.custom_buttons') + "\n" +
-        t('welcome.wizard.buttons_format') + "\n" +
-        t('welcome.wizard.buttons_example') + "\n\n" +
+    const text =
+        t('welcome.wizard.title') +
+        '\n\n' +
+        t('welcome.wizard.instruction') +
+        '\n\n' +
+        t('welcome.wizard.user_data') +
+        '\n' +
+        t('welcome.wizard.placeholders.mention') +
+        '\n' +
+        t('welcome.wizard.placeholders.user') +
+        '\n' +
+        t('welcome.wizard.placeholders.username') +
+        '\n' +
+        t('welcome.wizard.placeholders.first_name') +
+        '\n' +
+        t('welcome.wizard.placeholders.last_name') +
+        '\n' +
+        t('welcome.wizard.placeholders.id') +
+        '\n\n' +
+        t('welcome.wizard.group_data') +
+        '\n' +
+        t('welcome.wizard.placeholders.mention_group') +
+        '\n' +
+        t('welcome.wizard.placeholders.chat_title') +
+        '\n' +
+        t('welcome.wizard.placeholders.chat_username') +
+        '\n' +
+        t('welcome.wizard.placeholders.chat_id') +
+        '\n\n' +
+        t('welcome.wizard.special_functions') +
+        '\n' +
+        t('welcome.wizard.placeholders.custom_link') +
+        '\n\n' +
+        t('welcome.wizard.custom_buttons') +
+        '\n' +
+        t('welcome.wizard.buttons_format') +
+        '\n' +
+        t('welcome.wizard.buttons_example') +
+        '\n\n' +
         t('welcome.wizard.cancel');
 
     const keyboard = {
-        inline_keyboard: [
-            [{ text: t('welcome.rules_prompt.button_cancel'), callback_data: "wc_cancel_wizard" }]
-        ]
+        inline_keyboard: [[{ text: t('welcome.rules_prompt.button_cancel'), callback_data: 'wc_cancel_wizard' }]]
     };
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 module.exports = {

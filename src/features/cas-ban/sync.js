@@ -39,7 +39,9 @@ async function syncCasBans() {
         const allUsers = parseCsv(csvData);
         const newUsers = allUsers.filter(u => u.user_id > lastKnownId);
 
-        logger.info(`[cas-ban] Parsed ${allUsers.length} total users, ${newUsers.length} are new (ID > ${lastKnownId})`);
+        logger.info(
+            `[cas-ban] Parsed ${allUsers.length} total users, ${newUsers.length} are new (ID > ${lastKnownId})`
+        );
 
         if (newUsers.length === 0) {
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -58,7 +60,8 @@ async function syncCasBans() {
         await detection.reloadCache();
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        const message = `✅ **CAS Sync Completata**\n\n` +
+        const message =
+            `✅ **CAS Sync Completata**\n\n` +
             `📊 Totale nel file: ${allUsers.length.toLocaleString()}\n` +
             `🆕 Nuovi aggiunti: ${newUsers.length.toLocaleString()}\n` +
             `⏱️ Tempo: ${elapsed}s`;
@@ -70,7 +73,6 @@ async function syncCasBans() {
 
         logger.info(`[cas-ban] Sync completed in ${elapsed}s - added ${newUsers.length} new bans`);
         return { success: true, message, newBans: newUsers.length };
-
     } catch (e) {
         logger.error(`[cas-ban] Sync failed: ${e.message}`);
         return { success: false, message: `❌ Sync fallito: ${e.message}`, newBans: 0 };
@@ -84,16 +86,18 @@ function downloadCsv() {
     return new Promise((resolve, reject) => {
         const chunks = [];
 
-        https.get(CAS_EXPORT_URL, (res) => {
-            if (res.statusCode !== 200) {
-                reject(new Error(`HTTP ${res.statusCode}`));
-                return;
-            }
+        https
+            .get(CAS_EXPORT_URL, res => {
+                if (res.statusCode !== 200) {
+                    reject(new Error(`HTTP ${res.statusCode}`));
+                    return;
+                }
 
-            res.on('data', chunk => chunks.push(chunk));
-            res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-            res.on('error', reject);
-        }).on('error', reject);
+                res.on('data', chunk => chunks.push(chunk));
+                res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+                res.on('error', reject);
+            })
+            .on('error', reject);
     });
 }
 
@@ -141,17 +145,22 @@ async function bulkInsert(users) {
 
         // Build bulk INSERT with ON CONFLICT DO NOTHING
         const values = [];
-        const placeholders = batch.map((user, idx) => {
-            const offset = idx * 3;
-            values.push(user.user_id, user.offenses, user.time_added);
-            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, NOW())`;
-        }).join(', ');
+        const placeholders = batch
+            .map((user, idx) => {
+                const offset = idx * 3;
+                values.push(user.user_id, user.offenses, user.time_added);
+                return `($${offset + 1}, $${offset + 2}, $${offset + 3}, NOW())`;
+            })
+            .join(', ');
 
-        const result = await db.query(`
+        const result = await db.query(
+            `
             INSERT INTO cas_bans (user_id, offenses, time_added, imported_at)
             VALUES ${placeholders}
             ON CONFLICT (user_id) DO NOTHING
-        `, values);
+        `,
+            values
+        );
 
         inserted += result.rowCount || batch.length;
         logger.debug(`[cas-ban] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} rows)`);

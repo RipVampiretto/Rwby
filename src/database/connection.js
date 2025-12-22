@@ -16,7 +16,7 @@ async function init() {
         password: process.env.POSTGRES_PASSWORD || 'rwby_secure_password',
         max: 20, // Maximum pool size
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 10000
     };
 
     pool = new Pool(config);
@@ -33,7 +33,7 @@ async function init() {
     }
 
     // Handle pool errors
-    pool.on('error', (err) => {
+    pool.on('error', err => {
         logger.error(`PostgreSQL pool error: ${err.message}`);
     });
 
@@ -116,7 +116,7 @@ function getDb() {
     }
 
     return {
-        prepare: (sql) => {
+        prepare: sql => {
             // Convert SQLite placeholders (?) to PostgreSQL ($1, $2, ...)
             let paramIndex = 0;
             const pgSql = sql.replace(/\?/g, () => `$${++paramIndex}`);

@@ -1,7 +1,7 @@
 const { getGuildConfig } = require('../../database/repos/guild');
 const logger = require('../../middlewares/logger');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
-const { InlineKeyboard } = require("grammy");
+const { InlineKeyboard } = require('grammy');
 const i18n = require('../../i18n');
 
 // Track pending captchas for timeout: userId:chatId -> timeoutHandle
@@ -10,32 +10,101 @@ const PENDING_CAPTCHAS = new Map();
 // --- DATA LISTS ---
 
 const EMOJI_LIST = [
-    { name: 'MELA', emoji: '🍎' }, { name: 'AUTO', emoji: '🚗' }, { name: 'STELLA', emoji: '⭐' }, { name: 'GATTO', emoji: '🐱' },
-    { name: 'CANE', emoji: '🐶' }, { name: 'ALLIEN', emoji: '👽' }, { name: 'FANTASMA', emoji: '👻' }, { name: 'PIZZA', emoji: '🍕' },
-    { name: 'PALLONE', emoji: '⚽' }, { name: 'LIBRO', emoji: '📕' }, { name: 'TELEFONO', emoji: '📱' }, { name: 'REGALO', emoji: '🎁' },
-    { name: 'OCCHIALI', emoji: '👓' }, { name: 'CAPPELLO', emoji: '🎩' }, { name: 'ALBERO', emoji: '🌲' }, { name: 'SOLE', emoji: '☀️' }
+    { name: 'MELA', emoji: '🍎' },
+    { name: 'AUTO', emoji: '🚗' },
+    { name: 'STELLA', emoji: '⭐' },
+    { name: 'GATTO', emoji: '🐱' },
+    { name: 'CANE', emoji: '🐶' },
+    { name: 'ALLIEN', emoji: '👽' },
+    { name: 'FANTASMA', emoji: '👻' },
+    { name: 'PIZZA', emoji: '🍕' },
+    { name: 'PALLONE', emoji: '⚽' },
+    { name: 'LIBRO', emoji: '📕' },
+    { name: 'TELEFONO', emoji: '📱' },
+    { name: 'REGALO', emoji: '🎁' },
+    { name: 'OCCHIALI', emoji: '👓' },
+    { name: 'CAPPELLO', emoji: '🎩' },
+    { name: 'ALBERO', emoji: '🌲' },
+    { name: 'SOLE', emoji: '☀️' }
 ];
 
 const COLOR_LIST = [
-    { name: 'ROSSO', emoji: '🔴' }, { name: 'BLU', emoji: '🔵' }, { name: 'VERDE', emoji: '🟢' }, { name: 'GIALLO', emoji: '🟡' },
-    { name: 'NERO', emoji: '⚫' }, { name: 'BIANCO', emoji: '⚪' }, { name: 'ARANCIONE', emoji: '🟠' }, { name: 'VIOLA', emoji: '🟣' }
+    { name: 'ROSSO', emoji: '🔴' },
+    { name: 'BLU', emoji: '🔵' },
+    { name: 'VERDE', emoji: '🟢' },
+    { name: 'GIALLO', emoji: '🟡' },
+    { name: 'NERO', emoji: '⚫' },
+    { name: 'BIANCO', emoji: '⚪' },
+    { name: 'ARANCIONE', emoji: '🟠' },
+    { name: 'VIOLA', emoji: '🟣' }
 ];
 
 const REVERSE_WORDS = [
-    'ROMA', 'CASA', 'ALBERO', 'MARE', 'SOLE', 'LUNA', 'TRENO', 'PORTA', 'FIORE', 'VIDEO',
-    'MURO', 'FOGLIA', 'ACQUA', 'FUOCO', 'VENTO', 'AMICO', 'SCUOLA', 'NOTTE', 'GIORNO', 'TEMPO'
+    'ROMA',
+    'CASA',
+    'ALBERO',
+    'MARE',
+    'SOLE',
+    'LUNA',
+    'TRENO',
+    'PORTA',
+    'FIORE',
+    'VIDEO',
+    'MURO',
+    'FOGLIA',
+    'ACQUA',
+    'FUOCO',
+    'VENTO',
+    'AMICO',
+    'SCUOLA',
+    'NOTTE',
+    'GIORNO',
+    'TEMPO'
 ];
 
 const LOGIC_SEQUENCES = [
-    { seq: '2, 4, 6, ?', ans: '8' }, { seq: '1, 2, 3, ?', ans: '4' }, { seq: '10, 20, 30, ?', ans: '40' },
-    { seq: 'A, B, C, ?', ans: 'D' }, { seq: '5, 10, 15, ?', ans: '20' }, { seq: '3, 2, 1, ?', ans: '0' },
-    { seq: '1, 1, 2, 3, 5, ?', ans: '8' }, { seq: '2, 4, 8, ?', ans: '16' }, { seq: 'O, P, Q, ?', ans: 'R' }
+    { seq: '2, 4, 6, ?', ans: '8' },
+    { seq: '1, 2, 3, ?', ans: '4' },
+    { seq: '10, 20, 30, ?', ans: '40' },
+    { seq: 'A, B, C, ?', ans: 'D' },
+    { seq: '5, 10, 15, ?', ans: '20' },
+    { seq: '3, 2, 1, ?', ans: '0' },
+    { seq: '1, 1, 2, 3, 5, ?', ans: '8' },
+    { seq: '2, 4, 8, ?', ans: '16' },
+    { seq: 'O, P, Q, ?', ans: 'R' }
 ];
 
 const WORD_LIST = [
-    'BANANA', 'MONTAGNA', 'TELEGRAM', 'ROBOT', 'ALBERO', 'FIUME', 'CHITARRA', 'TAVOLO', 'SABBIA', 'CASTELLO',
-    'GATTO', 'CANE', 'SOLE', 'LUNA', 'STELLE', 'MARE', 'NONNA', 'PIZZA', 'PASTA', 'ITALIA',
-    'AMICO', 'SCUOLA', 'LIBRO', 'COMPUTER', 'MUSICA', 'GIOCO', 'FUOCO', 'ACQUA', 'TERRA', 'ARIA'
+    'BANANA',
+    'MONTAGNA',
+    'TELEGRAM',
+    'ROBOT',
+    'ALBERO',
+    'FIUME',
+    'CHITARRA',
+    'TAVOLO',
+    'SABBIA',
+    'CASTELLO',
+    'GATTO',
+    'CANE',
+    'SOLE',
+    'LUNA',
+    'STELLE',
+    'MARE',
+    'NONNA',
+    'PIZZA',
+    'PASTA',
+    'ITALIA',
+    'AMICO',
+    'SCUOLA',
+    'LIBRO',
+    'COMPUTER',
+    'MUSICA',
+    'GIOCO',
+    'FUOCO',
+    'ACQUA',
+    'TERRA',
+    'ARIA'
 ];
 
 // --- HELPERS ---
@@ -116,11 +185,12 @@ async function handleNewMember(ctx) {
         const status = ctx.chatMember.new_chat_member.status;
         const oldStatus = ctx.chatMember.old_chat_member.status;
 
-        logger.debug(`[Welcome] Member update: ${ctx.from.id} (${ctx.from.first_name}) - Old: ${oldStatus}, New: ${status}`);
+        logger.debug(
+            `[Welcome] Member update: ${ctx.from.id} (${ctx.from.first_name}) - Old: ${oldStatus}, New: ${status}`
+        );
 
         // Only trigger on join (member/restricted) from non-member
-        isJoin = (status === 'member' || status === 'restricted') &&
-            (oldStatus === 'left' || oldStatus === 'kicked');
+        isJoin = (status === 'member' || status === 'restricted') && (oldStatus === 'left' || oldStatus === 'kicked');
 
         if (isJoin) {
             newMembers = [ctx.chatMember.new_chat_member.user];
@@ -128,7 +198,8 @@ async function handleNewMember(ctx) {
     }
 
     if (!isJoin || newMembers.length === 0) {
-        if (!ctx.message?.new_chat_members) { // Don't log ignore for every message if possible, but here we are in handler
+        if (!ctx.message?.new_chat_members) {
+            // Don't log ignore for every message if possible, but here we are in handler
             logger.debug(`[Welcome] Not a join event. Ignoring.`);
         }
         return;
@@ -166,7 +237,10 @@ async function processUserJoin(ctx, user, config) {
     try {
         logger.debug(`[Welcome] Attempting to restrict user ${user.id}...`);
         await ctx.restrictChatMember(user.id, {
-            can_send_messages: false, can_send_media_messages: false, can_send_other_messages: false, can_add_web_page_previews: false
+            can_send_messages: false,
+            can_send_media_messages: false,
+            can_send_other_messages: false,
+            can_add_web_page_previews: false
         });
         logger.debug(`[Welcome] User ${user.id} restricted successfully.`);
     } catch (e) {
@@ -188,11 +262,17 @@ async function processUserJoin(ctx, user, config) {
             let a, b, ans;
 
             if (op === '*') {
-                a = getRandomInt(2, 6); b = getRandomInt(2, 6); ans = a * b;
+                a = getRandomInt(2, 6);
+                b = getRandomInt(2, 6);
+                ans = a * b;
             } else if (op === '-') {
-                a = getRandomInt(5, 14); b = getRandomInt(1, a); ans = a - b;
+                a = getRandomInt(5, 14);
+                b = getRandomInt(1, a);
+                ans = a - b;
             } else {
-                a = getRandomInt(1, 10); b = getRandomInt(1, 10); ans = a + b;
+                a = getRandomInt(1, 10);
+                b = getRandomInt(1, 10);
+                ans = a + b;
             }
 
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.solve_captcha')}\n\n${t('welcome.captcha_messages.math_question', { a, op: op === '*' ? 'x' : op, b })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
@@ -200,12 +280,11 @@ async function processUserJoin(ctx, user, config) {
             const options = new Set([ans]);
             while (options.size < 4) {
                 let fake;
-                if (op === '*') fake = ans + (getRandomInt(1, 6) * (Math.random() < 0.5 ? -1 : 1));
-                else fake = ans + (getRandomInt(1, 5) * (Math.random() < 0.5 ? -1 : 1));
+                if (op === '*') fake = ans + getRandomInt(1, 6) * (Math.random() < 0.5 ? -1 : 1);
+                else fake = ans + getRandomInt(1, 5) * (Math.random() < 0.5 ? -1 : 1);
                 if (fake >= 0) options.add(fake);
             }
             generateButtons(keyboard, user.id, ans, Array.from(options));
-
         } else if (mode === 'char') {
             const word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
             const char = word.charAt(Math.floor(Math.random() * word.length));
@@ -219,7 +298,6 @@ async function processUserJoin(ctx, user, config) {
                 if (fake !== ans) options.add(fake);
             }
             generateButtons(keyboard, user.id, ans, Array.from(options));
-
         } else if (mode === 'emoji') {
             const correctItem = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
             const ans = correctItem.emoji;
@@ -231,7 +309,6 @@ async function processUserJoin(ctx, user, config) {
                 if (fake !== ans) options.add(fake);
             }
             generateButtons(keyboard, user.id, ans, Array.from(options));
-
         } else if (mode === 'color') {
             const correctItem = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
             const ans = correctItem.emoji;
@@ -243,7 +320,6 @@ async function processUserJoin(ctx, user, config) {
                 if (fake !== ans) options.add(fake);
             }
             generateButtons(keyboard, user.id, ans, Array.from(options));
-
         } else if (mode === 'reverse') {
             const word = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
             const ans = word.split('').reverse().join('');
@@ -256,7 +332,6 @@ async function processUserJoin(ctx, user, config) {
                 if (fake !== ans) options.add(fake);
             }
             generateButtons(keyboard, user.id, ans, Array.from(options));
-
         } else if (mode === 'logic') {
             const puzzle = LOGIC_SEQUENCES[Math.floor(Math.random() * LOGIC_SEQUENCES.length)];
             const ans = puzzle.ans;
@@ -276,11 +351,10 @@ async function processUserJoin(ctx, user, config) {
                 if (fake !== ans && (isNum ? parseInt(fake) >= 0 : true)) options.add(fake);
             }
             generateButtons(keyboard, user.id, ans, Array.from(options));
-
         } else {
             // Button mode (Default)
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.confirm_human')}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-            keyboard.text("✅ Non sono un robot", `wc:b:${user.id}`);
+            keyboard.text('✅ Non sono un robot', `wc:b:${user.id}`);
         }
 
         const msg = await ctx.reply(text, {
@@ -299,7 +373,7 @@ async function processUserJoin(ctx, user, config) {
             try {
                 await ctx.banChatMember(user.id);
                 await ctx.unbanChatMember(user.id);
-                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => {});
             } catch (e) {
                 logger.error(`[Welcome] Kick failed: ${e.message}`);
             }
@@ -307,7 +381,6 @@ async function processUserJoin(ctx, user, config) {
         }, ms);
 
         PENDING_CAPTCHAS.set(key, timeoutHandle);
-
     } catch (e) {
         logger.error(`[Welcome] Failed to send captcha: ${e.message}`);
     }
@@ -333,7 +406,7 @@ async function handleCaptchaCallback(ctx) {
         // Rules acceptance
         // wc:accept_rules:USERID
         const targetUserId = parseInt(data.split(':')[2]);
-        if (ctx.from.id !== targetUserId) return ctx.answerCallbackQuery("Non per te.");
+        if (ctx.from.id !== targetUserId) return ctx.answerCallbackQuery('Non per te.');
 
         await completeVerification(ctx, targetUserId);
         return;
@@ -346,7 +419,7 @@ async function handleCaptchaCallback(ctx) {
 
     if (ctx.from.id !== targetUserId) {
         return ctx.answerCallbackQuery({
-            text: "⚠️ Questo captcha non è per te!",
+            text: '⚠️ Questo captcha non è per te!',
             show_alert: true
         });
     }
@@ -364,7 +437,7 @@ async function handleCaptchaCallback(ctx) {
         } else {
             logWelcomeEvent(ctx, 'FAIL', null, config);
             return ctx.answerCallbackQuery({
-                text: "❌ Risposta errata. Riprova.",
+                text: '❌ Risposta errata. Riprova.',
                 show_alert: true
             });
         }
@@ -388,20 +461,20 @@ async function handleCaptchaCallback(ctx) {
                     parse_mode: 'Markdown',
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: "🔗 Leggi Regolamento", url: rulesLink }],
-                            [{ text: "✅ Ho Letto e Accetto", callback_data: `wc:accept_rules:${ctx.from.id}` }]
+                            [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
+                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
                         ]
                     }
                 });
             } catch (e) {
                 // If edit fails, try sending new
-                await ctx.deleteMessage().catch(() => { });
+                await ctx.deleteMessage().catch(() => {});
                 await ctx.reply(text, {
                     parse_mode: 'Markdown',
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: "🔗 Leggi Regolamento", url: rulesLink }],
-                            [{ text: "✅ Ho Letto e Accetto", callback_data: `wc:accept_rules:${ctx.from.id}` }]
+                            [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
+                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
                         ]
                     }
                 });
@@ -419,10 +492,17 @@ async function completeVerification(ctx, userId) {
 
     try {
         await ctx.restrictChatMember(userId, {
-            can_send_messages: true, can_send_media_messages: true, can_send_other_messages: true, can_add_web_page_previews: true,
-            can_invite_users: true, can_pin_messages: false, can_change_info: false
+            can_send_messages: true,
+            can_send_media_messages: true,
+            can_send_other_messages: true,
+            can_add_web_page_previews: true,
+            can_invite_users: true,
+            can_pin_messages: false,
+            can_change_info: false
         });
-    } catch (e) { logger.error(`[Welcome] Unrestrict failed: ${e.message}`); }
+    } catch (e) {
+        logger.error(`[Welcome] Unrestrict failed: ${e.message}`);
+    }
 
     // Try to edit the existing message (captcha/rules) with the welcome message
     await sendWelcome(ctx, config, null, ctx.callbackQuery?.message?.message_id);
@@ -452,7 +532,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
                 sentMessageId = edited.message_id;
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
-                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -473,13 +553,12 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
         // Auto-delete
         if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
             setTimeout(() => {
-                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
             }, config.welcome_autodelete_timer * 1000);
         }
-
     } catch (e) {
         logger.error(`[Welcome] Send custom welcome failed: ${e.message}`);
-        // Fallback for parsing errors... might be complex to handle with edit vs reply. 
+        // Fallback for parsing errors... might be complex to handle with edit vs reply.
         // Simplest is to just log error if it fails after the fallback above.
     }
 }

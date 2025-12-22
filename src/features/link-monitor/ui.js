@@ -10,7 +10,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const sync = config.link_sync_global ? t('common.on') : t('common.off');
     const tierBypass = config.link_tier_bypass ?? 2;
 
-    let text = `${t('link.title')}\n\n` +
+    let text =
+        `${t('link.title')}\n\n` +
         `${t('link.description')}\n\n` +
         `ℹ️ **${t('link.info_title')}:**\n` +
         `• ${t('link.info_1')}\n` +
@@ -25,14 +26,14 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "lnk_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'lnk_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('link.buttons.monitor')}: ${enabled}`, callback_data: "lnk_toggle" }],
-            [{ text: `${t('link.buttons.tier')}: ${tierBypass}+`, callback_data: "lnk_tier" }],
-            [{ text: `${t('link.buttons.sync')}: ${sync}`, callback_data: "lnk_sync" }],
+            [{ text: `${t('link.buttons.monitor')}: ${enabled}`, callback_data: 'lnk_toggle' }],
+            [{ text: `${t('link.buttons.tier')}: ${tierBypass}+`, callback_data: 'lnk_tier' }],
+            [{ text: `${t('link.buttons.sync')}: ${sync}`, callback_data: 'lnk_sync' }],
             [closeBtn]
         ]
     };

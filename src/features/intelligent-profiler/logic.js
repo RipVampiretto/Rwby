@@ -13,7 +13,7 @@ async function getScamPatterns() {
     const rows = await db.queryAll(
         "SELECT word, is_regex FROM word_filters WHERE guild_id = 0 AND category = 'scam_pattern'"
     );
-    return rows.map(r => r.is_regex ? new RegExp(r.word, 'i') : new RegExp(escapeRegExp(r.word), 'i'));
+    return rows.map(r => (r.is_regex ? new RegExp(r.word, 'i') : new RegExp(escapeRegExp(r.word), 'i')));
 }
 
 function extractLinks(text) {
@@ -22,7 +22,7 @@ function extractLinks(text) {
 }
 
 async function scanMessage(ctx, config) {
-    const text = ctx.message.text || ctx.message.caption || "";
+    const text = ctx.message.text || ctx.message.caption || '';
 
     // 1. Link Check
     const links = extractLinks(text);
@@ -36,7 +36,11 @@ async function scanMessage(ctx, config) {
         }
 
         const isSafe = links.every(l => {
-            try { return whitelist.some(w => new URL(l).hostname.endsWith(w)); } catch (e) { return false; }
+            try {
+                return whitelist.some(w => new URL(l).hostname.endsWith(w));
+            } catch (e) {
+                return false;
+            }
         });
 
         if (!isSafe) {
@@ -53,7 +57,7 @@ async function scanMessage(ctx, config) {
         return {
             action: config.profiler_action_forward || 'delete',
             reason: 'Tier 0 Forward',
-            content: "[Forwarded Message]"
+            content: '[Forwarded Message]'
         };
     }
 

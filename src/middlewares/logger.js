@@ -8,7 +8,7 @@ const path = require('path');
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
 // Custom format for Italy timezone
-const italyTimestamp = winston.format((info) => {
+const italyTimestamp = winston.format(info => {
     info.timestamp = new Intl.DateTimeFormat('it-IT', {
         timeZone: 'Europe/Rome',
         hour: '2-digit',
@@ -17,7 +17,9 @@ const italyTimestamp = winston.format((info) => {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
-    }).format(new Date()).replace(',', '');
+    })
+        .format(new Date())
+        .replace(',', '');
     return info;
 });
 

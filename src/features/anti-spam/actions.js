@@ -28,8 +28,7 @@ async function executeAction(ctx, action, trigger) {
     if (action === 'delete') {
         await safeDelete(ctx, 'anti-spam');
         if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'anti-spam');
         const banned = await safeBan(ctx, user.id, 'anti-spam');
 
@@ -42,8 +41,7 @@ async function executeAction(ctx, action, trigger) {
             logParams.isGlobal = true;
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         await staffCoordination.reviewQueue(_botInstance, db, {
             guildId: ctx.chat.id,
             source: 'Anti-Spam',
@@ -62,7 +60,8 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
 
         const flux = await userReputation.getLocalFlux(db, user.id, ctx.chat.id);
 
-        const text = `🔨 **BAN ESEGUITO**\n\n` +
+        const text =
+            `🔨 **BAN ESEGUITO**\n\n` +
             `🏛️ Gruppo: ${ctx.chat.title} (@${ctx.chat.username || 'private'})\n` +
             `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
             `📊 Flux: ${flux}\n` +
@@ -73,7 +72,10 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
 
         const keyboard = {
             inline_keyboard: [
-                [{ text: "🌍 Global Ban", callback_data: `gban:${user.id}` }, { text: "✅ Solo Locale", callback_data: `gban_skip:${ctx.message.message_id}` }]
+                [
+                    { text: '🌍 Global Ban', callback_data: `gban:${user.id}` },
+                    { text: '✅ Solo Locale', callback_data: `gban_skip:${ctx.message.message_id}` }
+                ]
             ]
         };
 

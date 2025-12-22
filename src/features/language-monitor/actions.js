@@ -18,14 +18,12 @@ async function executeAction(ctx, config, detected, allowed) {
         eventType: eventType,
         targetUser: user,
         reason: `Language: ${detected} (Allowed: ${allowed.join(', ')})`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     // Get translation for this guild's UI language
     // Use HTML format for user mention to work properly
-    const userName = user.username
-        ? `@${user.username}`
-        : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
+    const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
     const warningMsg = i18n.t(ctx.chat.id, 'language.warning', {
         languages: allowed.join(', ').toUpperCase(),
         user: userName
@@ -39,11 +37,12 @@ async function executeAction(ctx, config, detected, allowed) {
         try {
             const warning = await ctx.reply(warningMsg, { parse_mode: 'HTML' });
             setTimeout(async () => {
-                try { await ctx.api.deleteMessage(ctx.chat.id, warning.message_id); } catch (e) { }
+                try {
+                    await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
+                } catch (e) {}
             }, 60000); // 1 minute
-        } catch (e) { }
-    }
-    else if (action === 'ban') {
+        } catch (e) {}
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'language-monitor');
         const banned = await safeBan(ctx, user.id, 'language-monitor');
 
@@ -64,8 +63,7 @@ async function executeAction(ctx, config, detected, allowed) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Language',

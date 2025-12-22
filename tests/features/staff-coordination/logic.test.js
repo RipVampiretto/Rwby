@@ -124,10 +124,12 @@ describe('Staff Coordination Logic', () => {
 
             await logic.addNote(mockDb, ctx, 456, 'This user is suspicious', -100999);
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('INSERT INTO staff_notes'),
-                [456, -100999, 'This user is suspicious', 111]
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO staff_notes'), [
+                456,
+                -100999,
+                'This user is suspicious',
+                111
+            ]);
         });
     });
 
@@ -142,10 +144,7 @@ describe('Staff Coordination Logic', () => {
             const result = await logic.getNotes(mockDb, 456, -100999);
 
             expect(result).toEqual(notes);
-            expect(mockDb.queryAll).toHaveBeenCalledWith(
-                expect.stringContaining('staff_notes'),
-                [456, -100999]
-            );
+            expect(mockDb.queryAll).toHaveBeenCalledWith(expect.stringContaining('staff_notes'), [456, -100999]);
         });
     });
 });

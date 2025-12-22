@@ -9,17 +9,19 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const actPat = (config.profiler_action_pattern || 'report_only').toUpperCase().replace(/_/g, ' ');
 
     let warning = '';
-    if (!config.staff_group_id && (
-        config.profiler_action_pattern === 'report_only' ||
-        config.profiler_action_link === 'report_only' ||
-        config.profiler_action_forward === 'report_only'
-    )) {
+    if (
+        !config.staff_group_id &&
+        (config.profiler_action_pattern === 'report_only' ||
+            config.profiler_action_link === 'report_only' ||
+            config.profiler_action_forward === 'report_only')
+    ) {
         warning = `\n${i18n.t(ctx.chat.id, 'common.warnings.no_staff_group')}\n`;
     }
 
     const t = (key, params) => i18n.t(ctx.chat.id, key, params);
 
-    const text = `🔍 **PROFILER NUOVI UTENTI**\n\n` +
+    const text =
+        `🔍 **PROFILER NUOVI UTENTI**\n\n` +
         `Analizza i nuovi arrivati per bloccare bot e spammer istantanei.\n` +
         `Smette di controllare gli utenti appena diventano fidati.\n\n` +
         `ℹ️ **Info:**\n` +
@@ -33,15 +35,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         warning;
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "prf_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'prf_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('profiler.buttons.profiler')}: ${enabled}`, callback_data: "prf_toggle" }],
-            [{ text: `${t('profiler.buttons.link')}: ${actLink}`, callback_data: "prf_act_link" }],
-            [{ text: `${t('profiler.buttons.forward')}: ${actFwd}`, callback_data: "prf_act_fwd" }],
-            [{ text: `${t('profiler.buttons.pattern')}: ${actPat}`, callback_data: "prf_act_pat" }],
+            [{ text: `${t('profiler.buttons.profiler')}: ${enabled}`, callback_data: 'prf_toggle' }],
+            [{ text: `${t('profiler.buttons.link')}: ${actLink}`, callback_data: 'prf_act_link' }],
+            [{ text: `${t('profiler.buttons.forward')}: ${actFwd}`, callback_data: 'prf_act_fwd' }],
+            [{ text: `${t('profiler.buttons.pattern')}: ${actPat}`, callback_data: 'prf_act_pat' }],
             [closeBtn]
         ]
     };

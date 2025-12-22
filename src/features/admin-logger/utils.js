@@ -14,30 +14,36 @@ async function isAdmin(ctx) {
 
 // Module name map
 const MODULE_MAP = {
-    'lang_delete': 'Language Monitor',
-    'lang_ban': 'Language Monitor',
-    'nsfw_delete': 'NSFW Monitor',
-    'nsfw_ban': 'NSFW Monitor',
-    'link_delete': 'Link Monitor',
-    'ai_delete': 'AI Moderation',
-    'ai_ban': 'AI Moderation',
-    'keyword_delete': 'Keyword Monitor',
-    'keyword_ban': 'Keyword Monitor',
-    'staff_ban': 'Staff Coordination',
-    'staff_delete': 'Staff Coordination',
-    'staff_dismiss': 'Staff Coordination',
-    'vote_ban': 'Vote Ban'
+    lang_delete: 'Language Monitor',
+    lang_ban: 'Language Monitor',
+    nsfw_delete: 'NSFW Monitor',
+    nsfw_ban: 'NSFW Monitor',
+    link_delete: 'Link Monitor',
+    ai_delete: 'AI Moderation',
+    ai_ban: 'AI Moderation',
+    keyword_delete: 'Keyword Monitor',
+    keyword_ban: 'Keyword Monitor',
+    staff_ban: 'Staff Coordination',
+    staff_delete: 'Staff Coordination',
+    staff_dismiss: 'Staff Coordination',
+    vote_ban: 'Vote Ban'
 };
 
 // Emoji map
 const EMOJI_MAP = {
-    'lang_delete': '🌐', 'lang_ban': '🌐',
-    'nsfw_delete': '🔞', 'nsfw_ban': '🔞',
-    'link_delete': '🔗',
-    'ai_delete': '🤖', 'ai_ban': '🤖',
-    'keyword_delete': '🔤', 'keyword_ban': '🔤',
-    'staff_ban': '👮', 'staff_delete': '👮', 'staff_dismiss': '👮',
-    'vote_ban': '⚖️'
+    lang_delete: '🌐',
+    lang_ban: '🌐',
+    nsfw_delete: '🔞',
+    nsfw_ban: '🔞',
+    link_delete: '🔗',
+    ai_delete: '🤖',
+    ai_ban: '🤖',
+    keyword_delete: '🔤',
+    keyword_ban: '🔤',
+    staff_ban: '👮',
+    staff_delete: '👮',
+    staff_dismiss: '👮',
+    vote_ban: '⚖️'
 };
 
 module.exports = {

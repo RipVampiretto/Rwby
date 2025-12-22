@@ -22,7 +22,9 @@ async function handleCallback(ctx) {
         } catch (e) {
             logger.error(`[Welcome] Navigation error: ${e.message}`);
         }
-        try { await ctx.answerCallbackQuery(); } catch (e) { }
+        try {
+            await ctx.answerCallbackQuery();
+        } catch (e) {}
         return;
     }
 
@@ -120,7 +122,7 @@ async function handleCallback(ctx) {
             welcome_buttons: null,
             welcome_msg_enabled: 0
         });
-        await ctx.answerCallbackQuery("✅ Messaggio rimosso.");
+        await ctx.answerCallbackQuery('✅ Messaggio rimosso.');
         await ui.sendWelcomeMenu(ctx, true);
         return;
     }

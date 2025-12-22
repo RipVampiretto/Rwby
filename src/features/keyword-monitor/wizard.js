@@ -18,7 +18,9 @@ function init() {
             }
         }
         if (cleaned > 0) {
-            logger.debug(`[keyword-monitor] Wizard cleanup: removed ${cleaned} expired sessions, ${WIZARD_SESSIONS.size} remaining`);
+            logger.debug(
+                `[keyword-monitor] Wizard cleanup: removed ${cleaned} expired sessions, ${WIZARD_SESSIONS.size} remaining`
+            );
         }
     }, WIZARD_CLEANUP_INTERVAL);
 }
@@ -31,9 +33,13 @@ async function handleWizardStep(ctx, sessionKey) {
         await ctx.reply(`\`${session.word}\` è una Regular Expression?`, {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "✅ Sì", callback_data: "wrd_wiz_regex_yes" }, { text: "❌ No", callback_data: "wrd_wiz_regex_no" }]
+                    [
+                        { text: '✅ Sì', callback_data: 'wrd_wiz_regex_yes' },
+                        { text: '❌ No', callback_data: 'wrd_wiz_regex_no' }
+                    ]
                 ]
-            }, parse_mode: 'Markdown'
+            },
+            parse_mode: 'Markdown'
         });
     }
 }

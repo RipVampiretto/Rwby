@@ -3,13 +3,23 @@ async function createVote(db, params) {
     const result = await db.query(
         `INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at, votes_yes, voters) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9) RETURNING vote_id`,
-        [target.id, target.username || target.first_name, chat.id, initiator.id, reason, required, expires, 1, JSON.stringify(voters)]
+        [
+            target.id,
+            target.username || target.first_name,
+            chat.id,
+            initiator.id,
+            reason,
+            required,
+            expires,
+            1,
+            JSON.stringify(voters)
+        ]
     );
     return result.rows[0].vote_id;
 }
 
 async function getVote(db, voteId) {
-    return await db.queryOne("SELECT * FROM active_votes WHERE vote_id = $1", [voteId]);
+    return await db.queryOne('SELECT * FROM active_votes WHERE vote_id = $1', [voteId]);
 }
 
 async function getActiveVoteForUser(db, chatId, userId) {
@@ -30,24 +40,20 @@ async function getAllActiveVotes(db) {
 }
 
 async function updateVote(db, voteId, yes, no, voters) {
-    await db.query(
-        "UPDATE active_votes SET votes_yes = $1, votes_no = $2, voters = $3 WHERE vote_id = $4",
-        [yes, no, JSON.stringify(voters), voteId]
-    );
+    await db.query('UPDATE active_votes SET votes_yes = $1, votes_no = $2, voters = $3 WHERE vote_id = $4', [
+        yes,
+        no,
+        JSON.stringify(voters),
+        voteId
+    ]);
 }
 
 async function setPollMessageId(db, voteId, messageId) {
-    await db.query(
-        "UPDATE active_votes SET poll_message_id = $1 WHERE vote_id = $2",
-        [messageId, voteId]
-    );
+    await db.query('UPDATE active_votes SET poll_message_id = $1 WHERE vote_id = $2', [messageId, voteId]);
 }
 
 async function closeVote(db, voteId, status) {
-    await db.query(
-        "UPDATE active_votes SET status = $1 WHERE vote_id = $2",
-        [status, voteId]
-    );
+    await db.query('UPDATE active_votes SET status = $1 WHERE vote_id = $2', [status, voteId]);
 }
 
 module.exports = {

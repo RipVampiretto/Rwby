@@ -14,8 +14,8 @@ const DEFAULT_LANG = 'en';
 
 // Available languages
 const AVAILABLE_LANGUAGES = {
-    'en': '🇬🇧 English',
-    'it': '🇮🇹 Italiano'
+    en: '🇬🇧 English',
+    it: '🇮🇹 Italiano'
 };
 
 let db = null;
@@ -154,7 +154,7 @@ function middleware() {
         // Attach other helpers
         ctx.i18n = {
             getLanguage: () => getLanguage(ctx.chat?.id),
-            setLanguage: (lang) => setLanguage(ctx.chat?.id, lang),
+            setLanguage: lang => setLanguage(ctx.chat?.id, lang),
             available: AVAILABLE_LANGUAGES
         };
 
@@ -172,10 +172,10 @@ function middleware() {
 function formatAction(guildId, action) {
     const actionKey = (action || 'report_only').toLowerCase().replace(/_/g, '');
     const actionMap = {
-        'reportonly': 'common.report_only',
-        'report_only': 'common.report_only',
-        'delete': 'common.delete',
-        'ban': 'common.ban'
+        reportonly: 'common.report_only',
+        report_only: 'common.report_only',
+        delete: 'common.delete',
+        ban: 'common.ban'
     };
 
     const key = actionMap[actionKey] || actionMap[(action || '').toLowerCase()];
@@ -195,4 +195,3 @@ module.exports = {
     middleware,
     formatAction
 };
-

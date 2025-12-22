@@ -28,10 +28,7 @@ describe('Intel Network Trust', () => {
             const result = await trust.getGuildTrust(-100123);
 
             expect(result).toEqual(trustRecord);
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining('guild_trust'),
-                [-100123]
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining('guild_trust'), [-100123]);
         });
 
         it('should create trust record if not exists', async () => {
@@ -42,10 +39,7 @@ describe('Intel Network Trust', () => {
 
             const result = await trust.getGuildTrust(-100123);
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('INSERT INTO guild_trust'),
-                [-100123]
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO guild_trust'), [-100123]);
             expect(result).toEqual(trustRecord);
         });
 

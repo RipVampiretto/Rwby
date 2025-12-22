@@ -27,7 +27,7 @@ async function isUserAdmin(ctx) {
 
 /**
  * Analyze a message using AI as a last resort filter.
- * 
+ *
  * @param {Context} ctx - Telegram context
  * @returns {Promise<{triggered: boolean, result: object|null}>}
  */
@@ -101,14 +101,13 @@ async function handleViolation(ctx, config, result) {
         eventType: eventType,
         targetUser: user,
         reason: `${trigger} - ${result.reason}`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     if (action === 'delete') {
         await safeDelete(ctx, 'ai-moderation');
         if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'ai-moderation');
         const banned = await safeBan(ctx, user.id, 'ai-moderation');
 
@@ -130,8 +129,8 @@ async function handleViolation(ctx, config, result) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else { // report_only
+    } else {
+        // report_only
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'AI-Moderation',

@@ -5,7 +5,7 @@ const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
 
 function registerCommands(bot, db) {
     // Middleware: profile Tier 0 users
-    bot.on("message", async (ctx, next) => {
+    bot.on('message', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
 
         // Skip check for admins
@@ -29,30 +29,30 @@ function registerCommands(bot, db) {
     });
 
     // UI Handlers
-    bot.on("callback_query:data", async (ctx, next) => {
+    bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
-        if (!data.startsWith("prf_")) return next();
+        if (!data.startsWith('prf_')) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
-        if (data === "prf_close") return ctx.deleteMessage();
+        if (data === 'prf_close') return ctx.deleteMessage();
 
-        if (data === "prf_toggle") {
+        if (data === 'prf_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { profiler_enabled: config.profiler_enabled ? 0 : 1 });
-        } else if (data === "prf_act_link") {
+        } else if (data === 'prf_act_link') {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.profiler_action_link || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             await db.updateGuildConfig(ctx.chat.id, { profiler_action_link: nextAct });
-        } else if (data === "prf_act_fwd") {
+        } else if (data === 'prf_act_fwd') {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.profiler_action_forward || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
             await db.updateGuildConfig(ctx.chat.id, { profiler_action_forward: nextAct });
-        } else if (data === "prf_act_pat") {
+        } else if (data === 'prf_act_pat') {
             const acts = ['delete', 'ban', 'report_only'];
             let cur = config.profiler_action_pattern || 'report_only';
             if (!acts.includes(cur)) cur = 'report_only';

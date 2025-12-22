@@ -20,7 +20,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         warning = `\n${t('common.warnings.no_staff_group')}\n`;
     }
 
-    const text = `${t('ai.title')}\n\n` +
+    const text =
+        `${t('ai.title')}\n\n` +
         `${t('ai.description')}\n\n` +
         `ℹ️ **${t('ai.info_title')}:**\n` +
         `• ${t('ai.info_1')}\n` +
@@ -32,22 +33,34 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         warning;
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "ai_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'ai_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('ai.buttons.system')}: ${enabled}`, callback_data: "ai_toggle" }],
-            [{ text: `${t('ai.buttons.context')}: ${config.ai_context_aware ? 'ON' : 'OFF'}`, callback_data: "ai_ctx" }],
-            [{ text: `${t('ai.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: "ai_tier_bypass" }],
-            [{ text: t('ai.buttons.categories'), callback_data: "ai_config_cats" }],
-            [{ text: `${t('ai.buttons.threshold')}: ${thr}%`, callback_data: "ai_threshold" }],
+            [{ text: `${t('ai.buttons.system')}: ${enabled}`, callback_data: 'ai_toggle' }],
+            [
+                {
+                    text: `${t('ai.buttons.context')}: ${config.ai_context_aware ? 'ON' : 'OFF'}`,
+                    callback_data: 'ai_ctx'
+                }
+            ],
+            [
+                {
+                    text: `${t('ai.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`,
+                    callback_data: 'ai_tier_bypass'
+                }
+            ],
+            [{ text: t('ai.buttons.categories'), callback_data: 'ai_config_cats' }],
+            [{ text: `${t('ai.buttons.threshold')}: ${thr}%`, callback_data: 'ai_threshold' }],
             [closeBtn]
         ]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -65,12 +78,12 @@ async function sendCategoryConfigUI(ctx, db, fromSettings = false) {
         const action = (config[`ai_action_${cat}`] || 'report_only').toUpperCase().replace('_', ' ');
         rows.push([{ text: `${cat.toUpperCase()}: ${action}`, callback_data: `ai_set_act:${cat}` }]);
     }
-    rows.push([{ text: t('common.back'), callback_data: "ai_back_main" }]);
+    rows.push([{ text: t('common.back'), callback_data: 'ai_back_main' }]);
 
     const text = `${t('ai.categories.title')}\n${t('ai.categories.subtitle')}`;
     try {
         await ctx.editMessageText(text, { reply_markup: { inline_keyboard: rows }, parse_mode: 'Markdown' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 module.exports = {

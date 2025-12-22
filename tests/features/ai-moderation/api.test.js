@@ -26,9 +26,10 @@ describe('AI Moderation API', () => {
         it('should produce consistent hashes for same input', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -49,9 +50,10 @@ describe('AI Moderation API', () => {
         it('should return cached result for repeated calls', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: '{"category": "safe", "confidence": 0.95}' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: '{"category": "safe", "confidence": 0.95}' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -65,9 +67,10 @@ describe('AI Moderation API', () => {
         it('should make new call for different text', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -82,13 +85,17 @@ describe('AI Moderation API', () => {
         it('should return parsed JSON response', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{
-                        message: {
-                            content: '{"category": "scam", "confidence": 0.85, "reason": "Crypto scheme detected"}'
-                        }
-                    }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [
+                            {
+                                message: {
+                                    content:
+                                        '{"category": "scam", "confidence": 0.85, "reason": "Crypto scheme detected"}'
+                                }
+                            }
+                        ]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -102,13 +109,16 @@ describe('AI Moderation API', () => {
         it('should extract JSON from markdown code blocks', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{
-                        message: {
-                            content: '```json\n{"category": "spam", "confidence": 0.9}\n```'
-                        }
-                    }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [
+                            {
+                                message: {
+                                    content: '```json\n{"category": "spam", "confidence": 0.9}\n```'
+                                }
+                            }
+                        ]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -137,9 +147,10 @@ describe('AI Moderation API', () => {
         it('should return safe on invalid JSON response', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: 'Not valid JSON at all' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: 'Not valid JSON at all' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -151,9 +162,10 @@ describe('AI Moderation API', () => {
         it('should include context messages in prompt', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -175,9 +187,10 @@ describe('AI Moderation API', () => {
         it('should use custom model when specified', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
@@ -192,18 +205,16 @@ describe('AI Moderation API', () => {
         it('should call correct endpoint', async () => {
             const mockResponse = {
                 ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
-                })
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: '{"category": "safe", "confidence": 0.9}' } }]
+                    })
             };
             global.fetch.mockResolvedValue(mockResponse);
 
             await api.callLLM('message', [], {});
 
-            expect(global.fetch).toHaveBeenCalledWith(
-                'http://localhost:1234/v1/chat/completions',
-                expect.any(Object)
-            );
+            expect(global.fetch).toHaveBeenCalledWith('http://localhost:1234/v1/chat/completions', expect.any(Object));
         });
     });
 
@@ -217,9 +228,7 @@ describe('AI Moderation API', () => {
 
             await api.testConnection(mockCtx);
 
-            expect(mockCtx.reply).toHaveBeenCalledWith(
-                expect.stringContaining('✅')
-            );
+            expect(mockCtx.reply).toHaveBeenCalledWith(expect.stringContaining('✅'));
         });
 
         it('should reply error on failed connection', async () => {
@@ -231,9 +240,7 @@ describe('AI Moderation API', () => {
 
             await api.testConnection(mockCtx);
 
-            expect(mockCtx.reply).toHaveBeenCalledWith(
-                expect.stringContaining('❌')
-            );
+            expect(mockCtx.reply).toHaveBeenCalledWith(expect.stringContaining('❌'));
         });
     });
 });

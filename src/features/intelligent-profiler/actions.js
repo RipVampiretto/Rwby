@@ -13,13 +13,12 @@ async function executeAction(ctx, action, reason, content) {
         targetUser: user,
         executorAdmin: null,
         reason: `Profiler: ${reason}`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     if (action === 'delete') {
         await safeDelete(ctx, 'intelligent-profiler');
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'intelligent-profiler');
         const banned = await safeBan(ctx, user.id, 'intelligent-profiler');
 
@@ -40,8 +39,7 @@ async function executeAction(ctx, action, reason, content) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Profiler',

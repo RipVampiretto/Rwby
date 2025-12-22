@@ -11,10 +11,21 @@ let _cacheInitialized = false;
  * Default config values for new guilds (used when not in cache yet)
  */
 const DEFAULT_CONFIG = {
-    spam_enabled: 0, ai_enabled: 0, edit_monitor_enabled: 0, profiler_enabled: 0,
-    lang_enabled: 0, link_enabled: 0, nsfw_enabled: 0, visual_enabled: 0,
-    voteban_enabled: 0, modal_enabled: 0, casban_enabled: 0, welcome_enabled: 0,
-    captcha_enabled: 0, rules_enabled: 0, welcome_msg_enabled: 0
+    spam_enabled: 0,
+    ai_enabled: 0,
+    edit_monitor_enabled: 0,
+    profiler_enabled: 0,
+    lang_enabled: 0,
+    link_enabled: 0,
+    nsfw_enabled: 0,
+    visual_enabled: 0,
+    voteban_enabled: 0,
+    modal_enabled: 0,
+    casban_enabled: 0,
+    welcome_enabled: 0,
+    captcha_enabled: 0,
+    rules_enabled: 0,
+    welcome_msg_enabled: 0
 };
 
 /**
@@ -40,45 +51,103 @@ async function initCache() {
  */
 const GUILD_CONFIG_COLUMNS = new Set([
     // Staff Coordination
-    'guild_name', 'staff_group_id', 'staff_topics',
+    'guild_name',
+    'staff_group_id',
+    'staff_topics',
     // Admin Logger
-    'log_channel_id', 'log_events', 'log_format',
+    'log_channel_id',
+    'log_events',
+    'log_format',
     // Anti-Spam
-    'spam_enabled', 'spam_sensitivity', 'spam_action_volume', 'spam_action_repetition',
-    'spam_volume_limit_60s', 'spam_volume_limit_10s', 'spam_duplicate_limit',
+    'spam_enabled',
+    'spam_sensitivity',
+    'spam_action_volume',
+    'spam_action_repetition',
+    'spam_volume_limit_60s',
+    'spam_volume_limit_10s',
+    'spam_duplicate_limit',
     // AI Moderation
-    'ai_enabled', 'ai_action_scam', 'ai_action_nsfw',
-    'ai_action_spam', 'ai_confidence_threshold', 'ai_context_aware', 'ai_context_messages', 'ai_tier_bypass',
+    'ai_enabled',
+    'ai_action_scam',
+    'ai_action_nsfw',
+    'ai_action_spam',
+    'ai_confidence_threshold',
+    'ai_context_aware',
+    'ai_context_messages',
+    'ai_tier_bypass',
     // Anti-Edit Abuse
-    'edit_monitor_enabled', 'edit_abuse_action', 'edit_lock_tier0',
-    'edit_similarity_threshold', 'edit_link_injection_action', 'edit_tier_bypass',
+    'edit_monitor_enabled',
+    'edit_abuse_action',
+    'edit_lock_tier0',
+    'edit_similarity_threshold',
+    'edit_link_injection_action',
+    'edit_tier_bypass',
     // Intelligent Profiler
-    'profiler_enabled', 'profiler_action_link', 'profiler_action_forward', 'profiler_action_pattern',
+    'profiler_enabled',
+    'profiler_action_link',
+    'profiler_action_forward',
+    'profiler_action_pattern',
     // Keyword Monitor
     'keyword_sync_global',
     // Language Monitor
-    'lang_enabled', 'allowed_languages', 'lang_action', 'lang_min_chars',
-    'lang_confidence_threshold', 'lang_tier_bypass',
+    'lang_enabled',
+    'allowed_languages',
+    'lang_action',
+    'lang_min_chars',
+    'lang_confidence_threshold',
+    'lang_tier_bypass',
     // Link Monitor
-    'link_enabled', 'link_action_unknown', 'link_sync_global', 'link_tier_bypass',
+    'link_enabled',
+    'link_action_unknown',
+    'link_sync_global',
+    'link_tier_bypass',
     // NSFW Monitor
-    'nsfw_enabled', 'nsfw_action', 'nsfw_threshold', 'nsfw_check_photos',
-    'nsfw_check_videos', 'nsfw_check_gifs', 'nsfw_check_stickers',
-    'nsfw_frame_interval_percent', 'nsfw_tier_bypass', 'nsfw_blocked_categories',
+    'nsfw_enabled',
+    'nsfw_action',
+    'nsfw_threshold',
+    'nsfw_check_photos',
+    'nsfw_check_videos',
+    'nsfw_check_gifs',
+    'nsfw_check_stickers',
+    'nsfw_frame_interval_percent',
+    'nsfw_tier_bypass',
+    'nsfw_blocked_categories',
     // Visual Immune System
-    'visual_enabled', 'visual_action', 'visual_sync_global', 'visual_hamming_threshold',
+    'visual_enabled',
+    'visual_action',
+    'visual_sync_global',
+    'visual_hamming_threshold',
     // Vote Ban / Smart Report System
-    'voteban_enabled', 'voteban_threshold', 'voteban_duration_minutes',
-    'voteban_initiator_tier', 'voteban_voter_tier',
-    'report_mode', 'report_ai_fallback', 'report_context_messages',
-    'report_action_scam', 'report_action_nsfw', 'report_action_spam',
+    'voteban_enabled',
+    'voteban_threshold',
+    'voteban_duration_minutes',
+    'voteban_initiator_tier',
+    'voteban_voter_tier',
+    'report_mode',
+    'report_ai_fallback',
+    'report_context_messages',
+    'report_action_scam',
+    'report_action_nsfw',
+    'report_action_spam',
     // Modal Pattern System
-    'modal_enabled', 'modal_action', 'modal_sync_global', 'modal_tier_bypass',
+    'modal_enabled',
+    'modal_action',
+    'modal_sync_global',
+    'modal_tier_bypass',
     // CAS Ban / Global Blacklist
     'casban_enabled',
     // Welcome & Captcha System
-    'welcome_enabled', 'welcome_msg_enabled', 'welcome_message', 'welcome_buttons', 'captcha_enabled', 'captcha_mode', 'kick_timeout',
-    'welcome_autodelete_timer', 'rules_enabled', 'rules_link', 'captcha_logs_enabled',
+    'welcome_enabled',
+    'welcome_msg_enabled',
+    'welcome_message',
+    'welcome_buttons',
+    'captcha_enabled',
+    'captcha_mode',
+    'kick_timeout',
+    'welcome_autodelete_timer',
+    'rules_enabled',
+    'rules_link',
+    'captcha_logs_enabled',
     // UI Language
     'ui_language'
 ]);
@@ -203,12 +272,15 @@ async function upsertGuild(chat) {
     const { id, title } = chat;
     if (!title) return; // Should have title if group/supergroup
 
-    await query(`
+    await query(
+        `
         INSERT INTO guild_config (guild_id, guild_name) VALUES ($1, $2)
         ON CONFLICT (guild_id) DO UPDATE SET 
             guild_name = EXCLUDED.guild_name,
             updated_at = NOW()
-    `, [id, title]);
+    `,
+        [id, title]
+    );
 
     // Sync cache
     const key = String(id);

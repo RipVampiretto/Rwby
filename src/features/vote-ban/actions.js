@@ -12,18 +12,33 @@ async function finalizeVote(ctx, db, vote, status, admin) {
     let details = '';
     try {
         const voters = JSON.parse(vote.voters || '[]');
-        const fmt = (v) => `<a href="tg://user?id=${v.id}">${v.name}</a>`;
-        const yes = voters.filter(v => typeof v === 'object' && v.vote === 'yes').map(fmt).join(', ') || 'Nessuno';
-        const no = voters.filter(v => typeof v === 'object' && v.vote === 'no').map(fmt).join(', ') || 'Nessuno';
+        const fmt = v => `<a href="tg://user?id=${v.id}">${v.name}</a>`;
+        const yes =
+            voters
+                .filter(v => typeof v === 'object' && v.vote === 'yes')
+                .map(fmt)
+                .join(', ') || 'Nessuno';
+        const no =
+            voters
+                .filter(v => typeof v === 'object' && v.vote === 'no')
+                .map(fmt)
+                .join(', ') || 'Nessuno';
         details = `\n\n✅ Favorevoli: ${yes}\n🛡️ Contrari: ${no}`;
-    } catch (e) { }
+    } catch (e) {}
 
     if (status === 'passed' || status === 'forced_ban') {
         try {
-            await ctx.editMessageText(`⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è stato BANNATO.\nEsito: ${status === 'forced_ban' ? 'Forzato da Admin' : 'Votazione Conclusa'}`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
+            await ctx.editMessageText(
+                `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è stato BANNATO.\nEsito: ${status === 'forced_ban' ? 'Forzato da Admin' : 'Votazione Conclusa'}`,
+                { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
+            );
 
             // Delete after 1 minute
-            setTimeout(() => { try { ctx.deleteMessage().catch(() => { }); } catch (e) { } }, 60000);
+            setTimeout(() => {
+                try {
+                    ctx.deleteMessage().catch(() => {});
+                } catch (e) {}
+            }, 60000);
 
             await ctx.banChatMember(vote.target_user_id);
             userReputation.modifyFlux(vote.target_user_id, vote.chat_id, -200, 'vote_ban');
@@ -38,12 +53,21 @@ async function finalizeVote(ctx, db, vote, status, admin) {
                     flux: userReputation.getLocalFlux(vote.target_user_id, vote.chat_id)
                 });
             }
-        } catch (e) { logger.error(`[vote-ban] Finalize vote error: ${e.message}`); }
+        } catch (e) {
+            logger.error(`[vote-ban] Finalize vote error: ${e.message}`);
+        }
     } else {
-        await ctx.editMessageText(`⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO.\nEsito: ${status === 'pardon' ? 'Graziato da Admin' : 'Votazione Fallita'}`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } });
+        await ctx.editMessageText(
+            `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO.\nEsito: ${status === 'pardon' ? 'Graziato da Admin' : 'Votazione Fallita'}`,
+            { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
+        );
 
         // Delete after 1 minute
-        setTimeout(() => { try { ctx.deleteMessage().catch(() => { }); } catch (e) { } }, 60000);
+        setTimeout(() => {
+            try {
+                ctx.deleteMessage().catch(() => {});
+            } catch (e) {}
+        }, 60000);
     }
 
     const tags = ['#VOTE_BAN'];
@@ -91,15 +115,26 @@ async function processExpiredVotes(bot, db) {
             let details = '';
             try {
                 const voters = JSON.parse(vote.voters || '[]');
-                const fmt = (v) => `<a href="tg://user?id=${v.id}">${v.name}</a>`;
-                const yes = voters.filter(v => typeof v === 'object' && v.vote === 'yes').map(fmt).join(', ') || 'Nessuno';
-                const no = voters.filter(v => typeof v === 'object' && v.vote === 'no').map(fmt).join(', ') || 'Nessuno';
+                const fmt = v => `<a href="tg://user?id=${v.id}">${v.name}</a>`;
+                const yes =
+                    voters
+                        .filter(v => typeof v === 'object' && v.vote === 'yes')
+                        .map(fmt)
+                        .join(', ') || 'Nessuno';
+                const no =
+                    voters
+                        .filter(v => typeof v === 'object' && v.vote === 'no')
+                        .map(fmt)
+                        .join(', ') || 'Nessuno';
                 details = `\n\n✅ Favorevoli: ${yes}\n🛡️ Contrari: ${no}`;
-            } catch (e) { }
+            } catch (e) {}
 
             // Get Guild Name manually since we don't have ctx
             let guildName = 'Unknown Group';
-            try { const chat = await bot.api.getChat(vote.chat_id); guildName = chat.title; } catch (e) { }
+            try {
+                const chat = await bot.api.getChat(vote.chat_id);
+                guildName = chat.title;
+            } catch (e) {}
 
             // Log outcome
             if (adminLogger.getLogEvent()) {
@@ -110,7 +145,11 @@ async function processExpiredVotes(bot, db) {
                     guildName: guildName,
                     eventType: 'vote_ban',
                     customTags: ['#VOTE_BAN', '#EXPIRED'],
-                    targetUser: { id: vote.target_user_id, username: vote.target_username, first_name: vote.target_username },
+                    targetUser: {
+                        id: vote.target_user_id,
+                        username: vote.target_username,
+                        first_name: vote.target_username
+                    },
                     executorAdmin: { first_name: 'System (Expired)' },
                     reason: `Esito: Scaduto (Voti Insufficienti)${cleanReason}${details}`,
                     isGlobal: true
@@ -118,15 +157,19 @@ async function processExpiredVotes(bot, db) {
             }
 
             try {
-                await bot.api.editMessageText(vote.chat_id, vote.poll_message_id,
+                await bot.api.editMessageText(
+                    vote.chat_id,
+                    vote.poll_message_id,
                     `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO (Scaduto).\nEsito: Votazione Scaduta`,
                     { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
                 );
                 // Delete after 1 minute
                 setTimeout(() => {
-                    try { bot.api.deleteMessage(vote.chat_id, vote.poll_message_id).catch(() => { }); } catch (e) { }
+                    try {
+                        bot.api.deleteMessage(vote.chat_id, vote.poll_message_id).catch(() => {});
+                    } catch (e) {}
                 }, 60000);
-            } catch (e) { }
+            } catch (e) {}
             continue;
         }
 
@@ -135,9 +178,19 @@ async function processExpiredVotes(bot, db) {
             const { text, keyboard } = ui.getVoteMessage(
                 vote.guild_id,
                 { id: vote.target_user_id, username: vote.target_username },
-                null, vote.reason, vote.votes_yes, vote.votes_no, vote.required_votes, vote.expires_at, vote.vote_id, false
+                null,
+                vote.reason,
+                vote.votes_yes,
+                vote.votes_no,
+                vote.required_votes,
+                vote.expires_at,
+                vote.vote_id,
+                false
             );
-            await bot.api.editMessageText(vote.chat_id, vote.poll_message_id, text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            await bot.api.editMessageText(vote.chat_id, vote.poll_message_id, text, {
+                reply_markup: keyboard,
+                parse_mode: 'Markdown'
+            });
         } catch (e) {
             // "message is not modified"
         }

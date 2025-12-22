@@ -68,9 +68,7 @@ describe('Intelligent Profiler Logic', () => {
         });
 
         it('should escape non-regex patterns', async () => {
-            mockDb.queryAll.mockResolvedValue([
-                { word: 'test.pattern', is_regex: false }
-            ]);
+            mockDb.queryAll.mockResolvedValue([{ word: 'test.pattern', is_regex: false }]);
 
             const patterns = await logic.getScamPatterns();
 
@@ -154,7 +152,7 @@ describe('Intelligent Profiler Logic', () => {
 
         it('should detect scam patterns with score >= 2', async () => {
             // Mock: first call for whitelist (in scanMessage), second for patterns (in getScamPatterns)
-            mockDb.queryAll.mockImplementation((sql) => {
+            mockDb.queryAll.mockImplementation(sql => {
                 if (sql.includes('intel_data')) {
                     return Promise.resolve([]); // No whitelist
                 }

@@ -2,7 +2,7 @@
  * ============================================================================
  * MENU OWNERSHIP MIDDLEWARE
  * ============================================================================
- * 
+ *
  * Restricts ALL inline keyboard interactions to group admins only.
  * This prevents regular users from clicking config buttons, closing menus, etc.
  */
@@ -85,7 +85,7 @@ function adminOnlyCallbacks() {
         if (!isAdmin) {
             logger.debug(`[menu-ownership] Blocked callback from non-admin ${ctx.from?.id} in ${ctx.chat?.id}`);
             await ctx.answerCallbackQuery({
-                text: "⛔ Solo gli admin possono usare questo menu",
+                text: '⛔ Solo gli admin possono usare questo menu',
                 show_alert: true
             });
             return; // Stop propagation

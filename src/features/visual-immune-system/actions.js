@@ -12,17 +12,16 @@ async function executeAction(ctx, db, action, match, currentHash) {
         targetUser: user,
         executorAdmin: null,
         reason: `Visual Match (${match.category})`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     try {
-        await db.query("UPDATE visual_hashes SET match_count = match_count + 1 WHERE id = $1", [match.id]);
-    } catch (e) { }
+        await db.query('UPDATE visual_hashes SET match_count = match_count + 1 WHERE id = $1', [match.id]);
+    } catch (e) {}
 
     if (action === 'delete') {
         await safeDelete(ctx, 'visual-immune');
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'visual-immune');
         const banned = await safeBan(ctx, user.id, 'visual-immune');
 
@@ -46,8 +45,7 @@ async function executeAction(ctx, db, action, match, currentHash) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         await staffCoordination.reviewQueue(ctx.api, db, {
             guildId: ctx.chat.id,
             source: 'Visual-Immune',

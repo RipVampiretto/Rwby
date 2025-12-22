@@ -26,12 +26,14 @@ describe('Anti Edit Abuse Snapshots', () => {
         it('should store database reference', () => {
             snapshots.init(mockDb);
             // Verify by calling other functions
-            expect(() => snapshots.saveSnapshot({
-                message_id: 1,
-                chat: { id: -100 },
-                from: { id: 123 },
-                text: 'test'
-            })).not.toThrow();
+            expect(() =>
+                snapshots.saveSnapshot({
+                    message_id: 1,
+                    chat: { id: -100 },
+                    from: { id: 123 },
+                    text: 'test'
+                })
+            ).not.toThrow();
         });
     });
 
@@ -67,10 +69,7 @@ describe('Anti Edit Abuse Snapshots', () => {
             await snapshots.saveSnapshot(message);
 
             // 5th param is hasLink (true)
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining([true])
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([true]));
         });
 
         it('should handle no text', async () => {
@@ -83,22 +82,21 @@ describe('Anti Edit Abuse Snapshots', () => {
             await snapshots.saveSnapshot(message);
 
             // hasLink should be false
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining([false])
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([false]));
         });
 
         it('should not throw without db', async () => {
             jest.resetModules();
             const freshSnapshots = require('../../../src/features/anti-edit-abuse/snapshots');
 
-            await expect(freshSnapshots.saveSnapshot({
-                message_id: 1,
-                chat: { id: -100 },
-                from: { id: 1 },
-                text: 'test'
-            })).resolves.not.toThrow();
+            await expect(
+                freshSnapshots.saveSnapshot({
+                    message_id: 1,
+                    chat: { id: -100 },
+                    from: { id: 1 },
+                    text: 'test'
+                })
+            ).resolves.not.toThrow();
         });
     });
 
@@ -147,9 +145,7 @@ describe('Anti Edit Abuse Snapshots', () => {
         it('should delete old snapshots', async () => {
             await snapshots.cleanupSnapshots();
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining('DELETE FROM message_snapshots')
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM message_snapshots'));
         });
 
         it('should not throw without db', async () => {

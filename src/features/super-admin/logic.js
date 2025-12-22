@@ -3,31 +3,32 @@ const adminLogger = require('../admin-logger');
 const { safeDelete } = require('../../utils/error-handlers');
 
 async function forwardToParliament(bot, db, params) {
-    if (!bot) return logger.error("[super-admin] Bot instance missing in forwardToParliament");
+    if (!bot) return logger.error('[super-admin] Bot instance missing in forwardToParliament');
 
     try {
-        const globalConfig = await db.queryOne("SELECT * FROM global_config WHERE id = 1");
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
         if (!globalConfig || !globalConfig.parliament_group_id) return;
 
         let topicId = null;
         if (globalConfig.global_topics) {
             try {
-                const topics = typeof globalConfig.global_topics === 'string'
-                    ? JSON.parse(globalConfig.global_topics)
-                    : globalConfig.global_topics;
+                const topics =
+                    typeof globalConfig.global_topics === 'string'
+                        ? JSON.parse(globalConfig.global_topics)
+                        : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const keyboard = {
             inline_keyboard: [
                 [
-                    { text: "➕ Blacklist Link", callback_data: `bl_link::${params.guildId}:${params.messageId}` },
-                    { text: "➕ Blacklist Parola", callback_data: "bl_word" }
+                    { text: '➕ Blacklist Link', callback_data: `bl_link::${params.guildId}:${params.messageId}` },
+                    { text: '➕ Blacklist Parola', callback_data: 'bl_word' }
                 ],
                 [
-                    { text: "🌍 Global Ban", callback_data: `gban:${params.user.id}` },
-                    { text: "✅ Solo Locale", callback_data: `gban_skip:${params.messageId}` }
+                    { text: '🌍 Global Ban', callback_data: `gban:${params.user.id}` },
+                    { text: '✅ Solo Locale', callback_data: `gban_skip:${params.messageId}` }
                 ]
             ]
         };
@@ -37,10 +38,11 @@ async function forwardToParliament(bot, db, params) {
             try {
                 const url = new URL(linkMatch[0]);
                 keyboard.inline_keyboard[0][0].callback_data = `bl_link:${url.hostname}:${params.guildId}:${params.messageId}`;
-            } catch (e) { }
+            } catch (e) {}
         }
 
-        const text = `🔨 **BAN ESEGUITO**\n\n` +
+        const text =
+            `🔨 **BAN ESEGUITO**\n\n` +
             `🏛️ Gruppo: \`${params.guildId}\`\n` +
             `👤 Utente: [${params.user.first_name}](tg://user?id=${params.user.id}) (\`${params.user.id}\`)\n` +
             `📊 Flux: ${params.flux}\n` +
@@ -55,11 +57,13 @@ async function forwardToParliament(bot, db, params) {
         });
 
         const deleteAfter = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        await db.query(`
+        await db.query(
+            `
             INSERT INTO pending_deletions (message_id, chat_id, created_at, delete_after)
             VALUES ($1, $2, NOW(), $3)
-        `, [sentMsg.message_id, globalConfig.parliament_group_id, deleteAfter]);
-
+        `,
+            [sentMsg.message_id, globalConfig.parliament_group_id, deleteAfter]
+        );
     } catch (e) {
         logger.error(`[super-admin] Forward error: ${e.message}`);
     }
@@ -67,24 +71,27 @@ async function forwardToParliament(bot, db, params) {
 
 async function sendGlobalLog(bot, db, event) {
     try {
-        const globalConfig = await db.queryOne("SELECT * FROM global_config WHERE id = 1");
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
         if (!globalConfig || !globalConfig.global_log_channel) return;
 
         let threadId = null;
         if (globalConfig.global_topics && globalConfig.parliament_group_id === globalConfig.global_log_channel) {
             try {
-                const topics = typeof globalConfig.global_topics === 'string'
-                    ? JSON.parse(globalConfig.global_topics)
-                    : globalConfig.global_topics;
+                const topics =
+                    typeof globalConfig.global_topics === 'string'
+                        ? JSON.parse(globalConfig.global_topics)
+                        : globalConfig.global_topics;
                 if (event.eventType === 'bot_join' || event.eventType === 'bot_leave') threadId = topics.add_group;
-                else if (event.eventType === 'user_join' || event.eventType === 'user_leave') threadId = topics.join_logs;
+                else if (event.eventType === 'user_join' || event.eventType === 'user_leave')
+                    threadId = topics.join_logs;
                 else if (event.eventType === 'image_spam_check') threadId = topics.image_spam;
                 else if (event.eventType === 'link_check') threadId = topics.link_checks;
                 else threadId = topics.logs;
-            } catch (e) { }
+            } catch (e) {}
         }
 
-        const text = `📋 **GLOBAL LOG: ${event.eventType}**\n` +
+        const text =
+            `📋 **GLOBAL LOG: ${event.eventType}**\n` +
             `🏛️ Guild: \`${event.guildId}\`\n` +
             `👤 Executor: ${event.executor} | Target: ${event.target}\n` +
             `📝 Reason: ${event.reason}\n` +
@@ -100,47 +107,44 @@ async function sendGlobalLog(bot, db, event) {
                 await bot.api.sendMessage(globalConfig.global_log_channel, text, { parse_mode: 'Markdown' });
             }
         }
-
-    } catch (e) { }
+    } catch (e) {}
 }
 
 async function executeGlobalBan(ctx, db, bot, userId) {
     try {
-        await db.query("UPDATE users SET is_banned_global = TRUE WHERE user_id = $1", [userId]);
+        await db.query('UPDATE users SET is_banned_global = TRUE WHERE user_id = $1', [userId]);
 
-        await ctx.answerCallbackQuery("✅ Global Ban Recorded");
+        await ctx.answerCallbackQuery('✅ Global Ban Recorded');
         await ctx.editMessageCaption({
-            caption: ctx.callbackQuery.message.caption + "\n\n🌍 **GLOBALLY BANNED by " + ctx.from.first_name + "**"
+            caption: ctx.callbackQuery.message.caption + '\n\n🌍 **GLOBALLY BANNED by ' + ctx.from.first_name + '**'
         });
 
-        const guilds = await db.queryAll("SELECT guild_id FROM guild_config");
+        const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
         let count = 0;
         for (const g of guilds) {
             try {
                 await bot.api.banChatMember(g.guild_id, userId);
                 count++;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         await ctx.reply(`🌍 Global Ban propagato a ${count} gruppi.`);
-
     } catch (e) {
         logger.error(`[super-admin] Global Ban Error: ${e.message}`);
-        await ctx.reply("❌ Error executing global ban: " + e.message);
+        await ctx.reply('❌ Error executing global ban: ' + e.message);
     }
 }
-
 
 async function cleanupPendingDeletions(db, bot) {
     try {
         const now = new Date().toISOString();
-        const pending = await db.queryAll("SELECT * FROM pending_deletions WHERE delete_after < $1", [now]);
+        const pending = await db.queryAll('SELECT * FROM pending_deletions WHERE delete_after < $1', [now]);
 
         for (const p of pending) {
             try {
                 await bot.api.deleteMessage(p.chat_id, p.message_id);
-            } catch (e) { }
-            await db.query("DELETE FROM pending_deletions WHERE id = $1", [p.id]);
+            } catch (e) {}
+            await db.query('DELETE FROM pending_deletions WHERE id = $1', [p.id]);
         }
     } catch (e) {
         logger.error(`[super-admin] Cleanup error: ${e.message}`);
@@ -150,13 +154,13 @@ async function cleanupPendingDeletions(db, bot) {
 async function setupParliament(db, ctx, bot) {
     let topics = {};
     if (ctx.chat.is_forum) {
-        const bans = await ctx.createForumTopic("🔨 Bans");
-        const bills = await ctx.createForumTopic("📜 Bills");
-        const logs = await ctx.createForumTopic("📋 Logs");
-        const joinLogs = await ctx.createForumTopic("📥 Join Logs");
-        const addGroup = await ctx.createForumTopic("🆕 Add Group");
-        const imageSpam = await ctx.createForumTopic("🖼️ Image Spam");
-        const linkChecks = await ctx.createForumTopic("🔗 Link Checks");
+        const bans = await ctx.createForumTopic('🔨 Bans');
+        const bills = await ctx.createForumTopic('📜 Bills');
+        const logs = await ctx.createForumTopic('📋 Logs');
+        const joinLogs = await ctx.createForumTopic('📥 Join Logs');
+        const addGroup = await ctx.createForumTopic('🆕 Add Group');
+        const imageSpam = await ctx.createForumTopic('🖼️ Image Spam');
+        const linkChecks = await ctx.createForumTopic('🔗 Link Checks');
 
         topics = {
             bans: bans.message_thread_id,
@@ -168,16 +172,19 @@ async function setupParliament(db, ctx, bot) {
             link_checks: linkChecks.message_thread_id
         };
     } else {
-        await ctx.reply("⚠️ Ottimizzato per Forum (Topic). Creazione topic saltata.");
+        await ctx.reply('⚠️ Ottimizzato per Forum (Topic). Creazione topic saltata.');
     }
 
-    await db.query(`
+    await db.query(
+        `
         INSERT INTO global_config (id, parliament_group_id, global_topics) 
         VALUES (1, $1, $2)
         ON CONFLICT(id) DO UPDATE SET 
             parliament_group_id = $1, 
             global_topics = $2
-    `, [ctx.chat.id, JSON.stringify(topics)]);
+    `,
+        [ctx.chat.id, JSON.stringify(topics)]
+    );
 
     return topics;
 }

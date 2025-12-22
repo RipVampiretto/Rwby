@@ -7,7 +7,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const config = await db.fetchGuildConfig(guildId);
     const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : t('logger.channel_not_set');
 
-    const text = `${t('staff.title')}\n\n` +
+    const text =
+        `${t('staff.title')}\n\n` +
         `${t('staff.description')}\n\n` +
         `${t('staff.staff_group')}: ${staffGroup}\n\n` +
         `**${t('staff.commands_title')}:**\n` +
@@ -16,17 +17,17 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('staff.cmd_notes_add')}`;
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "stf_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'stf_close' };
 
     const keyboard = {
-        inline_keyboard: [
-            [closeBtn]
-        ]
+        inline_keyboard: [[closeBtn]]
     };
 
     if (isEdit) {
-        try { await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' }); } catch (e) { }
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -41,7 +42,7 @@ function formatNoteList(guildId, targetId, notes) {
 
     let text = `${t('staff.notes.title', { id: targetId })}\n\n`;
     notes.forEach(note => {
-        const icon = note.severity === 'critical' ? '🔴' : (note.severity === 'warning' ? '🟠' : '🔵');
+        const icon = note.severity === 'critical' ? '🔴' : note.severity === 'warning' ? '🟠' : '🔵';
         text += `${icon} <b>[${note.severity.toUpperCase()}]</b> ${note.created_at.substring(0, 10)}\n`;
         text += `└ ${note.note_text}\n\n`;
     });

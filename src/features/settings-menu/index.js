@@ -7,7 +7,7 @@ let _botInstance = null;
 
 function init(database) {
     db = database;
-    ui.setDb(database);  // Pass db to UI for staff group check
+    ui.setDb(database); // Pass db to UI for staff group check
 }
 
 function register(bot) {

@@ -32,7 +32,9 @@ async function processVisual(ctx, db, config) {
     } catch (e) {
         handleCriticalError('visual-immune', 'processVisual', e, ctx);
     } finally {
-        try { fs.unlinkSync(localPath); } catch (e) { }
+        try {
+            fs.unlinkSync(localPath);
+        } catch (e) {}
     }
 }
 
@@ -49,19 +51,20 @@ async function addToDb(ctx, db, msg, type, category) {
             `INSERT INTO visual_hashes (phash, type, category, guild_id, match_count, created_at) VALUES ($1, $2, $3, $4, 0, NOW())`,
             [hash, type, category, ctx.chat.id]
         );
-        await ctx.reply(`✅ Immagine salvata come **${type}** (${category}). Hash: \`${hash}\``, { parse_mode: 'Markdown' });
+        await ctx.reply(`✅ Immagine salvata come **${type}** (${category}). Hash: \`${hash}\``, {
+            parse_mode: 'Markdown'
+        });
     } catch (e) {
-        await ctx.reply("❌ Errore: " + e.message);
+        await ctx.reply('❌ Errore: ' + e.message);
     } finally {
-        try { fs.unlinkSync(localPath); } catch (e) { }
+        try {
+            fs.unlinkSync(localPath);
+        } catch (e) {}
     }
 }
 
 async function findMatch(db, targetHash, guildId, threshold) {
-    const hashes = await db.queryAll(
-        `SELECT * FROM visual_hashes WHERE guild_id = $1 OR guild_id = 0`,
-        [guildId]
-    );
+    const hashes = await db.queryAll(`SELECT * FROM visual_hashes WHERE guild_id = $1 OR guild_id = 0`, [guildId]);
 
     let bestMatch = null;
     let minDist = Infinity;
@@ -94,15 +97,17 @@ function hammingDistance(h1, h2) {
 async function downloadFile(url, dest) {
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(dest);
-        https.get(url, (response) => {
-            response.pipe(file);
-            file.on('finish', () => {
-                file.close(resolve);
+        https
+            .get(url, response => {
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close(resolve);
+                });
+            })
+            .on('error', err => {
+                fs.unlink(dest, () => {});
+                reject(err);
             });
-        }).on('error', (err) => {
-            fs.unlink(dest, () => { });
-            reject(err);
-        });
     });
 }
 

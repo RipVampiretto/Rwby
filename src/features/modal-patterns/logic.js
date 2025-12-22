@@ -15,7 +15,7 @@ async function refreshCache() {
     modalCacheTime = 0;
     if (db) {
         try {
-            modalCache = await db.queryAll("SELECT * FROM spam_modals WHERE enabled = TRUE");
+            modalCache = await db.queryAll('SELECT * FROM spam_modals WHERE enabled = TRUE');
             modalCacheTime = Date.now();
         } catch (e) {
             logger.error(`[modal-patterns] Failed to load modals: ${e.message}`);
@@ -31,21 +31,21 @@ async function getModalsForLanguages(languages) {
     if (!db) return [];
 
     if (Date.now() - modalCacheTime < CACHE_TTL && modalCache.length > 0) {
-        return modalCache.filter(m =>
-            languages.includes(m.language) || m.language === '*'
-        );
+        return modalCache.filter(m => languages.includes(m.language) || m.language === '*');
     }
 
     await refreshCache();
 
-    return modalCache.filter(m =>
-        languages.includes(m.language) || m.language === '*'
-    );
+    return modalCache.filter(m => languages.includes(m.language) || m.language === '*');
 }
 
 function safeJsonParse(str, defaultVal) {
     if (typeof str === 'object' && str !== null) return str;
-    try { return JSON.parse(str); } catch (e) { return defaultVal; }
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        return defaultVal;
+    }
 }
 
 /**
@@ -55,7 +55,7 @@ async function isModalEnabledForGuild(guildId, modalId) {
     if (!db) return true;
     try {
         const override = await db.queryOne(
-            "SELECT enabled FROM guild_modal_overrides WHERE guild_id = $1 AND modal_id = $2",
+            'SELECT enabled FROM guild_modal_overrides WHERE guild_id = $1 AND modal_id = $2',
             [guildId, modalId]
         );
         if (!override) return true;
@@ -91,7 +91,7 @@ async function checkMessageAgainstModals(ctx, config) {
     try {
         const parsed = safeJsonParse(config.allowed_languages, []);
         if (parsed.length > 0) allowedLangs = parsed;
-    } catch (e) { }
+    } catch (e) {}
 
     const modals = await getModalsForLanguages(allowedLangs);
     const guildId = ctx.chat.id;

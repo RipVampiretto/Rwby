@@ -87,16 +87,10 @@ describe('CAS Ban Actions', () => {
         });
 
         it('should ban new users across all guilds', async () => {
-            mockDb.queryAll.mockResolvedValue([
-                { guild_id: -100001 },
-                { guild_id: -100002 }
-            ]);
+            mockDb.queryAll.mockResolvedValue([{ guild_id: -100001 }, { guild_id: -100002 }]);
             mockDb.queryOne.mockResolvedValue(null); // No global config
 
-            const newUsers = [
-                { user_id: 111 },
-                { user_id: 222 }
-            ];
+            const newUsers = [{ user_id: 111 }, { user_id: 222 }];
 
             await processNewCasBans(newUsers);
 

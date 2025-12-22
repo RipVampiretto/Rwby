@@ -1,9 +1,19 @@
 function checkSpamLimits(stats, config) {
     const sensitivity = config.spam_sensitivity || 'medium';
-    let limit10s = 5, limit60s = 10, limitDup = 3;
+    let limit10s = 5,
+        limit60s = 10,
+        limitDup = 3;
 
-    if (sensitivity === 'high') { limit10s = 3; limit60s = 5; limitDup = 2; }
-    if (sensitivity === 'low') { limit10s = 8; limit60s = 15; limitDup = 5; }
+    if (sensitivity === 'high') {
+        limit10s = 3;
+        limit60s = 5;
+        limitDup = 2;
+    }
+    if (sensitivity === 'low') {
+        limit10s = 8;
+        limit60s = 15;
+        limitDup = 5;
+    }
 
     // Override if in DB custom
     if (config.spam_volume_limit_10s) limit10s = config.spam_volume_limit_10s;

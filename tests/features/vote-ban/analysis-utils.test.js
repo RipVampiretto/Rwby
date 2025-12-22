@@ -234,9 +234,7 @@ describe('Vote Ban Analysis Utils', () => {
         });
 
         it('should detect violations in context', async () => {
-            getContext.mockReturnValue([
-                { messageId: 1, text: 'This is scam content detected' }
-            ]);
+            getContext.mockReturnValue([{ messageId: 1, text: 'This is scam content detected' }]);
 
             aiApi.processWithAI.mockResolvedValue({
                 category: 'scam',
@@ -245,16 +243,18 @@ describe('Vote Ban Analysis Utils', () => {
             });
 
             const ctx = { chat: { id: -100 } };
-            const result = await analyzeContextMessages(ctx, { ai_confidence_threshold: 0.75, report_action_scam: 'delete' }, 10);
+            const result = await analyzeContextMessages(
+                ctx,
+                { ai_confidence_threshold: 0.75, report_action_scam: 'delete' },
+                10
+            );
 
             expect(result[0].isViolation).toBe(true);
             expect(result[0].category).toBe('scam');
         });
 
         it('should skip short messages', async () => {
-            getContext.mockReturnValue([
-                { messageId: 1, text: 'Hi' }
-            ]);
+            getContext.mockReturnValue([{ messageId: 1, text: 'Hi' }]);
 
             const ctx = { chat: { id: -100 } };
             const result = await analyzeContextMessages(ctx, {}, 10);

@@ -7,7 +7,8 @@ function getVoteMessage(guildId, target, initiator, reason, yes, no, required, e
     const minLeft = Math.max(0, Math.ceil((new Date(expires) - Date.now()) / 60000));
     const timeDisplay = noExpiry ? '♾️' : `${minLeft} min`;
 
-    const text = `${t('voteban.vote_message.title')}\n\n` +
+    const text =
+        `${t('voteban.vote_message.title')}\n\n` +
         `${t('voteban.vote_message.votes', { current: yes + no, required: required })}\n` +
         `${t('voteban.vote_message.expires', { time: timeDisplay })}\n\n` +
         `_${t('voteban.vote_message.description')}_`;
@@ -28,9 +29,9 @@ function getVoteMessage(guildId, target, initiator, reason, yes, no, required, e
  */
 function getReportModeDisplay(mode, t) {
     const modes = {
-        'voteban_only': t('voteban.modes.voteban_only'),
-        'ai_only': t('voteban.modes.ai_only'),
-        'ai_voteban': t('voteban.modes.ai_voteban')
+        voteban_only: t('voteban.modes.voteban_only'),
+        ai_only: t('voteban.modes.ai_only'),
+        ai_voteban: t('voteban.modes.ai_voteban')
     };
     return modes[mode] || modes['ai_voteban'];
 }
@@ -53,7 +54,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const reportMode = config.report_mode || 'ai_voteban';
     const reportModeDisplay = getReportModeDisplay(reportMode, t);
 
-    const text = `${t('voteban.title')}\n\n` +
+    const text =
+        `${t('voteban.title')}\n\n` +
         `${t('voteban.description')}\n\n` +
         `ℹ️ **${t('voteban.how_to_use')}:**\n` +
         `${t('voteban.usage_info')}\n\n` +
@@ -67,17 +69,17 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('voteban.report_mode')}: ${reportModeDisplay}`;
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "vb_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'vb_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('voteban.buttons.system')}: ${enabled}`, callback_data: "vb_toggle" }],
-            [{ text: `${t('voteban.buttons.threshold')}: ${thr}`, callback_data: "vb_thr" }],
-            [{ text: `${t('voteban.buttons.duration')}: ${durDisplay}`, callback_data: "vb_dur" }],
-            [{ text: `${t('voteban.buttons.tier')}: ${tierDisplay}`, callback_data: "vb_tier" }],
-            [{ text: `📊 ${t('voteban.buttons.report_mode')}: ${reportModeDisplay}`, callback_data: "vb_mode" }],
-            [{ text: `⚙️ ${t('voteban.buttons.category_actions')}`, callback_data: "vb_cat_actions" }],
+            [{ text: `${t('voteban.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }],
+            [{ text: `${t('voteban.buttons.threshold')}: ${thr}`, callback_data: 'vb_thr' }],
+            [{ text: `${t('voteban.buttons.duration')}: ${durDisplay}`, callback_data: 'vb_dur' }],
+            [{ text: `${t('voteban.buttons.tier')}: ${tierDisplay}`, callback_data: 'vb_tier' }],
+            [{ text: `📊 ${t('voteban.buttons.report_mode')}: ${reportModeDisplay}`, callback_data: 'vb_mode' }],
+            [{ text: `⚙️ ${t('voteban.buttons.category_actions')}`, callback_data: 'vb_cat_actions' }],
             [closeBtn]
         ]
     };
@@ -94,9 +96,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
  */
 function getActionDisplay(action, t) {
     const actions = {
-        'delete': t('common.delete'),
-        'ban': t('common.ban'),
-        'report_only': t('common.report_only')
+        delete: t('common.delete'),
+        ban: t('common.ban'),
+        report_only: t('common.report_only')
     };
     return actions[action] || actions['report_only'];
 }
@@ -114,7 +116,8 @@ async function sendCategoryActionsUI(ctx, db, isEdit = false) {
     const nsfwAction = config.report_action_nsfw || 'report_only';
     const spamAction = config.report_action_spam || 'report_only';
 
-    const text = `${t('smart_report.category_title')}\n\n` +
+    const text =
+        `${t('smart_report.category_title')}\n\n` +
         `${t('smart_report.category_subtitle')}\n\n` +
         `🎭 **Scam**: ${getActionDisplay(scamAction, t)}\n` +
         `🔞 **NSFW**: ${getActionDisplay(nsfwAction, t)}\n` +
@@ -122,10 +125,10 @@ async function sendCategoryActionsUI(ctx, db, isEdit = false) {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `🎭 Scam: ${getActionDisplay(scamAction, t)}`, callback_data: "report_cat_scam" }],
-            [{ text: `🔞 NSFW: ${getActionDisplay(nsfwAction, t)}`, callback_data: "report_cat_nsfw" }],
-            [{ text: `📢 Spam: ${getActionDisplay(spamAction, t)}`, callback_data: "report_cat_spam" }],
-            [{ text: t('common.back'), callback_data: "vb_back_main" }]
+            [{ text: `🎭 Scam: ${getActionDisplay(scamAction, t)}`, callback_data: 'report_cat_scam' }],
+            [{ text: `🔞 NSFW: ${getActionDisplay(nsfwAction, t)}`, callback_data: 'report_cat_nsfw' }],
+            [{ text: `📢 Spam: ${getActionDisplay(spamAction, t)}`, callback_data: 'report_cat_spam' }],
+            [{ text: t('common.back'), callback_data: 'vb_back_main' }]
         ]
     };
 
@@ -141,4 +144,3 @@ module.exports = {
     sendConfigUI,
     sendCategoryActionsUI
 };
-

@@ -2,7 +2,14 @@
  * Tests for user-reputation/logic.js
  */
 
-const { TIER_THRESHOLDS, TIER_INFO, getUserTier, getLocalFlux, getGlobalFlux, modifyFlux } = require('../../../src/features/user-reputation/logic');
+const {
+    TIER_THRESHOLDS,
+    TIER_INFO,
+    getUserTier,
+    getLocalFlux,
+    getGlobalFlux,
+    modifyFlux
+} = require('../../../src/features/user-reputation/logic');
 
 // Mock database
 const mockDb = {
@@ -115,10 +122,7 @@ describe('User Reputation Logic', () => {
             mockDb.queryOne.mockResolvedValue({ local_flux: 100 });
             await getLocalFlux(mockDb, 123, 456);
 
-            expect(mockDb.queryOne).toHaveBeenCalledWith(
-                expect.stringContaining('user_trust_flux'),
-                [123, 456]
-            );
+            expect(mockDb.queryOne).toHaveBeenCalledWith(expect.stringContaining('user_trust_flux'), [123, 456]);
         });
     });
 
@@ -156,10 +160,7 @@ describe('User Reputation Logic', () => {
             await modifyFlux(mockDb, 123, 456, 100, 'test');
 
             // The newFlux should be clamped to 1000
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining([123, 456, 1000])
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([123, 456, 1000]));
         });
 
         it('should clamp flux to min -1000', async () => {
@@ -169,10 +170,7 @@ describe('User Reputation Logic', () => {
             await modifyFlux(mockDb, 123, 456, -100, 'test');
 
             // The newFlux should be clamped to -1000
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining([123, 456, -1000])
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([123, 456, -1000]));
         });
 
         it('should handle positive delta', async () => {
@@ -181,10 +179,7 @@ describe('User Reputation Logic', () => {
 
             await modifyFlux(mockDb, 123, 456, 50, 'bonus');
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining([123, 456, 150])
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([123, 456, 150]));
         });
 
         it('should handle negative delta', async () => {
@@ -193,10 +188,7 @@ describe('User Reputation Logic', () => {
 
             await modifyFlux(mockDb, 123, 456, -30, 'penalty');
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.arrayContaining([123, 456, 70])
-            );
+            expect(mockDb.query).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([123, 456, 70]));
         });
     });
 });

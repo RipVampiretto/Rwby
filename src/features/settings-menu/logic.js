@@ -29,7 +29,7 @@ async function routeToFeature(ctx, feature) {
             break;
         case 'antispam':
             // DISABLED
-            await ctx.answerCallbackQuery("Anti-Spam module is disabled.");
+            await ctx.answerCallbackQuery('Anti-Spam module is disabled.');
             break;
         case 'aimod':
             if (aiModeration.sendConfigUI) await aiModeration.sendConfigUI(ctx, true, true);
@@ -39,7 +39,7 @@ async function routeToFeature(ctx, feature) {
             break;
         case 'profiler':
             // DISABLED
-            await ctx.answerCallbackQuery("Profiler module is disabled.");
+            await ctx.answerCallbackQuery('Profiler module is disabled.');
             break;
         case 'badwords':
             // keywordMonitor has Wizard, might be tricky. Check sendConfigUI
@@ -56,7 +56,7 @@ async function routeToFeature(ctx, feature) {
             break;
         case 'visual':
             // DISABLED TEMPORARILY
-            await ctx.answerCallbackQuery("⚠️ Visual Immune System è temporaneamente disabilitato.");
+            await ctx.answerCallbackQuery('⚠️ Visual Immune System è temporaneamente disabilitato.');
             break;
         case 'voteban':
             if (voteBan.sendConfigUI) await voteBan.sendConfigUI(ctx, true, true);
@@ -66,18 +66,18 @@ async function routeToFeature(ctx, feature) {
             break;
         case 'staff':
             if (staffCoordination.sendConfigUI) await staffCoordination.sendConfigUI(ctx, true, true);
-            else await ctx.answerCallbackQuery("Configurazione Staff via comandi (/setstaff)");
+            else await ctx.answerCallbackQuery('Configurazione Staff via comandi (/setstaff)');
             break;
         case 'intel':
             // DISABLED
-            await ctx.answerCallbackQuery("Intel Network module is disabled.");
+            await ctx.answerCallbackQuery('Intel Network module is disabled.');
             break;
         case 'modals':
             if (modalPatterns.sendConfigUI) await modalPatterns.sendConfigUI(ctx, true, true);
             break;
         case 'casban':
             if (casBan.sendConfigUI) await casBan.sendConfigUI(ctx, true, true);
-            else await ctx.answerCallbackQuery("CAS Ban attivo. Usa /cassync per sync manuale.");
+            else await ctx.answerCallbackQuery('CAS Ban attivo. Usa /cassync per sync manuale.');
             break;
         case 'ui_lang':
             await ui.sendLanguageUI(ctx);
@@ -90,7 +90,7 @@ async function handleLanguageChange(ctx, langCode) {
     const availableLangs = i18n.getAvailableLanguages();
 
     if (!availableLangs[langCode]) {
-        await ctx.answerCallbackQuery("Invalid language");
+        await ctx.answerCallbackQuery('Invalid language');
         return;
     }
 

@@ -90,15 +90,17 @@ async function notifyParliament(newUsers, banCount, guildCount) {
         let topicId = null;
         if (globalConfig.global_topics) {
             try {
-                const topics = typeof globalConfig.global_topics === 'string'
-                    ? JSON.parse(globalConfig.global_topics)
-                    : globalConfig.global_topics;
+                const topics =
+                    typeof globalConfig.global_topics === 'string'
+                        ? JSON.parse(globalConfig.global_topics)
+                        : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const processedCount = Math.min(newUsers.length, 100);
-        const text = `🛡️ **CAS SYNC REPORT**\n\n` +
+        const text =
+            `🛡️ **CAS SYNC REPORT**\n\n` +
             `📊 Nuovi ban CAS rilevati: **${newUsers.length.toLocaleString()}**\n` +
             `🌍 Global ban eseguiti: **${banCount}** (su ${guildCount} gruppi)\n` +
             `👥 Utenti processati: ${processedCount}${newUsers.length > 100 ? ' (limite)' : ''}\n` +

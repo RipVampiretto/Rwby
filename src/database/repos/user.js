@@ -15,7 +15,8 @@ async function getUser(userId) {
  */
 async function upsertUser(userInfo) {
     const { id, username, first_name, last_name, is_bot, language_code } = userInfo;
-    await query(`
+    await query(
+        `
         INSERT INTO users (user_id, username, first_name, last_name, is_bot, language_code, last_seen)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
         ON CONFLICT (user_id) DO UPDATE SET
@@ -24,7 +25,9 @@ async function upsertUser(userInfo) {
             last_name = EXCLUDED.last_name,
             language_code = EXCLUDED.language_code,
             last_seen = NOW()
-    `, [id, username, first_name, last_name, is_bot || false, language_code]);
+    `,
+        [id, username, first_name, last_name, is_bot || false, language_code]
+    );
 }
 
 /**

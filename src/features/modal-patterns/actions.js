@@ -15,15 +15,16 @@ async function executeAction(ctx, action, category, pattern, similarity) {
         targetUser: user,
         executorAdmin: null,
         reason: `Modal: ${category} (${Math.round(similarity * 100)}% match)`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
-    logger.info(`[modal-patterns] Match: ${category} | User: ${user.id} | Sim: ${Math.round(similarity * 100)}% | Action: ${action}`);
+    logger.info(
+        `[modal-patterns] Match: ${category} | User: ${user.id} | Sim: ${Math.round(similarity * 100)}% | Action: ${action}`
+    );
 
     if (action === 'delete') {
         await safeDelete(ctx, 'modal-patterns');
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         await safeDelete(ctx, 'modal-patterns');
         const banned = await safeBan(ctx, user.id, 'modal-patterns');
 
@@ -44,8 +45,7 @@ async function executeAction(ctx, action, category, pattern, similarity) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Modal Pattern',

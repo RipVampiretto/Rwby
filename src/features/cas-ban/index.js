@@ -49,7 +49,7 @@ function register(bot) {
     });
 
     // Register super admin command for manual sync
-    bot.command('cassync', async (ctx) => {
+    bot.command('cassync', async ctx => {
         const { isSuperAdmin } = require('../../utils/error-handlers');
         if (!isSuperAdmin(ctx.from.id)) {
             return ctx.reply('❌ Solo super admin possono usare questo comando.');
@@ -66,8 +66,8 @@ function register(bot) {
         if (!data.startsWith('cas_')) return next();
 
         const config = db.getGuildConfig(ctx.chat.id);
-        const fromSettings = ctx.callbackQuery.message?.reply_markup?.inline_keyboard?.some(
-            row => row.some(btn => btn.callback_data === 'settings_main')
+        const fromSettings = ctx.callbackQuery.message?.reply_markup?.inline_keyboard?.some(row =>
+            row.some(btn => btn.callback_data === 'settings_main')
         );
 
         if (data === 'cas_close') {

@@ -182,9 +182,7 @@ describe('Error Handlers', () => {
                 callbackQuery: {
                     message: {
                         reply_markup: {
-                            inline_keyboard: [
-                                [{ text: 'Back', callback_data: 'settings_main' }]
-                            ]
+                            inline_keyboard: [[{ text: 'Back', callback_data: 'settings_main' }]]
                         }
                     }
                 }
@@ -198,9 +196,7 @@ describe('Error Handlers', () => {
                 callbackQuery: {
                     message: {
                         reply_markup: {
-                            inline_keyboard: [
-                                [{ text: 'Other', callback_data: 'other' }]
-                            ]
+                            inline_keyboard: [[{ text: 'Other', callback_data: 'other' }]]
                         }
                     }
                 }

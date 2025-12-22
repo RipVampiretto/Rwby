@@ -15,7 +15,7 @@ async function executeAction(ctx, action, reason, type) {
         eventType: eventType,
         targetUser: user,
         reason: `NSFW (${type}): ${reason}`,
-        isGlobal: (action === 'ban')
+        isGlobal: action === 'ban'
     };
 
     if (action === 'delete') {
@@ -27,8 +27,7 @@ async function executeAction(ctx, action, reason, type) {
 
         await safeDelete(ctx, 'nsfw-monitor');
         if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-    }
-    else if (action === 'ban') {
+    } else if (action === 'ban') {
         // Forward original media to Parliament BEFORE deleting
         if (superAdmin.forwardMediaToParliament) {
             const caption = `🖼️ NSFW Detected + BAN\n\nGruppo: ${ctx.chat.title}\nUser: ${user.first_name} (@${user.username || 'N/A'})\nUser ID: ${user.id}\nResult: ${reason}\nAction: BAN`;
@@ -54,8 +53,7 @@ async function executeAction(ctx, action, reason, type) {
             logParams.eventType = 'ban';
             if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
         }
-    }
-    else if (action === 'report_only') {
+    } else if (action === 'report_only') {
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'NSFW-Mon',

@@ -8,19 +8,20 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const config = await db.fetchGuildConfig(guildId);
     const syncGlobal = config.keyword_sync_global ? t('common.on') : t('common.off');
 
-    const text = `${t('keyword.title')}\n\n` +
+    const text =
+        `${t('keyword.title')}\n\n` +
         `${t('keyword.description')}\n\n` +
         `ℹ️ **${t('keyword.info_title')}:**\n` +
         `• ${t('keyword.info_1')}\n\n` +
         `${t('keyword.global_sync')}: ${syncGlobal}`;
 
     const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: "settings_main" }
-        : { text: t('common.close'), callback_data: "wrd_close" };
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'wrd_close' };
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: `${t('keyword.buttons.sync')}: ${syncGlobal}`, callback_data: "wrd_sync" }],
+            [{ text: `${t('keyword.buttons.sync')}: ${syncGlobal}`, callback_data: 'wrd_sync' }],
             [closeBtn]
         ]
     };

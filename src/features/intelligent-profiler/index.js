@@ -6,7 +6,7 @@
 
 const logic = require('./logic');
 const commands = require('./commands');
-const ui = require('./ui');    
+const ui = require('./ui');
 
 let db = null;
 

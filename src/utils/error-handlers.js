@@ -2,7 +2,7 @@
  * ============================================================================
  * ERROR HANDLERS - Utility functions for consistent error handling
  * ============================================================================
- * 
+ *
  * Provides safe wrappers for common Telegram operations that may fail,
  * with proper logging and context.
  */
@@ -140,11 +140,11 @@ function isFromSettingsMenu(ctx) {
     try {
         const markup = ctx.callbackQuery?.message?.reply_markup;
         if (markup && markup.inline_keyboard) {
-            return markup.inline_keyboard.some(row =>
-                row.some(btn => btn.callback_data === 'settings_main')
-            );
+            return markup.inline_keyboard.some(row => row.some(btn => btn.callback_data === 'settings_main'));
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+        /* ignore */
+    }
     return false;
 }
 

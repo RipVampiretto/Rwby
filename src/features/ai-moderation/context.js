@@ -8,14 +8,14 @@ const MAX_CONTEXT_SIZE = 20; // Keep last 20 messages per chat (for Smart Report
  */
 function registerContextMiddleware(bot) {
     // Handle text messages
-    bot.on("message:text", async (ctx, next) => {
+    bot.on('message:text', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
         addToBuffer(ctx, ctx.message.text, null);
         await next();
     });
 
     // Handle photos
-    bot.on("message:photo", async (ctx, next) => {
+    bot.on('message:photo', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
         const caption = ctx.message.caption || '';
         addToBuffer(ctx, caption, 'photo');
@@ -23,7 +23,7 @@ function registerContextMiddleware(bot) {
     });
 
     // Handle videos
-    bot.on("message:video", async (ctx, next) => {
+    bot.on('message:video', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
         const caption = ctx.message.caption || '';
         addToBuffer(ctx, caption, 'video');
@@ -31,7 +31,7 @@ function registerContextMiddleware(bot) {
     });
 
     // Handle animations/GIFs
-    bot.on("message:animation", async (ctx, next) => {
+    bot.on('message:animation', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
         const caption = ctx.message.caption || '';
         addToBuffer(ctx, caption, 'animation');
@@ -39,7 +39,7 @@ function registerContextMiddleware(bot) {
     });
 
     // Handle stickers
-    bot.on("message:sticker", async (ctx, next) => {
+    bot.on('message:sticker', async (ctx, next) => {
         if (ctx.chat.type === 'private') return next();
         addToBuffer(ctx, '', 'sticker');
         await next();

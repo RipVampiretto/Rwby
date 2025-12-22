@@ -6,9 +6,9 @@ const logger = require('../middlewares/logger');
 // Configuration
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(process.cwd(), 'backups');
 const RETENTION = {
-    hourly: parseInt(process.env.BACKUP_RETENTION_HOURS) || 24,  // Keep 24 hourly backups
-    daily: parseInt(process.env.BACKUP_RETENTION_DAYS) || 7,     // Keep 7 daily backups
-    weekly: parseInt(process.env.BACKUP_RETENTION_WEEKS) || 4    // Keep 4 weekly backups
+    hourly: parseInt(process.env.BACKUP_RETENTION_HOURS) || 24, // Keep 24 hourly backups
+    daily: parseInt(process.env.BACKUP_RETENTION_DAYS) || 7, // Keep 7 daily backups
+    weekly: parseInt(process.env.BACKUP_RETENTION_WEEKS) || 4 // Keep 4 weekly backups
 };
 
 // Ensure backup directory exists
@@ -83,7 +83,8 @@ function cleanupOldBackups(type) {
     const dir = path.join(BACKUP_DIR, type);
     if (!fs.existsSync(dir)) return;
 
-    const files = fs.readdirSync(dir)
+    const files = fs
+        .readdirSync(dir)
         .filter(f => f.endsWith('.sql'))
         .map(f => ({
             name: f,
@@ -112,34 +113,43 @@ function startScheduler() {
     logger.info('[backup] Starting backup scheduler');
 
     // Hourly backup - every hour
-    setInterval(async () => {
-        try {
-            await runBackup('hourly');
-            cleanupOldBackups('hourly');
-        } catch (e) {
-            logger.error(`[backup] Hourly backup error: ${e.message}`);
-        }
-    }, 60 * 60 * 1000); // 1 hour
+    setInterval(
+        async () => {
+            try {
+                await runBackup('hourly');
+                cleanupOldBackups('hourly');
+            } catch (e) {
+                logger.error(`[backup] Hourly backup error: ${e.message}`);
+            }
+        },
+        60 * 60 * 1000
+    ); // 1 hour
 
     // Daily backup - every 24 hours
-    setInterval(async () => {
-        try {
-            await runBackup('daily');
-            cleanupOldBackups('daily');
-        } catch (e) {
-            logger.error(`[backup] Daily backup error: ${e.message}`);
-        }
-    }, 24 * 60 * 60 * 1000); // 24 hours
+    setInterval(
+        async () => {
+            try {
+                await runBackup('daily');
+                cleanupOldBackups('daily');
+            } catch (e) {
+                logger.error(`[backup] Daily backup error: ${e.message}`);
+            }
+        },
+        24 * 60 * 60 * 1000
+    ); // 24 hours
 
     // Weekly backup - every 7 days
-    setInterval(async () => {
-        try {
-            await runBackup('weekly');
-            cleanupOldBackups('weekly');
-        } catch (e) {
-            logger.error(`[backup] Weekly backup error: ${e.message}`);
-        }
-    }, 7 * 24 * 60 * 60 * 1000); // 7 days
+    setInterval(
+        async () => {
+            try {
+                await runBackup('weekly');
+                cleanupOldBackups('weekly');
+            } catch (e) {
+                logger.error(`[backup] Weekly backup error: ${e.message}`);
+            }
+        },
+        7 * 24 * 60 * 60 * 1000
+    ); // 7 days
 
     // Run initial hourly backup on start
     setTimeout(async () => {
@@ -192,7 +202,8 @@ function listBackups() {
     for (const type of ['hourly', 'daily', 'weekly']) {
         const dir = path.join(BACKUP_DIR, type);
         if (fs.existsSync(dir)) {
-            result[type] = fs.readdirSync(dir)
+            result[type] = fs
+                .readdirSync(dir)
                 .filter(f => f.endsWith('.sql'))
                 .map(f => {
                     const stats = fs.statSync(path.join(dir, f));
