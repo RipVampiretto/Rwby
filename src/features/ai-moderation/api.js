@@ -1,4 +1,5 @@
 const logger = require('../../middlewares/logger');
+const config = require('../../config/env');
 
 const CACHE = new Map(); // Simple cache for message hashes
 const CACHE_TTL = 3600000; // 1 hour
@@ -27,7 +28,7 @@ function djb2(str) {
     return hash;
 }
 
-async function processWithAI(text, contextMessages, config, model = null) {
+async function processWithAI(text, contextMessages, guildConfig, model = null) {
     // Create cache key including context and model
     const contextStr = contextMessages.map(m => m.text).join('|');
     const hash = djb2(text + contextStr + (model || ''));
@@ -37,15 +38,15 @@ async function processWithAI(text, contextMessages, config, model = null) {
         return cached.res;
     }
 
-    const result = await callLLM(text, contextMessages, config, model);
+    const result = await callLLM(text, contextMessages, guildConfig, model);
     CACHE.set(hash, { ts: Date.now(), res: result });
 
     return result;
 }
 
-async function callLLM(text, contextMessages, config, model = null) {
-    const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
-    const modelToUse = model || process.env.LM_STUDIO_MODEL || undefined;
+async function callLLM(text, contextMessages, guildConfig, model = null) {
+    const url = config.LM_STUDIO.url;
+    const modelToUse = model || config.LM_STUDIO.model;
 
     // Build context string
     let contextStr = '';
@@ -69,7 +70,7 @@ Respond with ONLY a JSON object:
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        const timeout = setTimeout(() => controller.abort(), config.AI_TIMEOUTS.text);
 
         const response = await fetch(`${url}/v1/chat/completions`, {
             method: 'POST',
@@ -104,9 +105,9 @@ Respond with ONLY a JSON object:
 
 async function testConnection(ctx) {
     try {
-        const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+        const url = config.LM_STUDIO.url;
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
+        const timeout = setTimeout(() => controller.abort(), config.AI_TIMEOUTS.healthCheck);
         await fetch(`${url}/v1/models`, { signal: controller.signal });
         clearTimeout(timeout);
         await ctx.reply('✅ Connessione LM Studio con successo!');

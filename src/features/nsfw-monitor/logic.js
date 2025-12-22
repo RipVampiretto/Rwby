@@ -10,6 +10,7 @@ fluentFfmpeg.setFfprobePath(ffprobePath);
 
 const logger = require('../../middlewares/logger');
 const actions = require('./actions');
+const envConfig = require('../../config/env');
 
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'nsfw');
 
@@ -209,7 +210,7 @@ async function processMedia(ctx, config) {
         logger.debug(`[nsfw-monitor] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 
@@ -230,7 +231,7 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[nsfw-monitor] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => {});
+                fs.unlink(dest, () => { });
                 reject(err);
             });
     });
@@ -366,7 +367,7 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
     logger.info(`[nsfw-monitor] 🎬 Final frame count: ${validFrames.length}`);
 
     // Batch frames for LLM analysis
-    const BATCH_SIZE = parseInt(process.env.LM_STUDIO_BATCH_SIZE) || 5;
+    const BATCH_SIZE = envConfig.LM_STUDIO.batchSize;
     const batches = [];
     for (let i = 0; i < validFrames.length; i += BATCH_SIZE) {
         batches.push(validFrames.slice(i, i + BATCH_SIZE));
@@ -415,7 +416,7 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 }
@@ -491,8 +492,8 @@ function getDefaultBlockedCategories() {
     return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'drawn_gore', 'minors'];
 }
 
-async function callVisionLLM(base64Image, config, caption = null) {
-    const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+async function callVisionLLM(base64Image, guildConfig, caption = null) {
+    const url = envConfig.LM_STUDIO.url;
     logger.debug(`[nsfw-monitor] 🤖 callVisionLLM: Connecting to ${url}`);
 
     // Build category list for prompt
@@ -523,9 +524,9 @@ Respond ONLY with a JSON object:
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => {
-            logger.warn(`[nsfw-monitor] ⏰ LLM request timeout (60s)`);
+            logger.warn(`[nsfw-monitor] ⏰ LLM request timeout (${envConfig.AI_TIMEOUTS.vision}ms)`);
             controller.abort();
-        }, 60000);
+        }, envConfig.AI_TIMEOUTS.vision);
 
         logger.debug(`[nsfw-monitor] 🤖 Sending request to LLM API...`);
         const requestStart = Date.now();
@@ -534,7 +535,7 @@ Respond ONLY with a JSON object:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: process.env.LM_STUDIO_NSFW_MODEL || undefined,
+                model: envConfig.LM_STUDIO.nsfwModel,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     {
@@ -599,8 +600,8 @@ Respond ONLY with a JSON object:
  * @param {number[]} timestamps - Timestamps for each frame (for logging)
  * @returns {Promise<{isNsfw: boolean, reason: string}>}
  */
-async function callVisionLLMBatch(base64Images, config, caption = null, timestamps = []) {
-    const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+async function callVisionLLMBatch(base64Images, guildConfig, caption = null, timestamps = []) {
+    const url = envConfig.LM_STUDIO.url;
     logger.debug(`[nsfw-monitor] 🤖 callVisionLLMBatch: Analyzing ${base64Images.length} images`);
 
     // Get blocked categories for this guild
@@ -652,9 +653,9 @@ Respond ONLY with a JSON object:
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => {
-            logger.warn(`[nsfw-monitor] ⏰ Batch LLM request timeout (90s)`);
+            logger.warn(`[nsfw-monitor] ⏰ Batch LLM request timeout (${envConfig.AI_TIMEOUTS.visionBatch}ms)`);
             controller.abort();
-        }, 90000); // Longer timeout for batch
+        }, envConfig.AI_TIMEOUTS.visionBatch);
 
         logger.debug(`[nsfw-monitor] 🤖 Sending batch request to LLM API...`);
         const requestStart = Date.now();
@@ -663,7 +664,7 @@ Respond ONLY with a JSON object:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: process.env.LM_STUDIO_NSFW_MODEL || undefined,
+                model: envConfig.LM_STUDIO.nsfwModel,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: contentItems }
@@ -722,9 +723,9 @@ Respond ONLY with a JSON object:
 
 async function testConnection(ctx) {
     try {
-        const url = process.env.LM_STUDIO_URL || 'http://localhost:1234';
+        const url = envConfig.LM_STUDIO.url;
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
+        const timeout = setTimeout(() => controller.abort(), envConfig.AI_TIMEOUTS.healthCheck);
         await fetch(`${url}/v1/models`, { signal: controller.signal });
         clearTimeout(timeout);
         await ctx.reply('✅ Connessione LM Studio con successo!');
@@ -829,7 +830,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 
