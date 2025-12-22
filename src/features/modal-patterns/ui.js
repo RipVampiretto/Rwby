@@ -86,7 +86,7 @@ async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
         return;
     }
 
-    let text = `${t('modals.list.title')}\n\n${t('modals.list.toggle_info')}\n`;
+    const text = `${t('modals.list.title')}\n\n${t('modals.list.toggle_info')}\n`;
 
     // Build toggle buttons for each modal
     const buttons = await Promise.all(modals.map(async m => {

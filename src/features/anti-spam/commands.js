@@ -25,7 +25,7 @@ function registerCommands(bot, db) {
         if (await isAdmin(ctx, 'anti-spam')) return next();
 
         // Stats Logic
-        let userStats = stats.getStats(userId, guildId);
+        const userStats = stats.getStats(userId, guildId);
 
         const lastTs = userStats.last_msg_ts ? new Date(userStats.last_msg_ts).getTime() : 0;
         const diff = now - lastTs;

@@ -80,8 +80,8 @@ async function findMatch(db, targetHash, guildId, threshold) {
 function hammingDistance(h1, h2) {
     let dist = 0;
     for (let i = 0; i < h1.length; i++) {
-        let v1 = parseInt(h1[i], 16);
-        let v2 = parseInt(h2[i], 16);
+        const v1 = parseInt(h1[i], 16);
+        const v2 = parseInt(h2[i], 16);
         let val = v1 ^ v2;
         while (val) {
             dist++;

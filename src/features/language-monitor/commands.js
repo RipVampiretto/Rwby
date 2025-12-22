@@ -93,7 +93,7 @@ function registerCommands(bot, db) {
 
             if (allowed.includes(lang)) {
                 if (allowed.length > 1)
-                    allowed = allowed.filter(l => l !== lang);
+                    {allowed = allowed.filter(l => l !== lang);}
             } else {
                 allowed.push(lang);
             }

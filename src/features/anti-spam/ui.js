@@ -2,9 +2,13 @@ const { safeEdit } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
-    const config = await db.fetchGuildConfig(ctx.chat.id);
+    const guildId = ctx.chat.id;
+    const t = (key, params) => i18n.t(guildId, key, params);
+
+    const config = await db.fetchGuildConfig(guildId);
     const enabled = config.spam_enabled ? '✅ ON' : '❌ OFF';
-    const sens = (config.spam_sensitivity || 'medium').toUpperCase();
+    const sens = config.spam_sensitivity || 'medium';
+    const sensLabel = sens.toUpperCase();
     const actVol = (config.spam_action_volume || 'delete').toUpperCase().replace(/_/g, ' ');
     const actRep = (config.spam_action_repetition || 'delete').toUpperCase().replace(/_/g, ' ');
 
@@ -16,7 +20,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `• Rileva: Messaggi a raffica e ripetizioni\n` +
         `• Utenti fidati vengono ignorati\n\n` +
         `Stato: ${enabled}\n` +
-        `Sensibilità: ${sens}`;
+        `Sensibilità: ${sensLabel}`;
 
     // Callback suffix
     const s = fromSettings ? ':1' : ':0';

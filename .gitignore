@@ -9,3 +9,4 @@ package-lock.json
 *.sql
 telegram-bot-api-data
 temp/
+coverage/

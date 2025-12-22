@@ -222,6 +222,5 @@ module.exports = {
     getGuildConfig,
     fetchGuildConfig,
     updateGuildConfig,
-    updateGuildConfig,
     upsertGuild
 };

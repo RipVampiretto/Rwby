@@ -164,7 +164,7 @@ async function processMedia(ctx, config) {
 
     try {
         let isNsfw = false;
-        let reasons = [];
+        const reasons = [];
 
         // Extract caption if available (photos/videos can have captions)
         const caption = ctx.message.caption || null;

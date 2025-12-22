@@ -25,8 +25,6 @@ const MODULE_MAP = {
     'keyword_ban': 'Keyword Monitor',
     'staff_ban': 'Staff Coordination',
     'staff_delete': 'Staff Coordination',
-    'staff_ban': 'Staff Coordination', // Duplicate key in original, keeping it consistent
-    'staff_delete': 'Staff Coordination', // Duplicate key in original
     'staff_dismiss': 'Staff Coordination',
     'vote_ban': 'Vote Ban'
 };

@@ -29,7 +29,7 @@ function registerCommands(bot, db) {
         if (reportMode === 'voteban_only' && !votebanEnabled) return;
 
         // Get reason from the trigger message
-        const reason = text.replace(/^[@!.\/]admin\s*/i, '').trim() || "Nessun motivo specificato";
+        const reason = text.replace(/^[@!./]admin\s*/i, '').trim() || "Nessun motivo specificato";
 
         // =====================================================================
         // REPLY MODE: User replied to a specific message
@@ -275,7 +275,7 @@ function registerCommands(bot, db) {
                 const nextVal = durations[(idx + 1) % durations.length];
                 await db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: nextVal });
             } else if (data === "vb_tier") {
-                let val = config.voteban_initiator_tier || 0;
+                const val = config.voteban_initiator_tier || 0;
                 const tiers = [0, 1, 2, 3, -1];
                 const idx = tiers.indexOf(val);
                 const nextVal = tiers[(idx + 1) % tiers.length];

@@ -50,7 +50,7 @@ function registerCommands(bot, db) {
             await db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
         } else if (data === "mdl_tier") {
             const tiers = [0, 1, 2, 3, -1];
-            let cur = config.modal_tier_bypass ?? 2;
+            const cur = config.modal_tier_bypass ?? 2;
             const idx = tiers.indexOf(cur);
             const nextTier = tiers[(idx + 1) % tiers.length];
             await db.updateGuildConfig(ctx.chat.id, { modal_tier_bypass: nextTier });

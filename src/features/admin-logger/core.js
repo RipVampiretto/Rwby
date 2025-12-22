@@ -57,7 +57,7 @@ async function logEvent(params) {
         ? `<a href="https://t.me/${targetUser.username}">${targetUser.first_name}</a>`
         : `<a href="tg://user?id=${targetUser?.id}">${targetUser?.first_name || 'Unknown'}</a>`;
 
-    let tags = params.customTags || [`#${moduleTag}`, `#${actionType}`];
+    const tags = params.customTags || [`#${moduleTag}`, `#${actionType}`];
     let text = `${emoji} ${tags.join(' ')}\n`;
     text += `• Di: ${botLink} [${botInfo.id}]\n`;
     text += `• A: ${userLink} [${targetUser?.id}]\n`;

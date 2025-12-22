@@ -179,7 +179,7 @@ async function processUserJoin(ctx, user, config) {
     const mode = config.captcha_mode || 'button';
     const timeoutMins = config.kick_timeout || 5;
     let text = '';
-    let keyboard = new InlineKeyboard();
+    const keyboard = new InlineKeyboard();
 
     try {
         if (mode === 'math') {

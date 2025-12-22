@@ -46,7 +46,7 @@ async function finalizeVote(ctx, db, vote, status, admin) {
         setTimeout(() => { try { ctx.deleteMessage().catch(() => { }); } catch (e) { } }, 60000);
     }
 
-    let tags = ['#VOTE_BAN'];
+    const tags = ['#VOTE_BAN'];
     if (status === 'passed' || status === 'forced_ban') tags.push('#BAN');
     else tags.push('#SAVE');
 
@@ -56,7 +56,7 @@ async function finalizeVote(ctx, db, vote, status, admin) {
         else if (status === 'pardon') cause = 'Graziato da Admin';
         else if (status === 'failed') cause = 'Votazione Fallita';
 
-        let cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
+        const cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
 
         // Ensure title is available. usage of ctx.chat.title assumes finalizeVote is called with full context.
         // If called from cleanup, ctx might be missing or different.
@@ -103,7 +103,7 @@ async function processExpiredVotes(bot, db) {
 
             // Log outcome
             if (adminLogger.getLogEvent()) {
-                let cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
+                const cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
 
                 adminLogger.getLogEvent()({
                     guildId: vote.chat_id,
