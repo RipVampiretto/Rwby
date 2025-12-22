@@ -110,6 +110,25 @@
             "tier": "🏷️ Who can start",
             "report_mode": "Mode",
             "category_actions": "Category Actions"
+        },
+        "log": {
+            "tribunal_closed": "TRIBUNAL CLOSED",
+            "user_banned": "User @{user} has been BANNED.",
+            "user_saved": "User @{user} is SAFE.",
+            "user_saved_expired": "User @{user} is SAFE (Expired).",
+            "outcome": "Outcome",
+            "forced_by_admin": "Forced by Admin",
+            "vote_concluded": "Vote Concluded",
+            "pardoned_by_admin": "Pardoned by Admin",
+            "vote_failed": "Vote Failed",
+            "expired": "Expired (Insufficient Votes)",
+            "nobody": "Nobody",
+            "in_favor": "In Favor",
+            "against": "Against",
+            "no_reason": "No reason specified",
+            "report_sent": "Report Sent",
+            "no_ai_violations": "AI did not detect automatic violations. Staff will review the report.",
+            "report_sent_to_staff": "Report sent to staff."
         }
     },
     "logger": {
@@ -122,7 +141,14 @@
         "set_channel": "📢 Set Channel",
         "header_module": "Module",
         "header_delete": "🗑️",
-        "header_ban": "🚷"
+        "header_ban": "🚷",
+        "log": {
+            "by": "By",
+            "to": "To",
+            "group": "Group",
+            "reason": "Reason",
+            "go_to_message": "Go to message"
+        }
     },
     "antiedit": {
         "title": "✏️ **EDIT MONITORING**",
@@ -191,6 +217,7 @@
         "allowed": "Allowed languages",
         "warning": "{user}, this group only allows: {languages}. Please use one of these languages.",
         "log_reason": "Detected language {detected} (allowed: {allowed})",
+        "ban_reason": "Language Ban: {detected} not allowed.",
         "buttons": {
             "filter": "🌐 Filter",
             "tier": "👤 Tier Bypass",

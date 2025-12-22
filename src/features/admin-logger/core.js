@@ -1,5 +1,6 @@
 const logger = require('../../middlewares/logger');
 const { MODULE_MAP, EMOJI_MAP } = require('./utils');
+const i18n = require('../../i18n');
 
 let db = null;
 let _botInstance = null;
@@ -17,6 +18,10 @@ async function logEvent(params) {
     const config = await db.getGuildConfig(guildId);
     if (!config) return;
 
+    // Get the guild's UI language
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, p) => i18n.t(lang, key, p);
+
     let logEvents = {};
     if (config.log_events) {
         try {
@@ -29,7 +34,7 @@ async function logEvent(params) {
             } else {
                 logEvents = parsed;
             }
-        } catch (e) {}
+        } catch (e) { }
     }
 
     if (!logEvents[eventType]) return;
@@ -46,7 +51,7 @@ async function logEvent(params) {
     let botInfo = { first_name: 'Bot', username: 'bot', id: 0 };
     try {
         botInfo = await _botInstance.api.getMe();
-    } catch (e) {}
+    } catch (e) { }
 
     const botLink = botInfo.username
         ? `<a href="https://t.me/${botInfo.username}">${botInfo.first_name}</a>`
@@ -57,12 +62,12 @@ async function logEvent(params) {
 
     const tags = params.customTags || [`#${moduleTag}`, `#${actionType}`];
     let text = `${emoji} ${tags.join(' ')}\n`;
-    text += `• Di: ${botLink} [${botInfo.id}]\n`;
-    text += `• A: ${userLink} [${targetUser?.id}]\n`;
-    text += `• Gruppo: ${guildName || config.guild_name || guildId} [${guildId}]\n`;
-    text += `• Motivo: ${reason}\n`;
+    text += `• ${t('logger.log.by')}: ${botLink} [${botInfo.id}]\n`;
+    text += `• ${t('logger.log.to')}: ${userLink} [${targetUser?.id}]\n`;
+    text += `• ${t('logger.log.group')}: ${guildName || config.guild_name || guildId} [${guildId}]\n`;
+    text += `• ${t('logger.log.reason')}: ${reason}\n`;
     if (messageLink) {
-        text += `• 👀 Vai al messaggio (${messageLink})\n`;
+        text += `• 👀 ${t('logger.log.go_to_message')} (${messageLink})\n`;
     }
     text += `#id${targetUser?.id}`;
 
@@ -79,7 +84,7 @@ async function logEvent(params) {
                         targetChatId = config.staff_group_id;
                         messageThreadId = topics.logs;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
             await _botInstance.api.sendMessage(targetChatId, text, {
@@ -111,3 +116,4 @@ module.exports = {
     init,
     logEvent
 };
+

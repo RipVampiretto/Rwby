@@ -7,22 +7,21 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
-    const enabled = config.spam_enabled ? '✅ ON' : '❌ OFF';
+    const enabled = config.spam_enabled ? t('common.on') : t('common.off');
     const sens = config.spam_sensitivity || 'medium';
-    const sensLabel = sens.toUpperCase();
-    const actVol = (config.spam_action_volume || 'delete').toUpperCase().replace(/_/g, ' ');
-    const actRep = (config.spam_action_repetition || 'delete').toUpperCase().replace(/_/g, ' ');
+    const sensLabel = t(`antispam.sensitivity_values.${sens}`);
+    const actVol = i18n.formatAction(guildId, config.spam_action_volume || 'delete');
+    const actRep = i18n.formatAction(guildId, config.spam_action_repetition || 'delete');
 
     const statusText =
-        `🛡️ **ANTI-SPAM**\n\n` +
-        `Blocca chi invia troppi messaggi veloci o copia-incolla ripetuti.\n` +
-        `Protegge il gruppo da flood e bot.\n\n` +
-        `ℹ️ **Info:**\n` +
-        `• Sensibilità: Regola quanto deve essere severo\n` +
-        `• Rileva: Messaggi a raffica e ripetizioni\n` +
-        `• Utenti fidati vengono ignorati\n\n` +
-        `Stato: ${enabled}\n` +
-        `Sensibilità: ${sensLabel}`;
+        `${t('antispam.title')}\n\n` +
+        `${t('antispam.description')}\n\n` +
+        `${t('antispam.info_title')}\n` +
+        `${t('antispam.info_items.sensitivity')}\n` +
+        `${t('antispam.info_items.detects')}\n` +
+        `${t('antispam.info_items.trusted')}\n\n` +
+        `${t('antispam.status')}: ${enabled}\n` +
+        `${t('antispam.sensitivity')}: ${sensLabel}`;
 
     // Callback suffix
     const s = fromSettings ? ':1' : ':0';

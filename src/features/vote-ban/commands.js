@@ -6,6 +6,7 @@ const smartReport = require('./analysis-utils');
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const logger = require('../../middlewares/logger');
+const i18n = require('../../i18n');
 
 function registerCommands(bot, db) {
     // Trigger: @admin, etc. (Smart Report System)
@@ -180,7 +181,7 @@ function registerCommands(bot, db) {
                         content: targetMsg.text || targetMsg.caption || '[Media]'
                     });
                     return ctx.reply(
-                        `📋 **Report Inviato**\nL'AI non ha rilevato violazioni automatiche.\nLo staff esaminerà la segnalazione.`,
+                        `📋 **${t('voteban.log.report_sent')}**\n${t('voteban.log.no_ai_violations')}`,
                         { parse_mode: 'Markdown' }
                     );
                 }
@@ -202,7 +203,7 @@ function registerCommands(bot, db) {
                     messageId: targetMsg.message_id,
                     content: targetMsg.text || targetMsg.caption || '[Media]'
                 });
-                return ctx.reply(`📋 **Report Inviato**\nSegnalazione inviata allo staff.`, { parse_mode: 'Markdown' });
+                return ctx.reply(`📋 **${t('voteban.log.report_sent')}**\n${t('voteban.report_sent_to_staff')}`, { parse_mode: 'Markdown' });
             }
 
             const duration = config.voteban_duration_minutes || 30;

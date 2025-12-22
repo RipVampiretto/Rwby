@@ -4,9 +4,14 @@ const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 const logger = require('../../middlewares/logger');
+const i18n = require('../../i18n');
 
 async function finalizeVote(ctx, db, vote, status, admin) {
     await logic.closeVote(db, vote.vote_id, status);
+
+    // Get guild language
+    const lang = await i18n.getLanguage(vote.chat_id);
+    const t = (key, p) => i18n.t(lang, key, p);
 
     // Prepare log details
     let details = '';
@@ -17,19 +22,20 @@ async function finalizeVote(ctx, db, vote, status, admin) {
             voters
                 .filter(v => typeof v === 'object' && v.vote === 'yes')
                 .map(fmt)
-                .join(', ') || 'Nessuno';
+                .join(', ') || t('voteban.log.nobody');
         const no =
             voters
                 .filter(v => typeof v === 'object' && v.vote === 'no')
                 .map(fmt)
-                .join(', ') || 'Nessuno';
-        details = `\n\n✅ Favorevoli: ${yes}\n🛡️ Contrari: ${no}`;
+                .join(', ') || t('voteban.log.nobody');
+        details = `\n\n✅ ${t('voteban.log.in_favor')}: ${yes}\n🛡️ ${t('voteban.log.against')}: ${no}`;
     } catch (e) { }
 
     if (status === 'passed' || status === 'forced_ban') {
         try {
+            const outcome = status === 'forced_ban' ? t('voteban.log.forced_by_admin') : t('voteban.log.vote_concluded');
             await ctx.editMessageText(
-                `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è stato BANNATO.\nEsito: ${status === 'forced_ban' ? 'Forzato da Admin' : 'Votazione Conclusa'}`,
+                `⚖️ **${t('voteban.log.tribunal_closed')}**\n\n${t('voteban.log.user_banned', { user: vote.target_username })}\n${t('voteban.log.outcome')}: ${outcome}`,
                 { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
             );
 
@@ -57,8 +63,9 @@ async function finalizeVote(ctx, db, vote, status, admin) {
             logger.error(`[vote-ban] Finalize vote error: ${e.message}`);
         }
     } else {
+        const outcome = status === 'pardon' ? t('voteban.log.pardoned_by_admin') : t('voteban.log.vote_failed');
         await ctx.editMessageText(
-            `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO.\nEsito: ${status === 'pardon' ? 'Graziato da Admin' : 'Votazione Fallita'}`,
+            `⚖️ **${t('voteban.log.tribunal_closed')}**\n\n${t('voteban.log.user_saved', { user: vote.target_username })}\n${t('voteban.log.outcome')}: ${outcome}`,
             { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
         );
 
@@ -75,16 +82,13 @@ async function finalizeVote(ctx, db, vote, status, admin) {
     else tags.push('#SAVE');
 
     if (adminLogger.getLogEvent()) {
-        let cause = 'Votazione Conclusa';
-        if (status === 'forced_ban') cause = 'Forzato da Admin';
-        else if (status === 'pardon') cause = 'Graziato da Admin';
-        else if (status === 'failed') cause = 'Votazione Fallita';
+        let cause = t('voteban.log.vote_concluded');
+        if (status === 'forced_ban') cause = t('voteban.log.forced_by_admin');
+        else if (status === 'pardon') cause = t('voteban.log.pardoned_by_admin');
+        else if (status === 'failed') cause = t('voteban.log.vote_failed');
 
-        const cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
-
-        // Ensure title is available. usage of ctx.chat.title assumes finalizeVote is called with full context.
-        // If called from cleanup, ctx might be missing or different.
-        // Adjust for that in processExpiredVotes.
+        const noReasonText = t('voteban.log.no_reason');
+        const cleanReason = vote.reason === noReasonText || vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
 
         adminLogger.getLogEvent()({
             guildId: vote.chat_id,
@@ -93,7 +97,7 @@ async function finalizeVote(ctx, db, vote, status, admin) {
             customTags: tags,
             targetUser: { id: vote.target_user_id, username: vote.target_username, first_name: vote.target_username },
             executorAdmin: admin,
-            reason: `Esito: ${cause}${cleanReason}${details}`,
+            reason: `${t('voteban.log.outcome')}: ${cause}${cleanReason}${details}`,
             isGlobal: true
         });
     }
@@ -111,6 +115,10 @@ async function processExpiredVotes(bot, db) {
         if (expires < now) {
             await logic.closeVote(db, vote.vote_id, 'expired');
 
+            // Get guild language
+            const lang = await i18n.getLanguage(vote.chat_id);
+            const t = (key, p) => i18n.t(lang, key, p);
+
             // Prepare details for log and message
             let details = '';
             try {
@@ -120,13 +128,13 @@ async function processExpiredVotes(bot, db) {
                     voters
                         .filter(v => typeof v === 'object' && v.vote === 'yes')
                         .map(fmt)
-                        .join(', ') || 'Nessuno';
+                        .join(', ') || t('voteban.log.nobody');
                 const no =
                     voters
                         .filter(v => typeof v === 'object' && v.vote === 'no')
                         .map(fmt)
-                        .join(', ') || 'Nessuno';
-                details = `\n\n✅ Favorevoli: ${yes}\n🛡️ Contrari: ${no}`;
+                        .join(', ') || t('voteban.log.nobody');
+                details = `\n\n✅ ${t('voteban.log.in_favor')}: ${yes}\n🛡️ ${t('voteban.log.against')}: ${no}`;
             } catch (e) { }
 
             // Get Guild Name manually since we don't have ctx
@@ -138,7 +146,8 @@ async function processExpiredVotes(bot, db) {
 
             // Log outcome
             if (adminLogger.getLogEvent()) {
-                const cleanReason = vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
+                const noReasonText = t('voteban.log.no_reason');
+                const cleanReason = vote.reason === noReasonText || vote.reason === 'Nessun motivo specificato' ? '' : ` - ${vote.reason}`;
 
                 adminLogger.getLogEvent()({
                     guildId: vote.chat_id,
@@ -151,7 +160,7 @@ async function processExpiredVotes(bot, db) {
                         first_name: vote.target_username
                     },
                     executorAdmin: { first_name: 'System (Expired)' },
-                    reason: `Esito: Scaduto (Voti Insufficienti)${cleanReason}${details}`,
+                    reason: `${t('voteban.log.outcome')}: ${t('voteban.log.expired')}${cleanReason}${details}`,
                     isGlobal: true
                 });
             }
@@ -160,7 +169,7 @@ async function processExpiredVotes(bot, db) {
                 await bot.api.editMessageText(
                     vote.chat_id,
                     vote.poll_message_id,
-                    `⚖️ **TRIBUNALE CHIUSO**\n\nL'utente @${vote.target_username} è SALVO (Scaduto).\nEsito: Votazione Scaduta`,
+                    `⚖️ **${t('voteban.log.tribunal_closed')}**\n\n${t('voteban.log.user_saved_expired', { user: vote.target_username })}\n${t('voteban.log.outcome')}: ${t('voteban.log.expired')}`,
                     { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
                 );
                 // Delete after 1 minute

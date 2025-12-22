@@ -58,7 +58,7 @@ async function executeAction(ctx, config, detected, allowed) {
                     user: user,
                     guildName: ctx.chat.title,
                     guildId: ctx.chat.id,
-                    reason: `Language Ban: ${detected} not allowed.`,
+                    reason: i18n.t(lang, 'language.ban_reason', { detected: detected.toUpperCase() }),
                     evidence: ctx.message.text,
                     flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
                 });
@@ -72,7 +72,7 @@ async function executeAction(ctx, config, detected, allowed) {
             guildId: ctx.chat.id,
             source: 'Language',
             user: user,
-            reason: `Detected: ${detected}\nAllowed: ${allowed.join(', ')}`,
+            reason: i18n.t(lang, 'language.log_reason', { detected: detected.toUpperCase(), allowed: allowed.join(', ').toUpperCase() }),
             messageId: ctx.message.message_id,
             content: ctx.message.text
         });

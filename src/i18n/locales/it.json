@@ -110,6 +110,25 @@
             "tier": "🏷️ Chi può avviare",
             "report_mode": "Modalità",
             "category_actions": "Azioni per Categoria"
+        },
+        "log": {
+            "tribunal_closed": "TRIBUNALE CHIUSO",
+            "user_banned": "L'utente @{user} è stato BANNATO.",
+            "user_saved": "L'utente @{user} è SALVO.",
+            "user_saved_expired": "L'utente @{user} è SALVO (Scaduto).",
+            "outcome": "Esito",
+            "forced_by_admin": "Forzato da Admin",
+            "vote_concluded": "Votazione Conclusa",
+            "pardoned_by_admin": "Graziato da Admin",
+            "vote_failed": "Votazione Fallita",
+            "expired": "Scaduto (Voti Insufficienti)",
+            "nobody": "Nessuno",
+            "in_favor": "Favorevoli",
+            "against": "Contrari",
+            "no_reason": "Nessun motivo specificato",
+            "report_sent": "Report Inviato",
+            "no_ai_violations": "L'AI non ha rilevato violazioni automatiche. Lo staff esaminerà la segnalazione.",
+            "report_sent_to_staff": "Segnalazione inviata allo staff."
         }
     },
     "logger": {
@@ -122,7 +141,14 @@
         "set_channel": "📢 Imposta Canale",
         "header_module": "Modulo",
         "header_delete": "🗑️",
-        "header_ban": "🚷"
+        "header_ban": "🚷",
+        "log": {
+            "by": "Da",
+            "to": "A",
+            "group": "Gruppo",
+            "reason": "Motivo",
+            "go_to_message": "Vai al messaggio"
+        }
     },
     "antiedit": {
         "title": "✏️ **CONTROLLO MODIFICHE**",
@@ -191,6 +217,7 @@
         "allowed": "Lingue permesse",
         "warning": "{user}, in questo gruppo sono permesse solo: {languages}. Per favore, usa una di queste lingue.",
         "log_reason": "Rilevata lingua {detected} (permesse: {allowed})",
+        "ban_reason": "Ban Lingua: {detected} non permessa.",
         "buttons": {
             "filter": "🌐 Filtro",
             "tier": "👤 Bypass Tier",
