@@ -300,7 +300,7 @@ async function start() {
 
     // Start bot
     logger.info("🚀 Bot avviato...");
-    bot.start();
+    bot.start({drop_pending_updates: true});
 }
 
 start().catch(err => {

@@ -13,9 +13,171 @@ const actions = require('./actions');
 const envConfig = require('../../config/env');
 
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'nsfw');
+const LM_STUDIO_CONVERSATIONS_DIR = '/Users/ripvampiretto/.lmstudio/conversations/Rwby';
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+/**
+ * Save conversation to LM Studio format
+ * @param {string} chatId - Telegram chat ID
+ * @param {string} systemPrompt - System prompt used
+ * @param {string} userMessage - User message
+ * @param {string} base64Image - Base64 encoded image
+ * @param {string} responseText - LLM response text
+ * @param {object} stats - Response statistics
+ */
+function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image, responseText, stats) {
+    try {
+        const crypto = require('crypto');
+        const chatDir = path.join(LM_STUDIO_CONVERSATIONS_DIR, String(chatId));
+        const userFilesDir = '/Users/ripvampiretto/.lmstudio/user-files';
+
+        // Create directories if they don't exist
+        if (!fs.existsSync(chatDir)) {
+            fs.mkdirSync(chatDir, { recursive: true });
+        }
+        if (!fs.existsSync(userFilesDir)) {
+            fs.mkdirSync(userFilesDir, { recursive: true });
+        }
+
+        const timestamp = Date.now();
+        const imageBuffer = Buffer.from(base64Image, 'base64');
+        const imageSize = imageBuffer.length;
+        const sha256Hex = crypto.createHash('sha256').update(imageBuffer).digest('hex');
+
+        // Generate random number for file identifier (like LM Studio does)
+        const randomNum = Math.floor(Math.random() * 100);
+        const fileIdentifier = `${timestamp} - ${randomNum}.jpg`;
+
+        // Save image to user-files directory
+        const imagePath = path.join(userFilesDir, fileIdentifier);
+        fs.writeFileSync(imagePath, imageBuffer);
+
+        // Create metadata file
+        const metadataPath = path.join(userFilesDir, `${fileIdentifier}.metadata.json`);
+        const metadata = {
+            type: 'image',
+            sizeBytes: imageSize,
+            originalName: `nsfw_${chatId}_${timestamp}.jpg`,
+            fileIdentifier: fileIdentifier,
+            preview: {
+                data: `data:image/jpeg;base64,${base64Image}`
+            },
+            sha256Hex: sha256Hex
+        };
+        fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+
+        logger.debug(`[nsfw-monitor] 🖼️ Saved image to user-files: ${imagePath}`);
+
+        // Generate a name based on primary category if available
+        let conversationName = 'NSFW Analysis';
+        try {
+            const parsed = JSON.parse(responseText.match(/\{[\s\S]*\}/)?.[0] || '{}');
+            if (parsed.primary_category) {
+                conversationName = `NSFW: ${parsed.primary_category}`;
+            }
+        } catch (e) { }
+
+        const conversation = {
+            name: conversationName,
+            pinned: false,
+            createdAt: timestamp,
+            preset: '',
+            tokenCount: stats.totalTokensCount || 0,
+            userLastMessagedAt: timestamp,
+            systemPrompt: '',
+            messages: [
+                {
+                    versions: [
+                        {
+                            type: 'singleStep',
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: systemPrompt + '\n\n' + userMessage
+                                },
+                                {
+                                    type: 'file',
+                                    fileIdentifier: fileIdentifier,
+                                    fileType: 'image',
+                                    sizeBytes: imageSize
+                                }
+                            ]
+                        }
+                    ],
+                    currentlySelected: 0
+                },
+                {
+                    versions: [
+                        {
+                            type: 'multiStep',
+                            role: 'assistant',
+                            steps: [
+                                {
+                                    type: 'contentBlock',
+                                    stepIdentifier: `${timestamp}-0.${Math.random().toString().slice(2, 18)}`,
+                                    content: [
+                                        {
+                                            type: 'text',
+                                            text: responseText,
+                                            fromDraftModel: false,
+                                            tokensCount: stats.predictedTokensCount || 0,
+                                            isStructural: false
+                                        }
+                                    ],
+                                    defaultShouldIncludeInContext: true,
+                                    shouldIncludeInContext: true,
+                                    genInfo: {
+                                        indexedModelIdentifier: envConfig.LM_STUDIO.nsfwModel,
+                                        identifier: envConfig.LM_STUDIO.nsfwModel,
+                                        stats: {
+                                            stopReason: 'eosFound',
+                                            tokensPerSecond: stats.tokensPerSecond || 0,
+                                            timeToFirstTokenSec: stats.timeToFirstTokenSec || 0,
+                                            totalTimeSec: stats.totalTimeSec || 0,
+                                            promptTokensCount: stats.promptTokensCount || 0,
+                                            predictedTokensCount: stats.predictedTokensCount || 0,
+                                            totalTokensCount: stats.totalTokensCount || 0
+                                        }
+                                    }
+                                }
+                            ],
+                            senderInfo: {
+                                senderName: envConfig.LM_STUDIO.nsfwModel
+                            }
+                        }
+                    ],
+                    currentlySelected: 0
+                }
+            ],
+            usePerChatPredictionConfig: true,
+            perChatPredictionConfig: { fields: [] },
+            clientInput: '',
+            clientInputFiles: [],
+            userFilesSizeBytes: imageSize,
+            lastUsedModel: {
+                identifier: envConfig.LM_STUDIO.nsfwModel,
+                indexedModelIdentifier: envConfig.LM_STUDIO.nsfwModel,
+                instanceLoadTimeConfig: { fields: [] },
+                instanceOperationTimeConfig: { fields: [] }
+            },
+            notes: [],
+            plugins: [],
+            pluginConfigs: {},
+            disabledPluginTools: [],
+            looseFiles: [],
+            assistantLastMessagedAt: timestamp + 100
+        };
+
+        const jsonPath = path.join(chatDir, `${timestamp}.conversation.json`);
+        fs.writeFileSync(jsonPath, JSON.stringify(conversation, null, 2));
+        logger.debug(`[nsfw-monitor] 💾 Saved conversation to LM Studio: ${jsonPath}`);
+    } catch (e) {
+        logger.warn(`[nsfw-monitor] ⚠️ Failed to save LM Studio conversation: ${e.message}`);
+    }
 }
 
 async function processMedia(ctx, config) {
@@ -188,10 +350,10 @@ async function processMedia(ctx, config) {
 
         if (type === 'video' || type === 'gif') {
             logger.info(`[nsfw-monitor] 🎬 Starting VIDEO/GIF analysis...`);
-            isNsfw = await checkVideo(localPath, config, reasons, caption);
+            isNsfw = await checkVideo(localPath, config, reasons, caption, chatId);
         } else {
             logger.info(`[nsfw-monitor] 🖼️ Starting IMAGE analysis...`);
-            isNsfw = await checkImage(localPath, config, reasons, caption);
+            isNsfw = await checkImage(localPath, config, reasons, caption, chatId);
         }
 
         const totalTime = Date.now() - startTime;
@@ -237,7 +399,7 @@ async function downloadFile(url, dest) {
     });
 }
 
-async function checkImage(imagePath, config, reasons, caption = null) {
+async function checkImage(imagePath, config, reasons, caption = null, chatId = null) {
     logger.debug(`[nsfw-monitor] 🖼️ checkImage: Reading file ${imagePath}`);
     const buffer = fs.readFileSync(imagePath);
     const base64 = buffer.toString('base64');
@@ -246,17 +408,16 @@ async function checkImage(imagePath, config, reasons, caption = null) {
 
     logger.info(`[nsfw-monitor] 🤖 Sending image to Vision LLM for analysis...`);
     const llmStart = Date.now();
-    const res = await callVisionLLM(base64, config, caption);
+    const res = await callVisionLLM(base64, caption, chatId);
     const llmTime = Date.now() - llmStart;
 
     logger.info(
-        `[nsfw-monitor] 🤖 LLM Response (${llmTime}ms): category=${res.category}, confidence=${res.confidence}, reason=${res.reason || 'N/A'}`
+        `[nsfw-monitor] 🤖 LLM Response (${llmTime}ms): primary=${res.primary_category}, uncertainty=${res.uncertainty}, reason=${res.reason || 'N/A'}`
     );
 
     // Get blocked categories for this guild
     let blockedCategories = config.nsfw_blocked_categories;
     if (!blockedCategories || !Array.isArray(blockedCategories)) {
-        // Parse if it's a JSON string, or use defaults
         try {
             blockedCategories =
                 typeof blockedCategories === 'string' ? JSON.parse(blockedCategories) : getDefaultBlockedCategories();
@@ -271,22 +432,34 @@ async function checkImage(imagePath, config, reasons, caption = null) {
     }
 
     const threshold = config.nsfw_threshold || 0.7;
-    const isBlocked = blockedCategories.includes(res.category);
+    const scores = res.scores || {};
 
-    if (isBlocked && res.confidence >= threshold) {
-        const categoryInfo = NSFW_CATEGORIES[res.category] || { name: res.category };
-        logger.warn(`[nsfw-monitor] ⚠️ Blocked category detected: ${res.category} (${res.confidence} >= ${threshold})`);
-        reasons.push(`${categoryInfo.name} (${Math.round(res.confidence * 100)}%)`);
+    // Check minors FIRST with absolute priority (lower threshold)
+    if (scores.minors && scores.minors >= 0.5) {
+        const categoryInfo = NSFW_CATEGORIES.minors;
+        logger.warn(`[nsfw-monitor] 🚨 MINORS DETECTED: score=${scores.minors} (>= 0.5)`);
+        reasons.push(`${categoryInfo.name} (${Math.round(scores.minors * 100)}%)`);
         return true;
     }
 
+    // Check all blocked categories
+    for (const category of blockedCategories) {
+        const score = scores[category] || 0;
+        if (score >= threshold) {
+            const categoryInfo = NSFW_CATEGORIES[category] || { name: category };
+            logger.warn(`[nsfw-monitor] ⚠️ Blocked category detected: ${category} (${score} >= ${threshold})`);
+            reasons.push(`${categoryInfo.name} (${Math.round(score * 100)}%)`);
+            return true;
+        }
+    }
+
     logger.debug(
-        `[nsfw-monitor] ✅ Image passed check - category: ${res.category}, blocked: ${isBlocked}, confidence: ${res.confidence}`
+        `[nsfw-monitor] ✅ Image passed check - primary: ${res.primary_category}, uncertainty: ${res.uncertainty}`
     );
     return false;
 }
 
-async function checkVideo(videoPath, config, reasons, caption = null) {
+async function checkVideo(videoPath, config, reasons, caption = null, chatId = null) {
     logger.info(`[nsfw-monitor] 🎬 checkVideo: Analyzing ${videoPath}`);
 
     // Get duration
@@ -324,7 +497,7 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
     // Clamp between min and max
     targetFrames = Math.max(MIN_FRAMES, Math.min(targetFrames, MAX_FRAMES));
 
-    // Adjust if video is shorter than MIN_FRAMES seconds (can't have more frames than duration in seconds)
+    // Adjust if video is shorter than MIN_FRAMES seconds
     const actualFrames = Math.min(targetFrames, Math.floor(duration));
 
     logger.info(`[nsfw-monitor] 🎬 Duration: ${duration.toFixed(1)}s → Extracting ${actualFrames} frames uniformly`);
@@ -364,51 +537,25 @@ async function checkVideo(videoPath, config, reasons, caption = null) {
         return false;
     }
 
-    logger.info(`[nsfw-monitor] 🎬 Final frame count: ${validFrames.length}`);
-
-    // Batch frames for LLM analysis
-    const BATCH_SIZE = envConfig.LM_STUDIO.batchSize;
-    const batches = [];
-    for (let i = 0; i < validFrames.length; i += BATCH_SIZE) {
-        batches.push(validFrames.slice(i, i + BATCH_SIZE));
-    }
-
-    logger.info(
-        `[nsfw-monitor] 🤖 Analyzing ${validFrames.length} frames in ${batches.length} batches (${BATCH_SIZE} per batch)...`
-    );
+    logger.info(`[nsfw-monitor] 🎬 Analyzing ${validFrames.length} frames individually (frame-by-frame)...`);
 
     try {
-        for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-            const batch = batches[batchIdx];
-            logger.info(
-                `[nsfw-monitor] 🤖 Batch ${batchIdx + 1}/${batches.length}: Analyzing ${batch.length} frames...`
-            );
+        // Analyze each frame individually (unified logic with images)
+        for (let i = 0; i < validFrames.length; i++) {
+            const frame = validFrames[i];
+            logger.debug(`[nsfw-monitor] 🤖 Frame ${i + 1}/${validFrames.length} at ${frame.timestamp.toFixed(1)}s`);
 
-            // Read all frames in batch to base64
-            const base64Images = batch.map(f => {
-                const buffer = fs.readFileSync(f.path);
-                return buffer.toString('base64');
-            });
+            const frameReasons = [];
+            const isNsfw = await checkImage(frame.path, config, frameReasons, caption, chatId);
 
-            // Call LLM with all images in batch
-            const batchStart = Date.now();
-            const result = await callVisionLLMBatch(
-                base64Images,
-                config,
-                caption,
-                batch.map(f => f.timestamp)
-            );
-            logger.info(`[nsfw-monitor] 🤖 Batch ${batchIdx + 1} analyzed in ${Date.now() - batchStart}ms`);
-
-            // Check result
-            if (result.isNsfw) {
-                reasons.push(result.reason);
-                logger.warn(`[nsfw-monitor] 🚨 NSFW detected in batch ${batchIdx + 1}: ${result.reason}`);
+            if (isNsfw) {
+                reasons.push(`Frame @${frame.timestamp.toFixed(1)}s: ${frameReasons[0]}`);
+                logger.warn(`[nsfw-monitor] 🚨 NSFW detected at frame ${i + 1} (${frame.timestamp.toFixed(1)}s): ${frameReasons[0]}`);
                 return true;
             }
         }
 
-        logger.info(`[nsfw-monitor] ✅ All ${batches.length} batches passed check`);
+        logger.info(`[nsfw-monitor] ✅ All ${validFrames.length} frames passed check`);
         return false;
     } finally {
         // Cleanup all frame files
@@ -492,33 +639,210 @@ function getDefaultBlockedCategories() {
     return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'drawn_gore', 'minors'];
 }
 
-async function callVisionLLM(base64Image, guildConfig, caption = null) {
+async function callVisionLLM(base64Image, caption = null, chatId = null) {
     const url = envConfig.LM_STUDIO.url;
     logger.debug(`[nsfw-monitor] 🤖 callVisionLLM: Connecting to ${url}`);
 
-    // Build category list for prompt
-    const categoryList = Object.entries(NSFW_CATEGORIES)
-        .map(([key, val]) => `- "${key}": ${val.description}`)
-        .join('\n');
+    const systemPrompt = `You are a vision-based content moderation assistant.
 
-    const systemPrompt = `You are an image content classifier. Analyze this image and classify it into ONE of these categories.
+Your role is to analyze images and report visual signals related to potentially sensitive content.
+You do NOT make final moderation or policy decisions.
 
-CATEGORIES:
-${categoryList}
+You must follow these principles at all times:
 
-IMPORTANT RULES:
-- "minors" takes absolute priority - if ANY sexualized content involves minors, classify as "minors"
-- Distinguish between real photography and anime/cartoon/3D rendered content
-- Action figures and statues go in "figures_nsfw" if they show nudity/sexual themes
-- "hentai" is for anime with explicit sexual content
+- Base your analysis ONLY on visible evidence in the image.
+- Do NOT assume intent, age, identity, or context beyond what is visually clear.
+- Treat all outputs as uncertainty-aware signals, not ground truth.
+- Avoid overconfidence: ambiguity must be reflected in lower scores.
+- Multiple categories may partially apply to the same image.
+- Your output will be used by downstream logic; accuracy and caution are more important than decisiveness.
 
-Respond ONLY with a JSON object:
-{"category": "...", "confidence": 0.0-1.0, "reason": "brief explanation"}`;
+Important clarification about nudity:
+- Lingerie, underwear, bikinis, or revealing clothing WITHOUT visible genitals or nipples
+  should generally be considered "suggestive", NOT "real_nudity".
+- "real_nudity" should be used only when explicit nudity is clearly visible.
 
-    // Build user message with optional caption context
-    let userMessage = 'Classify this image.';
+You must strictly follow the output format requested by the user.
+Do not include extra text, explanations, or formatting outside the JSON response.
+
+--------------------------------------------------
+CATEGORIES TO EVALUATE
+--------------------------------------------------
+
+Evaluate EACH of the following categories independently and assign a score between 0.0 and 1.0 indicating how strongly the image matches the category.
+Scores are RELATIVE STRENGTH signals, NOT calibrated probabilities.
+
+- safe:
+  Normal, appropriate, non-sensitive content.
+
+- suggestive:
+  Revealing clothing, sexualized body emphasis, or provocative poses,
+  without explicit nudity or sexual acts.
+
+- figures_nsfw:
+  Action figures, statues, mannequins, or collectibles with nudity or sexual themes.
+  Includes realistic statues even if they resemble real humans.
+
+- real_nudity:
+  Photographic or highly realistic depiction of nude human bodies,
+  without explicit sexual acts. Requires visible genitals or nipples.
+
+- real_sex:
+  Photographic or highly realistic depiction of explicit sexual acts
+  involving real humans.
+
+- hentai:
+  Explicit sexual content in anime, manga, cartoon, or stylized illustrated form.
+
+- real_gore:
+  Photographic or highly realistic blood, injuries, exposed organs,
+  or graphic real-world violence.
+
+- drawn_gore:
+  Stylized, illustrated, animated, or video game depictions of blood,
+  injuries, or graphic violence.
+
+- minors:
+  ANY sexualized content involving minors or individuals that appear to be minors.
+  This category has ABSOLUTE PRIORITY.
+
+--------------------------------------------------
+CRITICAL RULES
+--------------------------------------------------
+
+1. MINORS ABSOLUTE PRIORITY:
+   - If there is ANY indication of sexualized content involving minors,
+     assign a HIGH score to "minors", even if uncertain.
+   - If age is ambiguous, be conservative and reflect uncertainty in the score.
+
+2. REAL VS DRAWN:
+   - Carefully distinguish real photography from anime, cartoons, illustrations,
+     CGI, or 3D renders.
+   - Do NOT assume realism unless visual evidence is strong.
+
+3. DO NOT FORCE CLASSIFICATION:
+   - If the image does not clearly fit a category, use a low score.
+   - It is acceptable for multiple categories to have moderate scores.
+
+4. SCORE DISCIPLINE:
+   - Scores > 0.90 should be used ONLY when evidence is extremely clear.
+   - Scores between 0.40–0.70 indicate ambiguity or partial match.
+   - Scores < 0.20 indicate weak or negligible evidence.
+
+5. SAFE CATEGORY:
+   - "safe" should have a HIGH score only if no other category shows
+     meaningful evidence.
+
+6. NUDITY VS SUGGESTIVE:
+   - Lingerie, underwear, bikinis = "suggestive" (NOT "real_nudity")
+   - Visible genitals or nipples = "real_nudity"
+
+Your goal is NOT to make a final policy decision, but to report visual signals in a structured way.`;
+
+    // Build user message with detailed prompt
+    const userPromptBase = `Analyze the provided image and evaluate the following content categories.
+
+For EACH category, assign a score between 0.0 and 1.0 indicating how strongly the image matches that category.
+Scores are RELATIVE STRENGTH signals, NOT calibrated probabilities.
+
+--------------------------------------------------
+CATEGORIES
+--------------------------------------------------
+
+- safe:
+  Normal, appropriate, non-sensitive content.
+
+- suggestive:
+  Revealing clothing, sexualized body emphasis, or provocative posing,
+  WITHOUT explicit nudity or sexual acts.
+
+- figures_nsfw:
+  Action figures, statues, mannequins, or collectibles with nudity or sexual themes,
+  even if they resemble realistic humans.
+
+- real_nudity:
+  Photographic or highly realistic depiction of nude human bodies
+  with visible genitals or nipples, but without sexual acts.
+
+- real_sex:
+  Photographic or highly realistic depiction of explicit sexual acts
+  involving real humans.
+
+- hentai:
+  Explicit sexual content in anime, manga, cartoons, or illustrated styles.
+
+- real_gore:
+  Photographic or highly realistic blood, injuries, exposed organs,
+  or graphic real-world violence.
+
+- drawn_gore:
+  Stylized, illustrated, animated, or video game depictions of blood,
+  injuries, or graphic violence.
+
+- minors:
+  ANY sexualized content involving minors or individuals who appear to be minors.
+
+--------------------------------------------------
+CRITICAL RULES
+--------------------------------------------------
+
+1. ABSOLUTE PRIORITY — MINORS:
+   - If there is ANY sexualized content involving minors,
+     assign a high score to "minors", even if uncertain.
+   - If age is ambiguous, be conservative and reflect uncertainty in the score.
+
+2. REAL VS DRAWN:
+   - Carefully distinguish real photography from anime, cartoons,
+     illustrations, CGI, or 3D renders.
+   - Do NOT assume realism unless visual evidence is strong.
+
+3. DO NOT FORCE CLASSIFICATION:
+   - If the image does not clearly fit a category, use a low score.
+   - It is acceptable and expected for multiple categories to have non-zero scores.
+
+4. SCORE DISCIPLINE:
+   - Scores > 0.90 only when evidence is extremely clear.
+   - Scores between 0.40–0.70 indicate ambiguity or partial match.
+   - Scores < 0.20 indicate weak or negligible evidence.
+
+5. SAFE CATEGORY:
+   - "safe" should have a high score ONLY if no other category
+     shows meaningful evidence.
+
+--------------------------------------------------
+OUTPUT FORMAT (STRICT)
+--------------------------------------------------
+
+Respond ONLY with a valid JSON object in the following exact structure:
+
+{
+  "scores": {
+    "safe": 0.0,
+    "suggestive": 0.0,
+    "figures_nsfw": 0.0,
+    "real_nudity": 0.0,
+    "real_sex": 0.0,
+    "hentai": 0.0,
+    "real_gore": 0.0,
+    "drawn_gore": 0.0,
+    "minors": 0.0
+  },
+  "primary_category": "...",
+  "uncertainty": "low | medium | high",
+  "reason": "Brief explanation of the strongest visual signals and remaining ambiguities"
+}
+
+--------------------------------------------------
+FINAL NOTES
+--------------------------------------------------
+
+- "primary_category" should normally be the category with the highest score.
+- If "minors" has a significant score, it MUST be selected as "primary_category".
+- Be conservative, consistent, and honest about uncertainty.`;
+
+    let userMessage = userPromptBase;
     if (caption && caption.trim()) {
-        userMessage = `Classify this image. The uploader's caption was: "${caption.substring(0, 200)}"`;
+        userMessage = `${userPromptBase}\n\nThe uploader's caption was: "${caption.substring(0, 200)}"`;
     }
 
     try {
@@ -547,7 +871,7 @@ Respond ONLY with a JSON object:
                     }
                 ],
                 temperature: 0.1,
-                max_tokens: 150
+                max_tokens: 500
             }),
             signal: controller.signal
         });
@@ -573,13 +897,31 @@ Respond ONLY with a JSON object:
             result = JSON.parse(content);
         }
 
-        // Normalize category to known values
-        if (!NSFW_CATEGORIES[result.category]) {
-            logger.warn(`[nsfw-monitor] Unknown category "${result.category}", defaulting to safe`);
-            result.category = 'safe';
+        // Validate result structure
+        if (!result.scores || typeof result.scores !== 'object') {
+            logger.warn(`[nsfw-monitor] Invalid response structure, creating safe default`);
+            result = {
+                scores: { safe: 1.0 },
+                primary_category: 'safe',
+                uncertainty: 'high',
+                reason: 'Invalid LLM response structure'
+            };
         }
 
         logger.debug(`[nsfw-monitor] 🤖 LLM parsed result: ${JSON.stringify(result)}`);
+
+        // Save conversation to LM Studio format
+        if (chatId) {
+            saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image, content, {
+                tokensPerSecond: 0,
+                timeToFirstTokenSec: 0,
+                totalTimeSec: responseTime / 1000,
+                promptTokensCount: 0,
+                predictedTokensCount: 0,
+                totalTokensCount: 0
+            });
+        }
+
         return result;
     } catch (e) {
         if (e.name === 'AbortError') {
@@ -588,138 +930,15 @@ Respond ONLY with a JSON object:
             logger.error(`[nsfw-monitor] ❌ LLM error: ${e.message}`);
         }
         logger.debug(`[nsfw-monitor] 🤖 Returning safe default due to error`);
-        return { category: 'safe', confidence: 1, reason: 'LLM error - defaulting to safe' };
+        return {
+            scores: { safe: 1.0 },
+            primary_category: 'safe',
+            uncertainty: 'high',
+            reason: 'LLM error - defaulting to safe'
+        };
     }
 }
 
-/**
- * Batch version: Analyze multiple images in a single LLM call
- * @param {string[]} base64Images - Array of base64 encoded images
- * @param {object} config - Guild config
- * @param {string|null} caption - Optional caption
- * @param {number[]} timestamps - Timestamps for each frame (for logging)
- * @returns {Promise<{isNsfw: boolean, reason: string}>}
- */
-async function callVisionLLMBatch(base64Images, guildConfig, caption = null, timestamps = []) {
-    const url = envConfig.LM_STUDIO.url;
-    logger.debug(`[nsfw-monitor] 🤖 callVisionLLMBatch: Analyzing ${base64Images.length} images`);
-
-    // Get blocked categories for this guild
-    let blockedCategories = config.nsfw_blocked_categories;
-    if (!blockedCategories || !Array.isArray(blockedCategories)) {
-        try {
-            blockedCategories =
-                typeof blockedCategories === 'string' ? JSON.parse(blockedCategories) : getDefaultBlockedCategories();
-        } catch (e) {
-            blockedCategories = getDefaultBlockedCategories();
-        }
-    }
-    if (!blockedCategories.includes('minors')) {
-        blockedCategories.push('minors');
-    }
-
-    const categoryList = Object.entries(NSFW_CATEGORIES)
-        .map(([key, val]) => `- "${key}": ${val.description}`)
-        .join('\n');
-
-    const systemPrompt = `You are an image content classifier. Analyze these ${base64Images.length} video frames and classify each into ONE of these categories.
-
-CATEGORIES:
-${categoryList}
-
-IMPORTANT RULES:
-- "minors" takes absolute priority - if ANY sexualized content involves minors, classify as "minors"
-- Distinguish between real photography and anime/cartoon/3D rendered content
-- Analyze EACH frame independently but report if ANY frame is problematic
-
-Respond ONLY with a JSON object:
-{"frames": [{"category": "...", "confidence": 0.0-1.0}], "worst_category": "...", "worst_confidence": 0.0-1.0, "reason": "brief explanation of worst finding"}`;
-
-    // Build user message with optional caption context
-    let userMessage = `Analyze these ${base64Images.length} video frames for NSFW content.`;
-    if (caption && caption.trim()) {
-        userMessage += ` The uploader's caption was: "${caption.substring(0, 200)}"`;
-    }
-
-    // Build content array with multiple images
-    const contentItems = [{ type: 'text', text: userMessage }];
-    for (let i = 0; i < base64Images.length; i++) {
-        contentItems.push({
-            type: 'image_url',
-            image_url: { url: `data:image/jpeg;base64,${base64Images[i]}` }
-        });
-    }
-
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-            logger.warn(`[nsfw-monitor] ⏰ Batch LLM request timeout (${envConfig.AI_TIMEOUTS.visionBatch}ms)`);
-            controller.abort();
-        }, envConfig.AI_TIMEOUTS.visionBatch);
-
-        logger.debug(`[nsfw-monitor] 🤖 Sending batch request to LLM API...`);
-        const requestStart = Date.now();
-
-        const response = await fetch(`${url}/v1/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: envConfig.LM_STUDIO.nsfwModel,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: contentItems }
-                ],
-                temperature: 0.1,
-                max_tokens: 300
-            }),
-            signal: controller.signal
-        });
-        clearTimeout(timeout);
-
-        const responseTime = Date.now() - requestStart;
-        logger.debug(`[nsfw-monitor] 🤖 Batch LLM response in ${responseTime}ms, status: ${response.status}`);
-
-        if (!response.ok) {
-            logger.error(`[nsfw-monitor] ❌ Batch LLM API error: status ${response.status}`);
-            throw new Error(`API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
-        logger.debug(`[nsfw-monitor] 🤖 Batch LLM raw response: ${content.substring(0, 200)}...`);
-
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        let result;
-        if (jsonMatch) {
-            result = JSON.parse(jsonMatch[0]);
-        } else {
-            result = JSON.parse(content);
-        }
-
-        // Check if worst category is blocked
-        const worstCategory = result.worst_category || 'safe';
-        const worstConfidence = result.worst_confidence || 0;
-        const threshold = config.nsfw_threshold || 0.7;
-
-        if (blockedCategories.includes(worstCategory) && worstConfidence >= threshold) {
-            const categoryInfo = NSFW_CATEGORIES[worstCategory] || { name: worstCategory };
-            return {
-                isNsfw: true,
-                reason: `${categoryInfo.name} (${Math.round(worstConfidence * 100)}%) - ${result.reason || 'Detected in video frames'}`
-            };
-        }
-
-        return { isNsfw: false, reason: null };
-    } catch (e) {
-        if (e.name === 'AbortError') {
-            logger.error(`[nsfw-monitor] ❌ Batch LLM request aborted (timeout)`);
-        } else {
-            logger.error(`[nsfw-monitor] ❌ Batch LLM error: ${e.message}`);
-        }
-        logger.debug(`[nsfw-monitor] 🤖 Returning safe default due to batch error`);
-        return { isNsfw: false, reason: null };
-    }
-}
 
 async function testConnection(ctx) {
     try {

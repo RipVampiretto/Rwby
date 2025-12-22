@@ -28,7 +28,6 @@ const REQUIRED_VARS = [
     // AI Timeouts (milliseconds)
     'AI_TIMEOUT_TEXT',
     'AI_TIMEOUT_VISION',
-    'AI_TIMEOUT_VISION_BATCH',
     'AI_TIMEOUT_HEALTH_CHECK',
 
     // Backup Configuration
@@ -77,15 +76,13 @@ const config = {
     LM_STUDIO: {
         url: process.env.LM_STUDIO_URL,
         model: process.env.LM_STUDIO_MODEL,
-        nsfwModel: process.env.LM_STUDIO_NSFW_MODEL,
-        batchSize: parseInt(process.env.LM_STUDIO_BATCH_SIZE) || 5
+        nsfwModel: process.env.LM_STUDIO_NSFW_MODEL
     },
 
     // AI Timeouts (in milliseconds)
     AI_TIMEOUTS: {
         text: parseInt(process.env.AI_TIMEOUT_TEXT),
         vision: parseInt(process.env.AI_TIMEOUT_VISION),
-        visionBatch: parseInt(process.env.AI_TIMEOUT_VISION_BATCH),
         healthCheck: parseInt(process.env.AI_TIMEOUT_HEALTH_CHECK)
     },
 
