@@ -5,7 +5,8 @@ const { NSFW_CATEGORIES, getDefaultBlockedCategories } = require('./logic');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     logger.debug(
         `[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`
@@ -105,7 +106,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
  */
 async function sendCategoriesUI(ctx, db, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
 

@@ -3,16 +3,23 @@ const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
+    logger.debug(`[admin-logger] sendConfigUI - log_events raw: ${JSON.stringify(config.log_events)}, type: ${typeof config.log_events}`);
 
     let logEvents = {};
     if (config.log_events) {
-        try {
-            logEvents = JSON.parse(config.log_events);
-        } catch (e) {}
-        if (Array.isArray(logEvents)) logEvents = {};
+        // Handle both string (legacy) and object (PostgreSQL JSONB) formats
+        if (typeof config.log_events === 'string') {
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+        if (Array.isArray(logEvents)) logEvents = {}; // Reset old array format
     }
 
     const has = key => (logEvents[key] ? '✅' : '❌');
@@ -88,7 +95,10 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
         } catch (e) {
-            logger.error(`[admin-logger] sendConfigUI error: ${e.message}`);
+            // Ignore "message is not modified" - it's normal when content hasn't changed
+            if (!e.message.includes('message is not modified')) {
+                logger.error(`[admin-logger] sendConfigUI error: ${e.message}`);
+            }
         }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });

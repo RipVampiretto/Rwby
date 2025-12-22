@@ -13,7 +13,7 @@ function registerCommands(bot, db) {
         if (ctx.userTier && ctx.userTier >= 2) return next();
 
         // Check if Enabled
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.spam_enabled) return next();
 
         const userId = ctx.from.id;
@@ -69,7 +69,7 @@ function registerCommands(bot, db) {
         const [actionKey, fromSettingsFlag] = data.split(':');
         const fromSettings = fromSettingsFlag === '1';
         const action = actionKey.replace('spam_', '');
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
 
         if (action === 'close') {
             await ctx.deleteMessage();

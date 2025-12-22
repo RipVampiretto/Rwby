@@ -52,7 +52,7 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('ai_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === 'ai_close') return ctx.deleteMessage();

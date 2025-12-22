@@ -3,7 +3,8 @@ const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
     const enabled = config.lang_enabled ? t('common.on') : t('common.off');
@@ -12,9 +13,16 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const tierDisplay = tierBypass === -1 ? 'OFF' : `${tierBypass}+`;
 
     let allowed = [];
-    try {
-        allowed = JSON.parse(config.allowed_languages || '[]');
-    } catch (e) {}
+    if (config.allowed_languages) {
+        // Handle both string (legacy) and array (PostgreSQL JSONB) formats
+        if (Array.isArray(config.allowed_languages)) {
+            allowed = config.allowed_languages;
+        } else if (typeof config.allowed_languages === 'string') {
+            try {
+                allowed = JSON.parse(config.allowed_languages);
+            } catch (e) { }
+        }
+    }
     if (allowed.length === 0) allowed = ['it', 'en'];
 
     const text =

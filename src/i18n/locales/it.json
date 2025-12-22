@@ -190,6 +190,7 @@
         "action": "Azione",
         "allowed": "Lingue permesse",
         "warning": "{user}, in questo gruppo sono permesse solo: {languages}. Per favore, usa una di queste lingue.",
+        "log_reason": "Rilevata lingua {detected} (permesse: {allowed})",
         "buttons": {
             "filter": "🌐 Filtro",
             "tier": "👤 Bypass Tier",

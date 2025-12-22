@@ -8,6 +8,7 @@ const { safeDelete, safeBan } = require('../../utils/error-handlers');
 async function executeAction(ctx, config, detected, allowed) {
     const action = config.lang_action || 'delete';
     const user = ctx.from;
+    const lang = ctx.lang || 'en';
 
     // Determine eventType based on action
     const eventType = action === 'ban' ? 'lang_ban' : 'lang_delete';
@@ -17,14 +18,17 @@ async function executeAction(ctx, config, detected, allowed) {
         guildName: ctx.chat.title,
         eventType: eventType,
         targetUser: user,
-        reason: `Language: ${detected} (Allowed: ${allowed.join(', ')})`,
+        reason: i18n.t(lang, 'language.log_reason', {
+            detected: detected.toUpperCase(),
+            allowed: allowed.join(', ').toUpperCase()
+        }),
         isGlobal: action === 'ban'
     };
 
     // Get translation for this guild's UI language
     // Use HTML format for user mention to work properly
     const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
-    const warningMsg = i18n.t(ctx.chat.id, 'language.warning', {
+    const warningMsg = i18n.t(ctx.lang || 'en', 'language.warning', {
         languages: allowed.join(', ').toUpperCase(),
         user: userName
     });
@@ -39,9 +43,9 @@ async function executeAction(ctx, config, detected, allowed) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 60000); // 1 minute
-        } catch (e) {}
+        } catch (e) { }
     } else if (action === 'ban') {
         await safeDelete(ctx, 'language-monitor');
         const banned = await safeBan(ctx, user.id, 'language-monitor');

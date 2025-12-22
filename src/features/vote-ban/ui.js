@@ -1,8 +1,9 @@
 const { safeEdit } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 
-function getVoteMessage(guildId, target, initiator, reason, yes, no, required, expires, voteId, noExpiry = false) {
-    const t = (key, params) => i18n.t(guildId, key, params);
+async function getVoteMessage(guildId, target, initiator, reason, yes, no, required, expires, voteId, noExpiry = false) {
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const minLeft = Math.max(0, Math.ceil((new Date(expires) - Date.now()) / 60000));
     const timeDisplay = noExpiry ? '♾️' : `${minLeft} min`;
@@ -38,7 +39,8 @@ function getReportModeDisplay(mode, t) {
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
 
@@ -108,7 +110,8 @@ function getActionDisplay(action, t) {
  */
 async function sendCategoryActionsUI(ctx, db, isEdit = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     const config = await db.fetchGuildConfig(guildId);
 
     // Get current actions for each category (defaults to report_only)

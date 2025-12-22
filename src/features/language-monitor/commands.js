@@ -18,7 +18,7 @@ function registerCommands(bot, db) {
         if (await isAdmin(ctx, 'language-monitor')) return next();
 
         // Config check
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.lang_enabled) return next();
 
         // Tier bypass check
@@ -37,10 +37,16 @@ function registerCommands(bot, db) {
         if (text.length === 0) return next();
 
         let allowed = ['it', 'en']; // Default
-        try {
-            const parsed = JSON.parse(config.allowed_languages || '[]');
-            if (parsed.length > 0) allowed = parsed;
-        } catch (e) {}
+        if (config.allowed_languages) {
+            if (Array.isArray(config.allowed_languages)) {
+                allowed = config.allowed_languages;
+            } else if (typeof config.allowed_languages === 'string') {
+                try {
+                    const parsed = JSON.parse(config.allowed_languages);
+                    if (parsed.length > 0) allowed = parsed;
+                } catch (e) { }
+            }
+        }
 
         // 1. Script Detection
         const scriptLang = detection.detectNonLatinScript(text);
@@ -66,7 +72,7 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('lng_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === 'lng_close') return ctx.deleteMessage();
@@ -88,9 +94,15 @@ function registerCommands(bot, db) {
         } else if (data.startsWith('lng_set:')) {
             const lang = data.split(':')[1];
             let allowed = [];
-            try {
-                allowed = JSON.parse(config.allowed_languages || '[]');
-            } catch (e) {}
+            if (config.allowed_languages) {
+                if (Array.isArray(config.allowed_languages)) {
+                    allowed = config.allowed_languages;
+                } else if (typeof config.allowed_languages === 'string') {
+                    try {
+                        allowed = JSON.parse(config.allowed_languages);
+                    } catch (e) { }
+                }
+            }
             if (allowed.length === 0) allowed = ['it', 'en'];
 
             if (allowed.includes(lang)) {

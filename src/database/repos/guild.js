@@ -1,51 +1,6 @@
 const { queryOne, query, queryAll } = require('../connection');
 const logger = require('../../middlewares/logger');
 
-// ============================================================================
-// IN-MEMORY CACHE FOR GUILD CONFIGS (Enables sync getGuildConfig calls)
-// ============================================================================
-const _guildCache = new Map();
-let _cacheInitialized = false;
-
-/**
- * Default config values for new guilds (used when not in cache yet)
- */
-const DEFAULT_CONFIG = {
-    spam_enabled: 0,
-    ai_enabled: 0,
-    edit_monitor_enabled: 0,
-    profiler_enabled: 0,
-    lang_enabled: 0,
-    link_enabled: 0,
-    nsfw_enabled: 0,
-    visual_enabled: 0,
-    voteban_enabled: 0,
-    modal_enabled: 0,
-    casban_enabled: 0,
-    welcome_enabled: 0,
-    captcha_enabled: 0,
-    rules_enabled: 0,
-    welcome_msg_enabled: 0
-};
-
-/**
- * Initialize cache by loading all guild configs from database
- * Called once at startup
- */
-async function initCache() {
-    if (_cacheInitialized) return;
-    try {
-        const configs = await queryAll('SELECT * FROM guild_config');
-        for (const config of configs) {
-            _guildCache.set(String(config.guild_id), config);
-        }
-        _cacheInitialized = true;
-        logger.info(`[database] Loaded ${_guildCache.size} guild configs into cache`);
-    } catch (e) {
-        logger.error(`[database] Failed to init guild cache: ${e.message}`);
-    }
-}
-
 /**
  * Valid column names for guild_config table (whitelist to prevent SQL injection)
  */
@@ -153,70 +108,44 @@ const GUILD_CONFIG_COLUMNS = new Set([
 ]);
 
 /**
- * Get guild config - SYNC from cache, async DB fetch if not cached
- * @param {number|string} guildId - Guild ID
- * @returns {object} Config object (sync) or Promise<object> if fetching from DB
+ * Default config values for new guilds
  */
-function getGuildConfig(guildId) {
-    const key = String(guildId);
-
-    // Return from cache if available (sync)
-    if (_guildCache.has(key)) {
-        return _guildCache.get(key);
-    }
-
-    // Not in cache - return default and trigger async load
-    const defaultConfig = { guild_id: guildId, ...DEFAULT_CONFIG };
-    _guildCache.set(key, defaultConfig); // Set temporary default
-
-    // Async: fetch from DB and update cache
-    (async () => {
-        try {
-            let config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
-            if (!config) {
-                await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
-                config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
-            }
-            if (config) {
-                _guildCache.set(key, config);
-            }
-        } catch (e) {
-            logger.error(`[database] Failed to fetch guild config for ${guildId}: ${e.message}`);
-        }
-    })();
-
-    return defaultConfig;
-}
+const DEFAULT_CONFIG = {
+    spam_enabled: 0,
+    ai_enabled: 0,
+    edit_monitor_enabled: 0,
+    profiler_enabled: 0,
+    lang_enabled: 0,
+    link_enabled: 0,
+    nsfw_enabled: 0,
+    visual_enabled: 0,
+    voteban_enabled: 0,
+    modal_enabled: 0,
+    casban_enabled: 0,
+    welcome_enabled: 0,
+    captcha_enabled: 0,
+    rules_enabled: 0,
+    welcome_msg_enabled: 0
+};
 
 /**
- * Fetch guild config directly from DB (bypassing cache check, but updating it)
- * Used for UI menus to ensure latest data is displayed
+ * Get guild config - ALWAYS reads from database (no cache)
  * @param {number|string} guildId - Guild ID
  * @returns {Promise<object>} Config object
  */
-async function fetchGuildConfig(guildId) {
-    const key = String(guildId);
-    let config = null;
-
+async function getGuildConfig(guildId) {
     try {
-        config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
+        let config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
         if (!config) {
-            // If doesn't exist, ensure it exists
+            // Create new config if doesn't exist
             await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
             config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
         }
+        return config || { guild_id: guildId, ...DEFAULT_CONFIG };
     } catch (e) {
-        logger.error(`[database] Failed to fetch guild config for ${guildId}: ${e.message}`);
+        logger.error(`[database] Failed to get guild config for ${guildId}: ${e.message}`);
+        return { guild_id: guildId, ...DEFAULT_CONFIG };
     }
-
-    // Default if still null (DB error)
-    if (!config) {
-        config = { guild_id: guildId, ...DEFAULT_CONFIG };
-    }
-
-    // Update cache
-    _guildCache.set(key, config);
-    return config;
 }
 
 /**
@@ -239,10 +168,28 @@ async function updateGuildConfig(guildId, updates) {
         logger.warn(`[database] updateGuildConfig ignored invalid columns: ${invalidKeys.join(', ')}`);
     }
 
+    // Ensure guild exists first
+    await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
+
+    // Boolean column names (need 0/1 -> true/false conversion)
+    const BOOLEAN_COLUMNS = new Set([
+        'spam_enabled', 'ai_enabled', 'edit_monitor_enabled', 'profiler_enabled',
+        'lang_enabled', 'link_enabled', 'nsfw_enabled', 'visual_enabled',
+        'voteban_enabled', 'modal_enabled', 'casban_enabled', 'welcome_enabled',
+        'captcha_enabled', 'rules_enabled', 'welcome_msg_enabled', 'captcha_logs_enabled',
+        'ai_context_aware', 'edit_lock_tier0', 'keyword_sync_global', 'link_sync_global',
+        'visual_sync_global', 'modal_sync_global', 'nsfw_check_photos', 'nsfw_check_videos',
+        'nsfw_check_gifs', 'nsfw_check_stickers'
+    ]);
+
     // Build parameterized query
     const setClauses = validKeys.map((k, i) => `${k} = $${i + 1}`);
     const values = validKeys.map(k => {
-        const val = updates[k];
+        let val = updates[k];
+        // Convert 0/1 to boolean for BOOLEAN columns
+        if (BOOLEAN_COLUMNS.has(k)) {
+            val = val === 1 || val === true || val === '1' || val === 'true';
+        }
         // Convert arrays/objects to JSON for JSONB columns
         if (typeof val === 'object' && val !== null) {
             return JSON.stringify(val);
@@ -252,16 +199,13 @@ async function updateGuildConfig(guildId, updates) {
     values.push(guildId);
 
     const sql = `UPDATE guild_config SET ${setClauses.join(', ')}, updated_at = NOW() WHERE guild_id = $${values.length}`;
+
+    logger.debug(`[database] updateGuildConfig SQL: ${sql}`);
+    logger.debug(`[database] updateGuildConfig values: ${JSON.stringify(values)}`);
+
     await query(sql, values);
 
-    // Sync cache: update cached config with new values
-    const key = String(guildId);
-    if (_guildCache.has(key)) {
-        const cached = _guildCache.get(key);
-        for (const k of validKeys) {
-            cached[k] = updates[k];
-        }
-    }
+    logger.info(`[database] updateGuildConfig completed for guild ${guildId}`);
 }
 
 /**
@@ -281,16 +225,12 @@ async function upsertGuild(chat) {
     `,
         [id, title]
     );
-
-    // Sync cache
-    const key = String(id);
-    if (_guildCache.has(key)) {
-        _guildCache.get(key).guild_name = title;
-    }
 }
 
+// Alias for backwards compatibility (both names now point to same function)
+const fetchGuildConfig = getGuildConfig;
+
 module.exports = {
-    initCache,
     getGuildConfig,
     fetchGuildConfig,
     updateGuildConfig,

@@ -12,7 +12,7 @@ function registerCommands(bot, db) {
         if (await isAdmin(ctx, 'intelligent-profiler')) return next();
 
         // Config check
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.profiler_enabled) return next();
 
         // Require Tier 0 (Novice)
@@ -33,7 +33,7 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('prf_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === 'prf_close') return ctx.deleteMessage();

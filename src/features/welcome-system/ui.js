@@ -7,18 +7,19 @@ const { replaceWildcards, parseButtonConfig } = require('./utils');
  */
 async function sendWelcomeMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     const config = (await getGuildConfig(guildId)) || {};
 
-    const captchaEnabled = config.captcha_enabled === 1;
-    const msgEnabled = config.welcome_msg_enabled === 1;
+    const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1;
+    const msgEnabled = config.welcome_msg_enabled === true || config.welcome_msg_enabled === 1;
     const modes = (config.captcha_mode || 'button').split(',');
     const modeDisplay = modes.length > 1 ? t('welcome.modes_active', { count: modes.length }) : modes[0];
     const timeout = config.kick_timeout || 5;
 
     const autoDelete = config.welcome_autodelete_timer || 0;
-    const rulesEnabled = config.rules_enabled === 1;
-    const logsEnabled = config.captcha_logs_enabled === 1;
+    const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
+    const logsEnabled = config.captcha_logs_enabled === true || config.captcha_logs_enabled === 1;
 
     const onOff = enabled => (enabled ? t('common.on') : t('common.off'));
 
@@ -86,7 +87,7 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -97,8 +98,9 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
  */
 async function sendCaptchaModeMenu(ctx) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
-    const config = getGuildConfig(guildId) || {};
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
+    const config = (await getGuildConfig(guildId)) || {};
     const currentModes = (config.captcha_mode || 'button').split(',');
 
     const isModeActive = mode => currentModes.includes(mode);
@@ -143,7 +145,7 @@ async function sendCaptchaModeMenu(ctx) {
     }
     try {
         await ctx.answerCallbackQuery();
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -151,8 +153,9 @@ async function sendCaptchaModeMenu(ctx) {
  */
 async function sendPreview(ctx) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
-    const config = getGuildConfig(guildId);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
+    const config = await getGuildConfig(guildId);
     if (!config.welcome_message) {
         return ctx.answerCallbackQuery(t('welcome.preview.no_message'));
     }
@@ -186,7 +189,8 @@ async function sendPreview(ctx) {
  */
 async function sendRulesWizardPrompt(ctx) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     const text =
         t('welcome.rules_prompt.title') +
         '\n\n' +
@@ -202,7 +206,7 @@ async function sendRulesWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -210,7 +214,8 @@ async function sendRulesWizardPrompt(ctx) {
  */
 async function sendWizardPrompt(ctx) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     const text =
         t('welcome.wizard.title') +
         '\n\n' +
@@ -258,7 +263,7 @@ async function sendWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 module.exports = {

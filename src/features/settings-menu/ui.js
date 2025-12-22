@@ -8,7 +8,8 @@ function setDb(database) {
 
 async function sendMainMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     // Check if staff group is configured
     const config = db ? await db.fetchGuildConfig(guildId) : null;
@@ -62,7 +63,7 @@ async function sendMainMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -70,8 +71,9 @@ async function sendMainMenu(ctx, isEdit = false) {
 
 async function sendLanguageUI(ctx) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
-    const currentLang = i18n.getLanguage(guildId);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
+    const currentLang = lang; // Already loaded above
     const availableLangs = i18n.getAvailableLanguages();
 
     const text = `${t('settings.language.title')}\n\n${t('settings.language.subtitle')}\n${t('settings.language.current', { lang: availableLangs[currentLang] })}`;
@@ -95,7 +97,7 @@ async function sendLanguageUI(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 module.exports = {

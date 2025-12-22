@@ -17,9 +17,6 @@ async function init() {
     // Run migrations
     await migrations.runMigrations();
 
-    // Initialize guild config cache (enables sync getGuildConfig)
-    await guildRepo.initCache();
-
     return connection.getPool();
 }
 

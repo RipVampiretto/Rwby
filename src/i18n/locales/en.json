@@ -190,6 +190,7 @@
         "action": "Action",
         "allowed": "Allowed languages",
         "warning": "{user}, this group only allows: {languages}. Please use one of these languages.",
+        "log_reason": "Detected language {detected} (allowed: {allowed})",
         "buttons": {
             "filter": "🌐 Filter",
             "tier": "👤 Tier Bypass",

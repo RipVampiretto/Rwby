@@ -63,7 +63,7 @@ bot.use(async (ctx, next) => {
         // Global Ban Check - if blacklist is enabled, check internal global bans
         // (CAS bans are checked in the cas-ban module)
         if (ctx.from) {
-            const config = db.getGuildConfig(ctx.chat.id);
+            const config = await db.getGuildConfig(ctx.chat.id);
             if (config.casban_enabled) {
                 const isBanned = await db.isUserGloballyBanned(ctx.from.id);
                 if (isBanned) {
@@ -300,7 +300,7 @@ async function start() {
 
     // Start bot
     logger.info("🚀 Bot avviato...");
-    bot.start({drop_pending_updates: true});
+    bot.start({ drop_pending_updates: true });
 }
 
 start().catch(err => {

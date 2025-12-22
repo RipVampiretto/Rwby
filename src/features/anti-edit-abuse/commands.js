@@ -26,7 +26,7 @@ function registerCommands(bot, db) {
         if (await isUserAdmin(ctx)) return next();
 
         // Config check
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.edit_monitor_enabled) return next();
 
         // Tier bypass check
@@ -43,7 +43,7 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('edt_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === 'edt_close') return ctx.deleteMessage();

@@ -18,7 +18,7 @@ function registerCommands(bot, db) {
         if (ctx.chat.type === 'private') return next();
         if (await isAdmin(ctx, 'visual-immune-system')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.visual_enabled) return next();
 
         const tierBypass = config.visual_tier_bypass ?? 2;
@@ -35,7 +35,7 @@ function registerCommands(bot, db) {
         if (!data.startsWith('vis_')) return next();
 
         // If config is needed for callback logic
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === 'vis_close') return ctx.deleteMessage();

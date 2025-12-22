@@ -19,7 +19,7 @@ function registerCommands(bot, db) {
 
         if (ctx.chat.type === 'private') return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
 
         // Check report mode
         const reportMode = config.report_mode || 'ai_voteban';
@@ -47,7 +47,7 @@ function registerCommands(bot, db) {
                 if (['creator', 'administrator'].includes(member.status)) {
                     return;
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             // Check initiator tier requirement
             const reqTier = config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 0;
@@ -78,7 +78,8 @@ function registerCommands(bot, db) {
 
                     const action = analysisResult.action || 'delete';
                     const i18n = require('../../i18n');
-                    const t = (key, params) => i18n.t(ctx.chat.id, key, params);
+                    const lang = await i18n.getLanguage(ctx.chat.id);
+                    const t = (key, params) => i18n.t(lang, key, params);
                     const userReputation = require('../user-reputation');
 
                     // Delete the offending message first
@@ -94,7 +95,7 @@ function registerCommands(bot, db) {
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                            } catch (e) {}
+                            } catch (e) { }
                         }, 60000);
                     } else if (action === 'ban') {
                         // Ban the user
@@ -128,7 +129,7 @@ function registerCommands(bot, db) {
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                            } catch (e) {}
+                            } catch (e) { }
                         }, 60000);
 
                         // Log to admin channel
@@ -160,7 +161,7 @@ function registerCommands(bot, db) {
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                            } catch (e) {}
+                            } catch (e) { }
                         }, 60000);
                     }
 
@@ -223,7 +224,7 @@ function registerCommands(bot, db) {
                 voters
             });
 
-            const { text: msgText, keyboard } = ui.getVoteMessage(
+            const { text: msgText, keyboard } = await ui.getVoteMessage(
                 ctx.chat.id,
                 target,
                 ctx.from,
@@ -293,7 +294,7 @@ function registerCommands(bot, db) {
 
         // Config Handlers
         if (data.startsWith('vb_')) {
-            const config = db.getGuildConfig(ctx.chat.id);
+            const config = await db.getGuildConfig(ctx.chat.id);
             const fromSettings = isFromSettingsMenu(ctx);
 
             if (data === 'vb_close') return ctx.deleteMessage();
@@ -348,7 +349,7 @@ function registerCommands(bot, db) {
         // Smart Report Category Action Handlers
         if (data.startsWith('report_cat_')) {
             const cat = data.replace('report_cat_', '');
-            const config = db.getGuildConfig(ctx.chat.id);
+            const config = await db.getGuildConfig(ctx.chat.id);
             const key = `report_action_${cat}`;
             const current = config[key] || 'report_only';
 
@@ -389,7 +390,7 @@ function registerCommands(bot, db) {
             }
 
             // Voting Logic
-            const config = db.getGuildConfig(ctx.chat.id);
+            const config = await db.getGuildConfig(ctx.chat.id);
             if (ctx.userTier < (config.voteban_voter_tier || 0)) {
                 return ctx.answerCallbackQuery('Tier insufficiente per votare.');
             }
@@ -397,7 +398,7 @@ function registerCommands(bot, db) {
             let voters = [];
             try {
                 voters = JSON.parse(vote.voters || '[]');
-            } catch (e) {}
+            } catch (e) { }
 
             const hasVoted = voters.some(v => (typeof v === 'object' ? v.id : v) === ctx.from.id);
             if (hasVoted) return ctx.answerCallbackQuery('Hai già votato!');
@@ -421,7 +422,7 @@ function registerCommands(bot, db) {
                 const outcome = yes > no ? 'passed' : 'failed';
                 await actions.finalizeVote(ctx, db, vote, outcome, null);
             } else {
-                const { text, keyboard } = ui.getVoteMessage(
+                const { text, keyboard } = await ui.getVoteMessage(
                     vote.guild_id,
                     { id: vote.target_user_id, username: vote.target_username },
                     { id: vote.initiated_by, username: '...' },
@@ -435,7 +436,7 @@ function registerCommands(bot, db) {
                 );
                 try {
                     await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-                } catch (e) {}
+                } catch (e) { }
             }
         }
 

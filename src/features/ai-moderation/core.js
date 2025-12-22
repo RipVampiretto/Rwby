@@ -37,7 +37,7 @@ async function analyzeMessage(ctx) {
         return { triggered: false, result: null };
     }
 
-    const config = db.getGuildConfig(ctx.chat.id);
+    const config = await db.getGuildConfig(ctx.chat.id);
 
     // Check if enabled
     if (!config.ai_enabled) {

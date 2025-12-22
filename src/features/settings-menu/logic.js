@@ -97,7 +97,8 @@ async function handleLanguageChange(ctx, langCode) {
     i18n.setLanguage(guildId, langCode);
 
     // Use the NEW language for the success message
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     await ctx.answerCallbackQuery(t('settings.language.changed', { lang: availableLangs[langCode] }));
 
     // Refresh the language UI with new language

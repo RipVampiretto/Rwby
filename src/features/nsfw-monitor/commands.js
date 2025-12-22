@@ -26,7 +26,7 @@ function registerCommands(bot, db) {
             }
 
             // Config check
-            const config = db.getGuildConfig(ctx.chat.id);
+            const config = await db.getGuildConfig(ctx.chat.id);
             if (!config.nsfw_enabled) {
                 logger.debug(`[nsfw-monitor] ⏭️ Skipping: NSFW monitor disabled for chat ${chatId}`);
                 return next();
@@ -95,7 +95,7 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('nsf_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
         if (data === 'nsf_close') return ctx.deleteMessage();
@@ -103,7 +103,7 @@ function registerCommands(bot, db) {
         // No-op for non-clickable buttons
         if (data === 'nsf_noop') {
             const i18n = require('../../i18n');
-            return ctx.answerCallbackQuery(i18n.t(ctx.chat.id, 'nsfw.categories_ui.noop'));
+            return ctx.answerCallbackQuery(i18n.t(ctx.lang || 'en', 'nsfw.categories_ui.noop'));
         }
 
         // Categories submenu

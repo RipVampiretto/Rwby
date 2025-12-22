@@ -127,7 +127,8 @@ async function logWelcomeEvent(ctx, type, details, config) {
     if (!logChannelId) return;
 
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     const user = ctx.from;
     const chat = ctx.chat;
     let text = '';
@@ -212,8 +213,8 @@ async function handleNewMember(ctx) {
         return;
     }
 
-    const config = getGuildConfig(ctx.chat.id);
-    const captchaEnabled = config.captcha_enabled === 1; // Correct toggle check
+    const config = await getGuildConfig(ctx.chat.id);
+    const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1; // Correct toggle check
     logger.debug(`[Welcome] Captcha Enabled: ${captchaEnabled} (Value: ${config.captcha_enabled})`);
 
     for (const member of humans) {
@@ -224,7 +225,7 @@ async function handleNewMember(ctx) {
 async function processUserJoin(ctx, user, config) {
     logWelcomeEvent(ctx, 'JOIN', null, config, user);
 
-    const captchaEnabled = config.captcha_enabled === 1;
+    const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1;
 
     if (!captchaEnabled) {
         await sendWelcome(ctx, config, user);
@@ -249,7 +250,8 @@ async function processUserJoin(ctx, user, config) {
 
     // 2. Prepare Captcha
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
     const mode = config.captcha_mode || 'button';
     const timeoutMins = config.kick_timeout || 5;
     let text = '';
@@ -425,7 +427,7 @@ async function handleCaptchaCallback(ctx) {
     }
 
     let success = false;
-    const config = getGuildConfig(ctx.chat.id);
+    const config = await getGuildConfig(ctx.chat.id);
 
     if (mode === 'b') {
         success = true;
@@ -451,9 +453,10 @@ async function handleCaptchaCallback(ctx) {
         }
 
         // Check Rules
-        if (config.rules_enabled === 1) {
+        if (config.rules_enabled === true || config.rules_enabled === 1) {
             const guildId = ctx.chat.id;
-            const t = (key, params) => i18n.t(guildId, key, params);
+            const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
             const rulesLink = config.rules_link || 'https://t.me/telegram'; // Fallback
             const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
             try {
@@ -487,7 +490,7 @@ async function handleCaptchaCallback(ctx) {
 }
 
 async function completeVerification(ctx, userId) {
-    const config = getGuildConfig(ctx.chat.id);
+    const config = await getGuildConfig(ctx.chat.id);
     logWelcomeEvent(ctx, 'SUCCESS', null, config);
 
     try {

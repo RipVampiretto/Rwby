@@ -29,27 +29,41 @@ describe('Guild Repository', () => {
     });
 
     describe('getGuildConfig()', () => {
-        it('should return default config for new guild', () => {
-            const config = guildRepo.getGuildConfig(-100123);
+        it('should return config for guild from database', async () => {
+            const { queryOne, query } = require('../../../src/database/connection');
+            queryOne.mockResolvedValueOnce({
+                guild_id: -100123,
+                spam_enabled: false,
+                ai_enabled: false
+            });
+
+            const config = await guildRepo.getGuildConfig(-100123);
+
+            expect(config.guild_id).toBe(-100123);
+            expect(queryOne).toHaveBeenCalled();
+        });
+
+        it('should create guild if not exists and return default config', async () => {
+            const { queryOne, query } = require('../../../src/database/connection');
+            queryOne
+                .mockResolvedValueOnce(null) // First query - not found
+                .mockResolvedValueOnce({ guild_id: -100123, spam_enabled: false });
+            query.mockResolvedValue({ rowCount: 1 });
+
+            const config = await guildRepo.getGuildConfig(-100123);
+
+            expect(config.guild_id).toBe(-100123);
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO guild_config'), [-100123]);
+        });
+
+        it('should return default config on database error', async () => {
+            const { queryOne } = require('../../../src/database/connection');
+            queryOne.mockRejectedValue(new Error('DB Error'));
+
+            const config = await guildRepo.getGuildConfig(-100123);
 
             expect(config.guild_id).toBe(-100123);
             expect(config.spam_enabled).toBe(0);
-            expect(config.ai_enabled).toBe(0);
-        });
-
-        it('should return same reference for same guild (cached)', () => {
-            const config1 = guildRepo.getGuildConfig(-100123);
-            const config2 = guildRepo.getGuildConfig(-100123);
-
-            expect(config1).toBe(config2);
-        });
-
-        it('should handle string guild ID', () => {
-            const config1 = guildRepo.getGuildConfig('-100123');
-            const config2 = guildRepo.getGuildConfig(-100123);
-
-            // Should be same cached object
-            expect(config1).toBe(config2);
         });
     });
 
@@ -102,7 +116,7 @@ describe('Guild Repository', () => {
                 ai_enabled: 1
             });
 
-            const call = query.mock.calls[0];
+            const call = query.mock.calls[1]; // calls[1] is UPDATE, calls[0] is INSERT
             expect(call[0]).toContain('spam_enabled');
             expect(call[0]).toContain('ai_enabled');
             expect(call[0]).not.toContain('invalid_column');

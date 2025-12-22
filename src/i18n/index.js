@@ -52,14 +52,20 @@ function init(database) {
 }
 
 /**
- * Get translation for a key
- * @param {number} guildId - Guild ID to get language for
+ * Get translation for a key (SYNC version - uses provided lang or default)
+ * @param {number|string} guildIdOrLang - Guild ID or language code
  * @param {string} key - Translation key (dot notation: "settings.title")
  * @param {object} params - Optional parameters for interpolation
  * @returns {string} Translated string or key if not found
  */
-function t(guildId, key, params = {}) {
-    const lang = getLanguage(guildId);
+function t(guildIdOrLang, key, params = {}) {
+    // If guildIdOrLang is a language code (string like 'it', 'en'), use it directly
+    // Otherwise it's a guildId and we use DEFAULT_LANG (caller should use tAsync for dynamic lang)
+    let lang = DEFAULT_LANG;
+    if (typeof guildIdOrLang === 'string' && AVAILABLE_LANGUAGES[guildIdOrLang]) {
+        lang = guildIdOrLang;
+    }
+
     const locale = localesCache[lang] || localesCache[DEFAULT_LANG];
 
     // Navigate nested keys (e.g., "settings.main.title")
@@ -87,15 +93,15 @@ function t(guildId, key, params = {}) {
 }
 
 /**
- * Get current language for a guild
+ * Get current language for a guild (ASYNC)
  * @param {number} guildId - Guild ID
- * @returns {string} Language code
+ * @returns {Promise<string>} Language code
  */
-function getLanguage(guildId) {
+async function getLanguage(guildId) {
     if (!db || !guildId) return DEFAULT_LANG;
 
     try {
-        const config = db.getGuildConfig(guildId);
+        const config = await db.getGuildConfig(guildId);
         return config?.ui_language || DEFAULT_LANG;
     } catch (e) {
         return DEFAULT_LANG;
@@ -103,19 +109,19 @@ function getLanguage(guildId) {
 }
 
 /**
- * Set language for a guild
+ * Set language for a guild (ASYNC)
  * @param {number} guildId - Guild ID
  * @param {string} langCode - Language code
- * @returns {boolean} Success
+ * @returns {Promise<boolean>} Success
  */
-function setLanguage(guildId, langCode) {
+async function setLanguage(guildId, langCode) {
     if (!AVAILABLE_LANGUAGES[langCode]) {
         logger.warn(`[i18n] Invalid language code: ${langCode}`);
         return false;
     }
 
     try {
-        db.updateGuildConfig(guildId, { ui_language: langCode });
+        await db.updateGuildConfig(guildId, { ui_language: langCode });
         logger.info(`[i18n] Set language for guild ${guildId}: ${langCode}`);
         return true;
     } catch (e) {
@@ -142,19 +148,27 @@ function getDefaultLanguage() {
 
 /**
  * Middleware to attach i18n functions to context
+ * Pre-loads language from DB at request start for sync access
  */
 function middleware() {
     return async (ctx, next) => {
-        // Attach translation function to context
+        // Pre-load language at start of request
+        const guildId = ctx.chat?.id;
+        const lang = guildId ? await getLanguage(guildId) : DEFAULT_LANG;
+
+        // Attach sync translation function that uses pre-loaded language
         ctx.t = (key, params) => {
-            const guildId = ctx.chat?.id;
-            return t(guildId, key, params);
+            return t(lang, key, params);
         };
+
+        // Store the current language
+        ctx.lang = lang;
 
         // Attach other helpers
         ctx.i18n = {
+            lang,
             getLanguage: () => getLanguage(ctx.chat?.id),
-            setLanguage: lang => setLanguage(ctx.chat?.id, lang),
+            setLanguage: langCode => setLanguage(ctx.chat?.id, langCode),
             available: AVAILABLE_LANGUAGES
         };
 
@@ -165,11 +179,11 @@ function middleware() {
 /**
  * Format action value to localized UI text
  * Converts: report_only -> "Segnala", delete -> "Elimina", ban -> "Banna"
- * @param {number} guildId - Guild ID for language
+ * @param {string} lang - Language code
  * @param {string} action - Action value (report_only, delete, ban)
  * @returns {string} Localized action text
  */
-function formatAction(guildId, action) {
+function formatAction(lang, action) {
     const actionKey = (action || 'report_only').toLowerCase().replace(/_/g, '');
     const actionMap = {
         reportonly: 'common.report_only',
@@ -180,7 +194,7 @@ function formatAction(guildId, action) {
 
     const key = actionMap[actionKey] || actionMap[(action || '').toLowerCase()];
     if (key) {
-        return t(guildId, key);
+        return t(lang, key);
     }
     return action || 'Report';
 }

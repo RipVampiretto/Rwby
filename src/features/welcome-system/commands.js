@@ -24,7 +24,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) {}
+        } catch (e) { }
         return;
     }
 
@@ -34,23 +34,34 @@ async function handleCallback(ctx) {
         const type = parts[1]; // captcha | msg
         const val = parseInt(parts[2]); // 0 | 1
 
-        if (type === 'captcha') {
-            updateGuildConfig(ctx.chat.id, { captcha_enabled: val });
-        } else if (type === 'msg') {
-            updateGuildConfig(ctx.chat.id, { welcome_msg_enabled: val });
-        } else if (type === 'rules') {
-            updateGuildConfig(ctx.chat.id, { rules_enabled: val });
-        } else if (type === 'logs') {
-            updateGuildConfig(ctx.chat.id, { captcha_logs_enabled: val });
+        logger.info(`[Welcome] Toggle: type=${type}, val=${val}, chat=${ctx.chat.id}`);
+
+        try {
+            if (type === 'captcha') {
+                await updateGuildConfig(ctx.chat.id, { captcha_enabled: val });
+            } else if (type === 'msg') {
+                await updateGuildConfig(ctx.chat.id, { welcome_msg_enabled: val });
+            } else if (type === 'rules') {
+                await updateGuildConfig(ctx.chat.id, { rules_enabled: val });
+            } else if (type === 'logs') {
+                await updateGuildConfig(ctx.chat.id, { captcha_logs_enabled: val });
+            }
+            logger.info(`[Welcome] Toggle update complete, refreshing UI`);
+            await ui.sendWelcomeMenu(ctx, true);
+        } catch (e) {
+            logger.error(`[Welcome] Toggle error: ${e.message}`);
+            console.error(e);
         }
-        await ui.sendWelcomeMenu(ctx, true);
+        try {
+            await ctx.answerCallbackQuery();
+        } catch (e) { }
         return;
     }
 
     // Toggle Mode (Multi-select)
     if (data.startsWith('wc_toggle_mode:')) {
         const modeToToggle = data.split(':')[1];
-        const config = getGuildConfig(ctx.chat.id);
+        const config = await getGuildConfig(ctx.chat.id);
         let currentModes = (config.captcha_mode || 'button').split(',');
 
         if (currentModes.includes(modeToToggle)) {
@@ -66,7 +77,7 @@ async function handleCallback(ctx) {
             currentModes.push('button');
         }
 
-        updateGuildConfig(ctx.chat.id, { captcha_mode: currentModes.join(',') });
+        await updateGuildConfig(ctx.chat.id, { captcha_mode: currentModes.join(',') });
         await ui.sendCaptchaModeMenu(ctx);
         return;
     }
@@ -78,7 +89,7 @@ async function handleCallback(ctx) {
         let idx = steps.indexOf(current);
         if (idx === -1) idx = 2; // Default 5
         const next = steps[(idx + 1) % steps.length];
-        updateGuildConfig(ctx.chat.id, { kick_timeout: next });
+        await updateGuildConfig(ctx.chat.id, { kick_timeout: next });
         await ui.sendWelcomeMenu(ctx, true);
         return;
     }
@@ -90,7 +101,7 @@ async function handleCallback(ctx) {
         let idx = steps.indexOf(current);
         if (idx === -1) idx = 0;
         const next = steps[(idx + 1) % steps.length];
-        updateGuildConfig(ctx.chat.id, { welcome_autodelete_timer: next });
+        await updateGuildConfig(ctx.chat.id, { welcome_autodelete_timer: next });
         await ui.sendWelcomeMenu(ctx, true);
         return;
     }
@@ -117,7 +128,7 @@ async function handleCallback(ctx) {
     }
 
     if (data === 'wc_del_msg') {
-        updateGuildConfig(ctx.chat.id, {
+        await updateGuildConfig(ctx.chat.id, {
             welcome_message: null,
             welcome_buttons: null,
             welcome_msg_enabled: 0

@@ -13,13 +13,18 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('log_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         let logEvents = {};
         if (config.log_events) {
-            try {
-                logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
-            if (Array.isArray(logEvents)) logEvents = {}; // Reset if old format
+            // Handle both string (legacy) and object (PostgreSQL JSONB) formats
+            if (typeof config.log_events === 'string') {
+                try {
+                    logEvents = JSON.parse(config.log_events);
+                } catch (e) { }
+            } else if (typeof config.log_events === 'object') {
+                logEvents = config.log_events;
+            }
+            if (Array.isArray(logEvents)) logEvents = {}; // Reset old array format
         }
         const fromSettings = isFromSettingsMenu(ctx);
 

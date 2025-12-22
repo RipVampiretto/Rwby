@@ -35,8 +35,8 @@ function register(bot) {
         if (ctx.chat.type === 'private') return next();
 
         // Check if enabled for this guild
-        const config = db.getGuildConfig(ctx.chat.id);
-        if (config.casban_enabled === 0) return next();
+        const config = await db.getGuildConfig(ctx.chat.id);
+        if (!config.casban_enabled) return next();
 
         // Check if user is CAS banned
         const isBanned = await detection.isCasBanned(ctx.from.id);
@@ -65,7 +65,7 @@ function register(bot) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('cas_')) return next();
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = ctx.callbackQuery.message?.reply_markup?.inline_keyboard?.some(row =>
             row.some(btn => btn.callback_data === 'settings_main')
         );
@@ -76,11 +76,11 @@ function register(bot) {
         }
 
         if (data === 'cas_toggle') {
-            const newState = config.casban_enabled === 0 ? 1 : 0;
-            await db.updateGuildConfig(ctx.chat.id, { casban_enabled: newState });
+            const newState = !config.casban_enabled;
+            await db.updateGuildConfig(ctx.chat.id, { casban_enabled: newState ? 1 : 0 });
 
             // When enabling, sync all existing internal global bans to this group
-            if (newState === 1) {
+            if (newState) {
                 await ctx.answerCallbackQuery({ text: '🔄 Sincronizzazione blacklist in corso...' });
 
                 const superAdmin = require('../super-admin');

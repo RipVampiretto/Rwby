@@ -2,7 +2,8 @@ const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
     const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : t('logger.channel_not_set');
@@ -27,14 +28,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
 }
 
-function formatNoteList(guildId, targetId, notes) {
-    const t = (key, params) => i18n.t(guildId, key, params);
+async function formatNoteList(guildId, targetId, notes) {
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     if (notes.length === 0) {
         return t('staff.notes.empty');

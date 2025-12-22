@@ -15,10 +15,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             config.profiler_action_link === 'report_only' ||
             config.profiler_action_forward === 'report_only')
     ) {
-        warning = `\n${i18n.t(ctx.chat.id, 'common.warnings.no_staff_group')}\n`;
+        warning = `\n${i18n.t(ctx.lang || 'en', 'common.warnings.no_staff_group')}\n`;
     }
 
-    const t = (key, params) => i18n.t(ctx.chat.id, key, params);
+    const lang = await i18n.getLanguage(ctx.chat.id);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const text =
         `🔍 **PROFILER NUOVI UTENTI**\n\n` +

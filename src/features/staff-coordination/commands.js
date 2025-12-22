@@ -41,7 +41,7 @@ function registerCommands(bot, db) {
     bot.command('notes', async ctx => {
         if (ctx.chat.type === 'private') return;
 
-        const config = db.getGuildConfig(ctx.chat.id);
+        const config = await db.getGuildConfig(ctx.chat.id);
         const staffGroupId = config.staff_group_id || ctx.chat.id;
         const args = ctx.message.text.split(' ').slice(1);
 
@@ -78,7 +78,7 @@ function registerCommands(bot, db) {
         }
 
         const notes = await logic.getNotes(db, targetId, staffGroupId);
-        const text = ui.formatNoteList(targetId, notes);
+        const text = await ui.formatNoteList(ctx.chat.id, targetId, notes);
         await ctx.reply(text, { parse_mode: 'HTML' });
     });
 

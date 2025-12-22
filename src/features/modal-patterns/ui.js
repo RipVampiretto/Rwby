@@ -5,7 +5,8 @@ const i18n = require('../../i18n');
 
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
     const enabled = config.modal_enabled ? t('common.on') : t('common.off');
@@ -14,10 +15,16 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     // Count active modals for this group's languages
     let allowedLangs = ['it', 'en'];
-    try {
-        const parsed = JSON.parse(config.allowed_languages || '[]');
-        if (parsed.length > 0) allowedLangs = parsed;
-    } catch (e) {}
+    if (config.allowed_languages) {
+        if (Array.isArray(config.allowed_languages)) {
+            allowedLangs = config.allowed_languages;
+        } else if (typeof config.allowed_languages === 'string') {
+            try {
+                const parsed = JSON.parse(config.allowed_languages);
+                if (parsed.length > 0) allowedLangs = parsed;
+            } catch (e) { }
+        }
+    }
 
     const modals = await logic.getModalsForLanguages(allowedLangs);
     const activeCount = modals.filter(m => m.enabled).length;
@@ -64,16 +71,23 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
 async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
 
     // Get group's allowed languages
     let allowedLangs = ['it', 'en'];
-    try {
-        const parsed = JSON.parse(config.allowed_languages || '[]');
-        if (parsed.length > 0) allowedLangs = parsed;
-    } catch (e) {}
+    if (config.allowed_languages) {
+        if (Array.isArray(config.allowed_languages)) {
+            allowedLangs = config.allowed_languages;
+        } else if (typeof config.allowed_languages === 'string') {
+            try {
+                const parsed = JSON.parse(config.allowed_languages);
+                if (parsed.length > 0) allowedLangs = parsed;
+            } catch (e) { }
+        }
+    }
 
     const modals = await logic.getModalsForLanguages(allowedLangs);
 
