@@ -91,6 +91,24 @@ function registerCommands(bot, db) {
                 await db.updateGuildConfig(ctx.chat.id, { [key]: nextAct });
                 return sendCategoryConfigUI(ctx, db, fromSettings); // Stay in sub-menu
             }
+        } else if (data.startsWith('ai_log_')) {
+            // Log toggle: ai_log_delete or ai_log_ban
+            const logType = data.replace('ai_log_', ''); // 'delete' or 'ban'
+            const logKey = `ai_${logType}`;
+
+            // Get current log events
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+
+            // Toggle
+            logEvents[logKey] = !logEvents[logKey];
+            await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         } else if (data === 'ai_back_main') {
             return sendConfigUI(ctx, db, true, fromSettings);
         }

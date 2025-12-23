@@ -113,6 +113,21 @@ function registerCommands(bot, db) {
                 allowed.push(lang);
             }
             await db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
+        } else if (data.startsWith('lng_log_')) {
+            // Log toggle: lng_log_delete or lng_log_ban
+            const logType = data.replace('lng_log_', '');
+            const logKey = `lang_${logType}`;
+
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+            logEvents[logKey] = !logEvents[logKey];
+            await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

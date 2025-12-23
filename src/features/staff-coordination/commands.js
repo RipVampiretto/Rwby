@@ -2,6 +2,9 @@ const logic = require('./logic');
 const ui = require('./ui');
 const { isAdmin } = require('../../utils/error-handlers');
 
+// Simple wizard session storage for log channel configuration
+const LOG_CHANNEL_WIZARDS = new Map();
+
 function registerCommands(bot, db) {
     // Command: /setstaff <id>
     bot.command('setstaff', async ctx => {
@@ -82,6 +85,46 @@ function registerCommands(bot, db) {
         await ctx.reply(text, { parse_mode: 'HTML' });
     });
 
+    // Log channel wizard handler (must come BEFORE callback handler to catch text input)
+    bot.on('message:text', async (ctx, next) => {
+        const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
+        if (!LOG_CHANNEL_WIZARDS.has(sessionKey)) return next();
+
+        const text = ctx.message.text.trim();
+
+        // Handle cancel
+        if (text.toLowerCase() === 'cancel') {
+            LOG_CHANNEL_WIZARDS.delete(sessionKey);
+            await ctx.reply('❌ Operazione annullata.');
+            return;
+        }
+
+        // Try to parse as channel ID
+        let channelId;
+        if (text.match(/^-?\d+$/)) {
+            channelId = parseInt(text);
+        }
+
+        if (!channelId || isNaN(channelId)) {
+            await ctx.reply('❌ ID non valido. Usa un ID numerico (es. `-100123456789`). Scrivi "cancel" per annullare.', { parse_mode: 'Markdown' });
+            return;
+        }
+
+        // Try to send a test message
+        try {
+            await ctx.api.sendMessage(channelId, '✅ Canale Log configurato correttamente!');
+            await db.updateGuildConfig(ctx.chat.id, { log_channel_id: channelId });
+            await ctx.reply(`✅ Canale Log impostato: \`${channelId}\``, { parse_mode: 'Markdown' });
+        } catch (e) {
+            await ctx.reply(
+                `❌ Impossibile inviare messaggi nel canale \`${channelId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`,
+                { parse_mode: 'Markdown' }
+            );
+        }
+
+        LOG_CHANNEL_WIZARDS.delete(sessionKey);
+    });
+
     // Action Handlers
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
@@ -94,6 +137,17 @@ function registerCommands(bot, db) {
             await logic.handleStaffAction(ctx, bot, 'delete', data);
         } else if (data === 'stf_close') {
             await ctx.deleteMessage();
+        } else if (data === 'stf_set_log_channel') {
+            // Start wizard to set log channel
+            const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
+            LOG_CHANNEL_WIZARDS.set(sessionKey, { startedAt: Date.now() });
+
+            await ctx.reply(
+                '📢 **Imposta Canale Log**\n\nInvia l\'ID del canale dove inviare i log (es. `-100123456789`).\n\nScrivi "cancel" per annullare.',
+                { parse_mode: 'Markdown' }
+            );
+            await ctx.answerCallbackQuery();
+            return;
         } else {
             return next();
         }

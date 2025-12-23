@@ -26,6 +26,17 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         text += `\n${t('common.warnings.no_staff_group')}\n`;
     }
 
+    // Parse log events
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+    const logDel = logEvents['link_delete'] ? '✅' : '❌';
+
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: 'lnk_close' };
@@ -35,6 +46,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             [{ text: `${t('link.buttons.monitor')}: ${enabled}`, callback_data: 'lnk_toggle' }],
             [{ text: `${t('link.buttons.tier')}: ${tierBypass}+`, callback_data: 'lnk_tier' }],
             [{ text: `${t('link.buttons.sync')}: ${sync}`, callback_data: 'lnk_sync' }],
+            // Log toggles
+            [{ text: `📋 Log 🗑️${logDel}`, callback_data: 'lnk_log_delete' }],
             [closeBtn]
         ]
     };

@@ -172,6 +172,24 @@ function registerCommands(bot, db) {
             if (config[key] !== undefined) {
                 await db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
             }
+        } else if (data.startsWith('nsf_log_')) {
+            // Log toggle: nsf_log_delete or nsf_log_ban
+            const logType = data.replace('nsf_log_', ''); // 'delete' or 'ban'
+            const logKey = `nsfw_${logType}`;
+
+            // Get current log events
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+
+            // Toggle
+            logEvents[logKey] = !logEvents[logKey];
+            await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         } else if (data === 'nsf_tier') {
             const current = config.nsfw_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];

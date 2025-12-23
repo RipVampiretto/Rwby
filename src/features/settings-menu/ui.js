@@ -52,10 +52,7 @@ async function sendMainMenu(ctx, isEdit = false) {
             ],
 
             // ━━━ AMMINISTRAZIONE ━━━
-            [
-                { text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' },
-                { text: `${t('settings.buttons.logger')}`, callback_data: 'set_goto:logger' }
-            ],
+            [{ text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' }],
             [{ text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }],
             [{ text: `${t('settings.main.close')}`, callback_data: 'settings_close' }]
         ]

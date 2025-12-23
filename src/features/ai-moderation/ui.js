@@ -33,6 +33,18 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `${t('ai.threshold')}: ${thr}%` +
         warning;
 
+    // Parse log events
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+    const logDel = logEvents['ai_delete'] ? '✅' : '❌';
+    const logBan = logEvents['ai_ban'] ? '✅' : '❌';
+
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: 'ai_close' };
@@ -54,6 +66,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             ],
             [{ text: t('ai.buttons.categories'), callback_data: 'ai_config_cats' }],
             [{ text: `${t('ai.buttons.threshold')}: ${thr}%`, callback_data: 'ai_threshold' }],
+            // Log toggles
+            [
+                { text: `📋 Log 🗑️${logDel}`, callback_data: 'ai_log_delete' },
+                { text: `📋 Log 🚷${logBan}`, callback_data: 'ai_log_ban' }
+            ],
             [closeBtn]
         ]
     };
@@ -61,7 +78,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
@@ -85,7 +102,7 @@ async function sendCategoryConfigUI(ctx, db, fromSettings = false) {
     const text = `${t('ai.categories.title')}\n${t('ai.categories.subtitle')}`;
     try {
         await ctx.editMessageText(text, { reply_markup: { inline_keyboard: rows }, parse_mode: 'Markdown' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 module.exports = {

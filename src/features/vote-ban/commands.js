@@ -342,6 +342,18 @@ function registerCommands(bot, db) {
                 // Back to main report UI from category actions - always show Back since we came from settings
                 await ui.sendConfigUI(ctx, db, true, true);
                 return;
+            } else if (data === 'vb_log_ban') {
+                // Log toggle for vote_ban
+                let logEvents = {};
+                if (config.log_events) {
+                    if (typeof config.log_events === 'string') {
+                        try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                    } else if (typeof config.log_events === 'object') {
+                        logEvents = config.log_events;
+                    }
+                }
+                logEvents['vote_ban'] = !logEvents['vote_ban'];
+                await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
             }
             await ui.sendConfigUI(ctx, db, true, fromSettings);
             return;

@@ -54,6 +54,18 @@ function registerCommands(bot, db) {
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
             await db.updateGuildConfig(ctx.chat.id, { link_tier_bypass: next });
+        } else if (data === 'lnk_log_delete') {
+            // Log toggle for link_delete
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+            logEvents['link_delete'] = !logEvents['link_delete'];
+            await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

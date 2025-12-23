@@ -58,7 +58,7 @@ function registerCommands(bot, db) {
                     reply_markup: { inline_keyboard: [[backBtn]] },
                     parse_mode: 'Markdown'
                 });
-            } catch (e) {}
+            } catch (e) { }
             return;
         } else if (data === 'wrd_back') {
             return ui.sendConfigUI(ctx, db, true, false);
@@ -114,6 +114,23 @@ function registerCommands(bot, db) {
             const config = await db.getGuildConfig(ctx.chat.id);
             const newValue = !config.keyword_sync_global;
             await db.updateGuildConfig(ctx.chat.id, { keyword_sync_global: newValue });
+            return ui.sendConfigUI(ctx, db, true, fromSettings);
+        } else if (data.startsWith('wrd_log_')) {
+            // Log toggle: wrd_log_delete or wrd_log_ban
+            const logType = data.replace('wrd_log_', '');
+            const logKey = `keyword_${logType}`;
+            const config = await db.getGuildConfig(ctx.chat.id);
+
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+            logEvents[logKey] = !logEvents[logKey];
+            await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
             return ui.sendConfigUI(ctx, db, true, fromSettings);
         }
     });

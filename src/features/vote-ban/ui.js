@@ -70,6 +70,17 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `**${t('voteban.smart_report_section')}**\n` +
         `${t('voteban.report_mode')}: ${reportModeDisplay}`;
 
+    // Parse log events
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+    const logBan = logEvents['vote_ban'] ? '✅' : '❌';
+
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: 'vb_close' };
@@ -82,6 +93,8 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             [{ text: `${t('voteban.buttons.tier')}: ${tierDisplay}`, callback_data: 'vb_tier' }],
             [{ text: `📊 ${t('voteban.buttons.report_mode')}: ${reportModeDisplay}`, callback_data: 'vb_mode' }],
             [{ text: `⚙️ ${t('voteban.buttons.category_actions')}`, callback_data: 'vb_cat_actions' }],
+            // Log toggle
+            [{ text: `📋 Log 🚷${logBan}`, callback_data: 'vb_log_ban' }],
             [closeBtn]
         ]
     };

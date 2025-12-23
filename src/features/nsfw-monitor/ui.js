@@ -58,6 +58,18 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             text += `\n${t('common.warnings.no_staff_group')}`;
         }
 
+        // Parse log events
+        let logEvents = {};
+        if (config.log_events) {
+            if (typeof config.log_events === 'string') {
+                try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            } else if (typeof config.log_events === 'object') {
+                logEvents = config.log_events;
+            }
+        }
+        const logDel = logEvents['nsfw_delete'] ? '✅' : '❌';
+        const logBan = logEvents['nsfw_ban'] ? '✅' : '❌';
+
         const closeBtn = fromSettings
             ? { text: t('common.back'), callback_data: 'settings_main' }
             : { text: t('common.close'), callback_data: 'nsf_close' };
@@ -84,6 +96,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
                     { text: `🪙 ${s}`, callback_data: 'nsf_tog_sticker' }
                 ],
                 [{ text: `${t('nsfw.buttons.categories')} (${blockedCount})`, callback_data: 'nsf_categories' }],
+                // Log toggles
+                [
+                    { text: `📋 Log 🗑️${logDel}`, callback_data: 'nsf_log_delete' },
+                    { text: `📋 Log 🚷${logBan}`, callback_data: 'nsf_log_ban' }
+                ],
                 [closeBtn]
             ]
         };
@@ -97,7 +114,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         logger.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
-        } catch (e2) {}
+        } catch (e2) { }
     }
 }
 
