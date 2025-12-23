@@ -10,13 +10,20 @@ async function executeAction(ctx, config, detected, allowed) {
     const user = ctx.from;
     const lang = ctx.lang || 'en';
 
-    // Determine eventType based on action
-    const eventType = action === 'ban' ? 'lang_ban' : 'lang_delete';
+    // Parse log events
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
 
     const logParams = {
         guildId: ctx.chat.id,
         guildName: ctx.chat.title,
-        eventType: eventType,
+        eventType: 'lang_delete',
         targetUser: user,
         reason: i18n.t(lang, 'language.log_reason', {
             detected: detected.toUpperCase(),
@@ -26,7 +33,6 @@ async function executeAction(ctx, config, detected, allowed) {
     };
 
     // Get translation for this guild's UI language
-    // Use HTML format for user mention to work properly
     const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
     const warningMsg = i18n.t(ctx.lang || 'en', 'language.warning', {
         languages: allowed.join(', ').toUpperCase(),
@@ -35,7 +41,11 @@ async function executeAction(ctx, config, detected, allowed) {
 
     if (action === 'delete') {
         await safeDelete(ctx, 'language-monitor');
-        if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+
+        // Log only if enabled
+        if (logEvents['lang_delete'] && adminLogger.getLogEvent()) {
+            adminLogger.getLogEvent()(logParams);
+        }
 
         // Send warning and auto-delete after 1 minute
         try {
@@ -44,7 +54,7 @@ async function executeAction(ctx, config, detected, allowed) {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
                 } catch (e) { }
-            }, 60000); // 1 minute
+            }, 60000);
         } catch (e) { }
     } else if (action === 'ban') {
         await safeDelete(ctx, 'language-monitor');
@@ -64,11 +74,14 @@ async function executeAction(ctx, config, detected, allowed) {
                 });
             }
 
-            logParams.eventType = 'ban';
-            if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+            // Log only if enabled
+            if (logEvents['lang_ban'] && adminLogger.getLogEvent()) {
+                logParams.eventType = 'ban';
+                adminLogger.getLogEvent()(logParams);
+            }
         }
     } else if (action === 'report_only') {
-        staffCoordination.reviewQueue({
+        const sent = await staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Language',
             user: user,
@@ -76,6 +89,12 @@ async function executeAction(ctx, config, detected, allowed) {
             messageId: ctx.message.message_id,
             content: ctx.message.text
         });
+
+        // Log only if enabled and report was sent
+        if (sent && logEvents['lang_report'] && adminLogger.getLogEvent()) {
+            logParams.eventType = 'lang_report';
+            adminLogger.getLogEvent()(logParams);
+        }
     }
 }
 

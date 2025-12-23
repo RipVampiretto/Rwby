@@ -55,6 +55,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
     const logDel = logEvents['lang_delete'] ? '✅' : '❌';
     const logBan = logEvents['lang_ban'] ? '✅' : '❌';
+    const logRep = logEvents['lang_report'] ? '✅' : '❌';
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
@@ -68,8 +69,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             [{ text: `${t('language.buttons.action')}: ${action}`, callback_data: 'lng_act' }],
             // Log toggles
             [
-                { text: `📋 Log 🗑️${logDel}`, callback_data: 'lng_log_delete' },
-                { text: `📋 Log 🚷${logBan}`, callback_data: 'lng_log_ban' }
+                { text: `Log 🗑️${logDel}`, callback_data: 'lng_log_delete' },
+                { text: `Log 🚷${logBan}`, callback_data: 'lng_log_ban' },
+                { text: `Log 📢${logRep}`, callback_data: 'lng_log_report' }
             ],
             [closeBtn]
         ]
