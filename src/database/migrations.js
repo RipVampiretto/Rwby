@@ -16,7 +16,21 @@ async function runMigrations() {
         )
     `);
 
-    logger.info('[migrations] Schema is up to date (consolidated)');
+    // Migration: Add edit_grace_period and edit_action columns
+    const migration1 = 'add_edit_grace_period';
+    const check1 = await query(`SELECT 1 FROM migrations WHERE name = $1`, [migration1]);
+    if (check1.rowCount === 0) {
+        try {
+            await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS edit_grace_period INTEGER DEFAULT 0`);
+            await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS edit_action TEXT DEFAULT 'delete'`);
+            await query(`INSERT INTO migrations (name) VALUES ($1)`, [migration1]);
+            logger.info(`[migrations] Applied: ${migration1}`);
+        } catch (e) {
+            logger.debug(`[migrations] ${migration1} already applied or failed: ${e.message}`);
+        }
+    }
+
+    logger.info('[migrations] Schema is up to date');
 }
 
 module.exports = {

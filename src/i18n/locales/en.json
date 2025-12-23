@@ -151,21 +151,21 @@
     },
     "antiedit": {
         "title": "✏️ **EDIT MONITORING**",
-        "description": "Checks if someone edits old messages to insert links or scams. Protects the chat history.",
+        "description": "Detects suspicious message edits, like link injection or radical content changes.",
         "info_title": "How it works",
-        "info_1": "If someone sends a normal message and then edits it to add suspicious links, the bot blocks it",
-        "info_2": "Also prevents completely changing the meaning of a sentence",
+        "info_1": "Blocks link insertion in messages that didn't have links before",
+        "info_2": "Detects radical text changes",
+        "info_3": "Grace period allows free edits within X minutes after sending",
         "status": "Status",
-        "tier_bypass": "Tier Bypass",
-        "threshold": "Sensitivity",
-        "action_injection": "Action (Hidden links)",
-        "action_other": "Action (Other)",
+        "action": "Action",
+        "grace_period": "Grace Period",
+        "warning": "{user}, your edited message was deleted because it violated the rules.",
+        "reason_link": "Suspicious link injection",
+        "reason_similarity": "Radical message change",
         "buttons": {
             "monitor": "✏️ Monitor",
-            "tier": "👤 Tier Bypass",
-            "threshold": "📊 Threshold",
-            "action_inj": "🔗 Link Inj",
-            "action_gen": "👮 Other"
+            "action": "👮 Action",
+            "grace": "⏱️ Grace"
         }
     },
     "modals": {

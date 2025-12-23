@@ -151,21 +151,21 @@
     },
     "antiedit": {
         "title": "✏️ **CONTROLLO MODIFICHE**",
-        "description": "Controlla se qualcuno modifica i messaggi vecchi per inserire link o truffe. Protegge lo storico della chat.",
+        "description": "Rileva modifiche sospette ai messaggi, come inserimento di link o cambiamenti radicali del contenuto.",
         "info_title": "Come funziona",
-        "info_1": "Se qualcuno invia un messaggio normale e poi lo modifica aggiungendo link sospetti, il bot lo blocca",
-        "info_2": "Impedisce anche di cambiare completamente il senso di una frase",
+        "info_1": "Blocca l'inserimento di link in messaggi che prima non ne avevano",
+        "info_2": "Rileva cambiamenti radicali del testo",
+        "info_3": "Il periodo di grazia permette modifiche libere entro X minuti dall'invio",
         "status": "Stato",
-        "tier_bypass": "Bypass da Tier",
-        "threshold": "Sensibilità",
-        "action_injection": "Azione (Link nascosti)",
-        "action_other": "Azione (Altro)",
+        "action": "Azione",
+        "grace_period": "Periodo di grazia",
+        "warning": "{user}, il tuo messaggio modificato è stato eliminato perché violava le regole.",
+        "reason_link": "Inserimento link sospetto",
+        "reason_similarity": "Modifica radicale del messaggio",
         "buttons": {
             "monitor": "✏️ Monitor",
-            "tier": "👤 Bypass Tier",
-            "threshold": "📊 Soglia",
-            "action_inj": "🔗 Link Inj",
-            "action_gen": "👮 Altro"
+            "action": "👮 Azione",
+            "grace": "⏱️ Grazia"
         }
     },
     "modals": {

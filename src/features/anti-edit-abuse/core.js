@@ -1,10 +1,10 @@
-const { safeDelete, safeBan } = require('../../utils/error-handlers');
+const { safeDelete } = require('../../utils/error-handlers');
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
-const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 const snapshots = require('./snapshots');
 const detection = require('./detection');
+const i18n = require('../../i18n');
 
 let db = null;
 
@@ -17,102 +17,125 @@ async function processEdit(ctx, config) {
     const editedMsg = ctx.editedMessage;
 
     // Retrieve snapshot
-    const snapshot = snapshots.getSnapshot(editedMsg.message_id, editedMsg.chat.id);
+    const snapshot = await snapshots.getSnapshot(editedMsg.message_id, editedMsg.chat.id);
 
     if (!snapshot) return; // No baseline
 
+    // Grace period check: skip if message was created recently
+    const gracePeriod = config.edit_grace_period ?? 0; // 0 = no grace period
+    if (gracePeriod > 0) {
+        const createdAt = new Date(snapshot.created_at).getTime();
+        const now = Date.now();
+        const minutesSinceCreation = (now - createdAt) / 60000;
+        if (minutesSinceCreation < gracePeriod) {
+            return; // Within grace period, allow edits
+        }
+    }
+
     const originalText = snapshot.original_text || '';
     const newText = editedMsg.text || '';
-    const originalHasLink = snapshot.original_has_link === 1;
+    const originalHasLink = snapshot.original_has_link === true || snapshot.original_has_link === 1;
     const newHasLink = /(https?:\/\/[^\s]+)/.test(newText);
 
     // Check A: Link Injection
     if (!originalHasLink && newHasLink) {
-        await executeAction(ctx, config.edit_link_injection_action || 'ban', 'Link Injection', originalText, newText);
+        await executeAction(ctx, config, 'link_injection', originalText, newText);
         return;
     }
 
-    // Check B: Similarity - but allow legitimate additions
+    // Check B: Similarity (fixed at 75%)
     // Skip if very short
     if (originalText.length > 5 && newText.length > 5) {
-        // Allow if the original text is preserved at the start (append case)
-        // e.g., "ciao" -> "ciao, come stai?" is OK
         const normalizedOriginal = originalText.toLowerCase().trim();
         const normalizedNew = newText.toLowerCase().trim();
 
-        // Check if it's just an append (original preserved at start)
-        if (normalizedNew.startsWith(normalizedOriginal)) {
-            return; // Legitimate append, skip
-        }
+        // Allow legitimate appends/prepends
+        if (normalizedNew.startsWith(normalizedOriginal)) return;
+        if (normalizedNew.endsWith(normalizedOriginal)) return;
+        if (normalizedNew.includes(normalizedOriginal) && normalizedNew.length < normalizedOriginal.length * 3) return;
 
-        // Check if original content is preserved somewhere (prepend case)
-        if (normalizedNew.endsWith(normalizedOriginal)) {
-            return; // Legitimate prepend, skip
-        }
-
-        // Check if original is contained in new (middle insertion)
-        if (normalizedNew.includes(normalizedOriginal) && normalizedNew.length < normalizedOriginal.length * 3) {
-            return; // Legitimate addition, skip
-        }
-
-        // Now check similarity for actual replacements
+        // Fixed 75% threshold
         const sim = detection.similarity(originalText, newText);
-        const threshold = config.edit_similarity_threshold || 0.5;
-        if (sim < threshold) {
-            await executeAction(
-                ctx,
-                config.edit_abuse_action || 'delete',
-                `Low Similarity (${Math.round(sim * 100)}%)`,
-                originalText,
-                newText
-            );
+        if (sim < 0.75) {
+            await executeAction(ctx, config, 'low_similarity', originalText, newText);
             return;
         }
     }
 }
 
-async function executeAction(ctx, action, reason, original, current) {
-    const user = ctx.from; // edited_message.from
+async function executeAction(ctx, config, reason, original, current) {
+    const action = config.edit_action || 'delete';
+    const user = ctx.from;
+    const lang = await i18n.getLanguage(ctx.chat.id);
+
+    // Parse log events
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+
+    const reasonText = reason === 'link_injection'
+        ? i18n.t(lang, 'antiedit.reason_link')
+        : i18n.t(lang, 'antiedit.reason_similarity');
+
     const logParams = {
         guildId: ctx.chat.id,
         eventType: 'edit_abuse',
         targetUser: user,
-        executorAdmin: null,
-        reason: `${reason}`,
-        isGlobal: action === 'ban'
+        reason: reasonText,
+        isGlobal: false
     };
 
     if (action === 'delete') {
-        await safeDelete(ctx, 'anti-edit-abuse');
-    } else if (action === 'ban') {
-        await safeDelete(ctx, 'anti-edit-abuse');
-        const banned = await safeBan(ctx, user.id, 'anti-edit-abuse');
-
-        if (banned) {
-            userReputation.modifyFlux(user.id, ctx.chat.id, -100, 'edit_ban');
-
-            if (superAdmin.forwardBanToParliament) {
-                superAdmin.forwardBanToParliament({
-                    user: user,
-                    guildName: ctx.chat.title,
-                    guildId: ctx.chat.id,
-                    reason: `Edit Abuse: ${reason}`,
-                    evidence: `BEFORE:\n${original}\n\nAFTER:\n${current}`,
-                    flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
-                });
-            }
-            logParams.eventType = 'ban';
-            if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+        // Forward to Parliament BEFORE deleting
+        if (superAdmin.forwardToParliament) {
+            await superAdmin.forwardToParliament({
+                type: 'edit_abuse',
+                user: user,
+                guildName: ctx.chat.title,
+                guildId: ctx.chat.id,
+                reason: reasonText,
+                evidence: `PRIMA:\n${original.substring(0, 200)}\n\nDOPO:\n${current.substring(0, 200)}`
+            });
         }
+
+        await safeDelete(ctx, 'anti-edit-abuse');
+
+        // Send warning and auto-delete after 1 minute
+        try {
+            const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
+            const warningMsg = i18n.t(lang, 'antiedit.warning', { user: userName });
+            const warning = await ctx.reply(warningMsg, { parse_mode: 'HTML' });
+            setTimeout(async () => {
+                try {
+                    await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
+                } catch (e) { }
+            }, 60000);
+        } catch (e) { }
+
+        // Log if enabled
+        if (logEvents['edit_delete'] && adminLogger.getLogEvent()) {
+            adminLogger.getLogEvent()(logParams);
+        }
+
     } else if (action === 'report_only') {
-        staffCoordination.reviewQueue({
+        const sent = await staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
-            source: 'Edit-Abuse',
+            source: 'Anti-Edit',
             user: user,
-            reason: `${reason}`,
+            reason: reasonText,
             messageId: ctx.editedMessage.message_id,
-            content: `BEFORE: ${original}\nAFTER: ${current}`
+            content: `PRIMA: ${original.substring(0, 200)}\nDOPO: ${current.substring(0, 200)}`
         });
+
+        if (sent && logEvents['edit_report'] && adminLogger.getLogEvent()) {
+            logParams.eventType = 'edit_report';
+            adminLogger.getLogEvent()(logParams);
+        }
     }
 }
 

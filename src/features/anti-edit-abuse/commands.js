@@ -1,13 +1,7 @@
 const snapshots = require('./snapshots');
 const core = require('./core');
 const ui = require('./ui');
-const userReputation = require('../user-reputation');
-const { isFromSettingsMenu } = require('../../utils/error-handlers');
-
-async function isUserAdmin(ctx) {
-    const member = await ctx.getChatMember(ctx.from.id);
-    return ['creator', 'administrator'].includes(member.status);
-}
+const { isAdmin } = require('../../utils/error-handlers');
 
 function registerCommands(bot, db) {
     // Store snapshot on new message
@@ -23,16 +17,11 @@ function registerCommands(bot, db) {
         if (ctx.chat.type === 'private') return next();
 
         // Skip admins
-        if (await isUserAdmin(ctx)) return next();
+        if (await isAdmin(ctx, 'anti-edit-abuse')) return next();
 
         // Config check
         const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.edit_monitor_enabled) return next();
-
-        // Tier bypass check
-        const tierBypass = config.edit_tier_bypass ?? 2;
-        const userTier = userReputation.getUserTier(ctx.from.id, ctx.chat.id);
-        if (tierBypass !== -1 && userTier >= tierBypass) return next();
 
         await core.processEdit(ctx, config);
         await next();
@@ -44,38 +33,41 @@ function registerCommands(bot, db) {
         if (!data.startsWith('edt_')) return next();
 
         const config = await db.getGuildConfig(ctx.chat.id);
-        const fromSettings = isFromSettingsMenu(ctx);
-
-        if (data === 'edt_close') return ctx.deleteMessage();
 
         if (data === 'edt_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { edit_monitor_enabled: config.edit_monitor_enabled ? 0 : 1 });
-        } else if (data === 'edt_thr') {
-            let thr = config.edit_similarity_threshold || 0.5;
-            thr = thr >= 0.9 ? 0.1 : thr + 0.1;
-            await db.updateGuildConfig(ctx.chat.id, { edit_similarity_threshold: parseFloat(thr.toFixed(1)) });
-        } else if (data === 'edt_act_inj') {
-            const acts = ['delete', 'ban', 'report_only'];
-            let cur = config.edit_link_injection_action || 'ban';
-            if (!acts.includes(cur)) cur = 'ban';
-            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            await db.updateGuildConfig(ctx.chat.id, { edit_link_injection_action: nextAct });
-        } else if (data === 'edt_act_gen') {
-            const acts = ['delete', 'ban', 'report_only'];
-            let cur = config.edit_abuse_action || 'report_only';
-            if (!acts.includes(cur)) cur = 'report_only';
-            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
-            await db.updateGuildConfig(ctx.chat.id, { edit_abuse_action: nextAct });
-        } else if (data === 'edt_tier') {
-            // Cycle through 0, 1, 2, 3, -1 (OFF)
-            const current = config.edit_tier_bypass ?? 2;
-            const tiers = [0, 1, 2, 3, -1];
-            const idx = tiers.indexOf(current);
-            const next = tiers[(idx + 1) % tiers.length];
-            await db.updateGuildConfig(ctx.chat.id, { edit_tier_bypass: next });
+        } else if (data === 'edt_act') {
+            // Only two actions: delete and report_only
+            const acts = ['delete', 'report_only'];
+            let cur = config.edit_action || 'delete';
+            if (!acts.includes(cur)) cur = 'delete';
+            const nextAct = acts[(acts.indexOf(cur) + 1) % 2];
+            await db.updateGuildConfig(ctx.chat.id, { edit_action: nextAct });
+        } else if (data === 'edt_grace') {
+            // Cycle through grace periods: 0, 1, 3, 5, 10 minutes
+            const current = config.edit_grace_period ?? 0;
+            const periods = [0, 1, 3, 5, 10];
+            const idx = periods.indexOf(current);
+            const next = periods[(idx + 1) % periods.length];
+            await db.updateGuildConfig(ctx.chat.id, { edit_grace_period: next });
+        } else if (data.startsWith('edt_log_')) {
+            // Log toggle
+            const logType = data.replace('edt_log_', '');
+            const logKey = `edit_${logType}`;
+
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+            logEvents[logKey] = !logEvents[logKey];
+            await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         }
 
-        await ui.sendConfigUI(ctx, db, true, fromSettings);
+        await ui.sendConfigUI(ctx, db, true);
     });
 }
 

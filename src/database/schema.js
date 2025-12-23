@@ -63,11 +63,8 @@ async function createTables() {
             
             -- Anti-Edit Abuse
             edit_monitor_enabled BOOLEAN DEFAULT FALSE,
-            edit_abuse_action TEXT DEFAULT 'delete',
-            edit_lock_tier0 BOOLEAN DEFAULT TRUE,
-            edit_similarity_threshold REAL DEFAULT 0.5,
-            edit_link_injection_action TEXT DEFAULT 'ban',
-            edit_tier_bypass INTEGER DEFAULT 2,
+            edit_action TEXT DEFAULT 'delete',
+            edit_grace_period INTEGER DEFAULT 0,
             
             -- Intelligent Profiler
             profiler_enabled BOOLEAN DEFAULT FALSE,

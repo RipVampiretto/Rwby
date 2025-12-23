@@ -32,11 +32,8 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'ai_tier_bypass',
     // Anti-Edit Abuse
     'edit_monitor_enabled',
-    'edit_abuse_action',
-    'edit_lock_tier0',
-    'edit_similarity_threshold',
-    'edit_link_injection_action',
-    'edit_tier_bypass',
+    'edit_action',
+    'edit_grace_period',
     // Intelligent Profiler
     'profiler_enabled',
     'profiler_action_link',
