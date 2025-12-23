@@ -237,6 +237,7 @@
         "check_types": "Controlla",
         "blocked_categories": "Categorie bloccate",
         "warning": "{user}, il tuo media è stato eliminato perché non conforme alle regole del gruppo.",
+        "warning_album": "{user}, {count} media sono stati eliminati perché non conformi alle regole del gruppo.",
         "buttons": {
             "monitor": "🖼️ Monitor",
             "tier": "👤 Bypass",

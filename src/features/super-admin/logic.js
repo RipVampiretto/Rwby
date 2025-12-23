@@ -169,6 +169,85 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
     }
 }
 
+/**
+ * Forward album to Parliament with all violating media
+ * @param {object} bot - Bot instance
+ * @param {object} db - Database instance  
+ * @param {string} topic - Topic key
+ * @param {Array} violations - Array of {ctx, reason, type}
+ * @param {object} info - {groupTitle, user, reason, count}
+ */
+async function forwardAlbumToParliament(bot, db, topic, violations, info) {
+    if (!bot || !violations || violations.length === 0) return;
+
+    try {
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        // Select topic
+        let topicId = null;
+        if (globalConfig.global_topics) {
+            try {
+                const topics =
+                    typeof globalConfig.global_topics === 'string'
+                        ? JSON.parse(globalConfig.global_topics)
+                        : globalConfig.global_topics;
+                topicId = topics[topic] || topics.image_spam || topics.bans;
+            } catch (e) { }
+        }
+
+        // Build media group
+        const mediaItems = violations.map((v, idx) => {
+            const msg = v.ctx.message;
+            let item = null;
+            if (msg.photo) {
+                const photo = msg.photo[msg.photo.length - 1];
+                item = { type: 'photo', media: photo.file_id };
+            } else if (msg.video) {
+                item = { type: 'video', media: msg.video.file_id };
+            } else if (msg.animation) {
+                item = { type: 'document', media: msg.animation.file_id };
+            } else if (msg.document) {
+                item = { type: 'document', media: msg.document.file_id };
+            }
+            // Caption on first item
+            if (item && idx === 0) {
+                item.caption = `🖼️ **ALBUM NON CONFORME**\n\n` +
+                    `🏛️ Gruppo: ${info.groupTitle}\n` +
+                    `👤 Utente: [${info.user.first_name}](tg://user?id=${info.user.id}) [\`${info.user.id}\`]\n` +
+                    `📁 Media: ${info.count}\n` +
+                    `📝 Categorie: ${info.reason}`;
+                item.parse_mode = 'Markdown';
+            }
+            return item;
+        }).filter(Boolean);
+
+        if (mediaItems.length === 0) return;
+
+        // Send album
+        await bot.api.sendMediaGroup(globalConfig.parliament_group_id, mediaItems, {
+            message_thread_id: topicId
+        });
+
+        // Send keyboard separately (can't be attached to media group)
+        await bot.api.sendMessage(globalConfig.parliament_group_id,
+            `⚖️ Azioni per ${info.user.first_name}:`, {
+            message_thread_id: topicId,
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: '🌍 Global Ban Utente', callback_data: `gban:${info.user.id}` },
+                        { text: '✅ Ignora', callback_data: 'parl_dismiss' }
+                    ]
+                ]
+            }
+        });
+
+    } catch (e) {
+        logger.error(`[super-admin] ForwardAlbum error: ${e.message}`);
+    }
+}
+
 async function sendGlobalLog(bot, db, event) {
     try {
         const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
@@ -328,6 +407,7 @@ async function syncGlobalBansToGuild(bot, db, guildId) {
 module.exports = {
     forwardToParliament,
     forwardMediaToParliament,
+    forwardAlbumToParliament,
     sendGlobalLog,
     executeGlobalBan,
     cleanupPendingDeletions,

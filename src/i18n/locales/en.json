@@ -237,6 +237,7 @@
         "check_types": "Check",
         "blocked_categories": "Blocked categories",
         "warning": "{user}, your media was deleted because it violates the group rules.",
+        "warning_album": "{user}, {count} media were deleted because they violate the group rules.",
         "buttons": {
             "monitor": "🖼️ Monitor",
             "tier": "👤 Bypass",

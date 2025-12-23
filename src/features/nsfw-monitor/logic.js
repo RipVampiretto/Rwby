@@ -1056,6 +1056,7 @@ async function analyzeMediaOnly(ctx, config) {
 
         return {
             isNsfw: isNsfw,
+            type: type,
             category: isNsfw ? reasons[0]?.split(' ')[0] || 'nsfw' : 'safe',
             reason: reasons[0] || null
         };

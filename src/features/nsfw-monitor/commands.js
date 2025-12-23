@@ -1,5 +1,6 @@
 const logic = require('./logic');
 const ui = require('./ui');
+const album = require('./album');
 const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
@@ -80,11 +81,17 @@ function registerCommands(bot, db) {
                 `[nsfw-monitor] ✅ Proceeding with analysis for ${mediaType} - Chat: ${chatId}, User: ${userId}`
             );
 
-            // Download and analyze
-            // Fire and forget to avoid blocking, but handle errors
-            logic
-                .processMedia(ctx, config)
-                .catch(err => logger.error(`[nsfw-monitor] ❌ Process error: ${err.message}\n${err.stack}`));
+            // Check if this is part of an album
+            if (album.isAlbumItem(ctx)) {
+                // Buffer album items for batch processing
+                album.bufferAlbumItem(ctx, config);
+                logger.debug(`[nsfw-monitor] 📦 Media is part of album ${ctx.message.media_group_id}`);
+            } else {
+                // Single media - process normally
+                logic
+                    .processMedia(ctx, config)
+                    .catch(err => logger.error(`[nsfw-monitor] ❌ Process error: ${err.message}\n${err.stack}`));
+            }
 
             await next();
         }
