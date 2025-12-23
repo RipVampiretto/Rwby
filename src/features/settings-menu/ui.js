@@ -23,38 +23,39 @@ async function sendMainMenu(ctx, isEdit = false) {
 
     const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}${warningText}`;
 
-    // Layout: 2 columns, ordered by checking flow (first to last)
-    // Flow: Blacklist → Link → Language → Keyword → Modals → NSFW → Anti-Edit → Vote Ban → AI (last)
+    // Layout: Grouped by function for better UX
+    // Groups: Ingresso → Contenuti → AI → Anti-Abuso → Admin
     const keyboard = {
         inline_keyboard: [
-            // === FIRST LINE OF DEFENSE ===
-            [{ text: `🛡️ Welcome & Captcha`, callback_data: 'set_goto:welcome' }],
+            // ━━━ INGRESSO ━━━
+            [{ text: `${t('settings.buttons.welcome')}`, callback_data: 'set_goto:welcome' }],
+            [{ text: `${t('settings.buttons.casban')}`, callback_data: 'set_goto:casban' }],
+
+            // ━━━ FILTRI CONTENUTI ━━━
             [
-                { text: `${t('settings.buttons.casban')}`, callback_data: 'set_goto:casban' },
-                { text: `${t('settings.buttons.links')}`, callback_data: 'set_goto:links' }
+                { text: `${t('settings.buttons.links')}`, callback_data: 'set_goto:links' },
+                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' }
             ],
+            [{ text: `${t('settings.buttons.badwords')}`, callback_data: 'set_goto:badwords' }],
+
+            // ━━━ PROTEZIONE AI ━━━
             [
-                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' },
-                { text: `${t('settings.buttons.badwords')}`, callback_data: 'set_goto:badwords' }
-            ],
-            // === PATTERN DETECTION ===
-            [
-                { text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' },
+                { text: `${t('settings.buttons.aimod')}`, callback_data: 'set_goto:aimod' },
                 { text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' }
             ],
-            // === BEHAVIOR DETECTION ===
+            [{ text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' }],
+
+            // ━━━ ANTI-ABUSO ━━━
             [
                 { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' },
                 { text: `${t('settings.buttons.voteban')}`, callback_data: 'set_goto:voteban' }
             ],
-            // === AI (LAST LINE) ===
-            [{ text: `${t('settings.buttons.aimod')}`, callback_data: 'set_goto:aimod' }],
-            // === ADMIN TOOLS ===
+
+            // ━━━ AMMINISTRAZIONE ━━━
             [
                 { text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' },
                 { text: `${t('settings.buttons.logger')}`, callback_data: 'set_goto:logger' }
             ],
-            // === SETTINGS ===
             [{ text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }],
             [{ text: `${t('settings.main.close')}`, callback_data: 'settings_close' }]
         ]
