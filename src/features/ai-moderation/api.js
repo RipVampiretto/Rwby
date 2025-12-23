@@ -55,16 +55,21 @@ async function callLLM(text, contextMessages, guildConfig, model = null) {
             '\n\nPrevious messages for context:\n' + contextMessages.map(m => `[${m.username}]: ${m.text}`).join('\n');
     }
 
-    const systemPrompt = `You are a chat moderation AI. Classify the user's message for a Telegram group moderation bot.
+    const systemPrompt = `You are a content moderation AI for Telegram groups. Your task is to classify messages for potential violations.
 
-Categories (choose ONE):
-- "safe": Normal, acceptable content
-- "scam": Scams, phishing, fake giveaways, crypto schemes, money-making promises
-- "nsfw": Sexual content, explicit material
-- "spam": Unsolicited promotion, advertising, repetitive content
+CATEGORIES (choose exactly ONE):
+- "safe": Normal conversation, acceptable content, no violations
+- "scam": Scams, phishing, fake giveaways, crypto schemes, money-making promises, suspicious links
+- "nsfw": Sexual content, explicit material, pornographic references
+- "hate": Hate speech, discrimination, racism, threats, harassment, bullying
 
-Respond with ONLY a JSON object:
-{"category": "...", "confidence": 0.0-1.0, "reason": "brief explanation"}`;
+IMPORTANT:
+- Be conservative: if unsure, classify as "safe"
+- Consider context when available
+- Focus on clear violations, not borderline cases
+
+Respond with ONLY valid JSON (no markdown):
+{"category": "safe|scam|nsfw|hate", "confidence": 0.0-1.0, "reason": "brief explanation"}`;
 
     const userMessage = text + contextStr;
 

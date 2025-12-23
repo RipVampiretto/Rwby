@@ -4,6 +4,7 @@
         "off": "❌ OFF",
         "back": "🔙 Indietro",
         "close": "❌ Chiudi",
+        "cancel": "❌ Annulla",
         "enabled": "Attivo",
         "disabled": "Disattivato",
         "status": "Stato",
@@ -73,62 +74,63 @@
             "back": "⬅️ Indietro"
         }
     },
-    "voteban": {
+    "report": {
         "title": "📋 **SEGNALAZIONI**",
-        "description": "Sistema intelligente per segnalare utenti problematici. L'AI analizza il messaggio e, se non trova violazioni, avvia una votazione della community.",
+        "description": "Sistema intelligente per segnalare utenti problematici.",
         "how_to_use": "Come si usa",
         "usage_info": "Rispondi al messaggio di chi disturba scrivendo @admin, !admin, .admin oppure /admin",
-        "smart_report_info": "Se rispondi a un messaggio, l'AI lo analizza automaticamente. Se usi @admin senza rispondere, viene analizzata la chat recente (ultimi 10 messaggi).",
-        "everyone": "Tutti",
         "status": "Stato",
         "votes_required": "Voti necessari",
         "timer": "Tempo per votare",
-        "tier_initiator": "Chi può avviare",
-        "disabled_timer": "Nessun limite",
-        "settings_section": "Impostazioni VoteBan",
-        "smart_report_section": "Smart Report (AI)",
+        "settings_section": "Impostazioni",
         "report_mode": "Modalità",
-        "ai_not_enabled": "Per usare i report AI, attiva AI Mod o NSFW",
+        "modes_title": "Modalità disponibili",
         "modes": {
-            "voteban_only": "Solo VoteBan",
+            "voteban_only": "Solo Voto",
+            "voteban_only_desc": "La community vota direttamente senza analisi AI",
             "ai_only": "Solo AI",
-            "ai_voteban": "AI + VoteBan"
+            "ai_only_desc": "L'AI analizza, se non trova nulla invia allo staff",
+            "ai_voteban": "AI + Voto",
+            "ai_voteban_desc": "L'AI analizza, se non trova nulla la community vota"
         },
         "vote_message": {
             "title": "⚖️ **VOTAZIONE IN CORSO**",
+            "action": "Azione",
             "votes": "📊 **Voti:** {current}/{required}",
             "expires": "⏱️ **Tempo rimasto:** {time}",
-            "description": "La community sta decidendo se bannare questo utente. Vota!",
-            "btn_ban": "✅ Banna ({count})",
-            "btn_save": "🛡️ Salva ({count})"
+            "description": "La community sta decidendo. Vota!",
+            "btn_yes": "✅ Sì ({count})",
+            "btn_no": "❌ No ({count})"
         },
         "buttons": {
-            "system": "⚖️ Sistema",
+            "system": "📋 Segnalazioni",
             "threshold": "📊 Soglia",
             "duration": "⏱️ Durata",
-            "tier": "🏷️ Chi può avviare",
-            "report_mode": "Modalità",
+            "report_mode": "🔄 Modalità",
             "category_actions": "Azioni per Categoria"
         },
+        "category_title": "AZIONI PER CATEGORIA",
+        "category_subtitle": "Scegli cosa fare per ogni tipo di violazione rilevata dall'AI",
         "log": {
-            "tribunal_closed": "TRIBUNALE CHIUSO",
-            "user_banned": "L'utente @{user} è stato BANNATO.",
-            "user_saved": "L'utente @{user} è SALVO.",
-            "user_saved_expired": "L'utente @{user} è SALVO (Scaduto).",
-            "outcome": "Esito",
-            "forced_by_admin": "Forzato da Admin",
-            "vote_concluded": "Votazione Conclusa",
-            "pardoned_by_admin": "Graziato da Admin",
-            "vote_failed": "Votazione Fallita",
-            "expired": "Scaduto (Voti Insufficienti)",
-            "nobody": "Nessuno",
-            "in_favor": "Favorevoli",
-            "against": "Contrari",
-            "no_reason": "Nessun motivo specificato",
-            "report_sent": "Report Inviato",
-            "no_ai_violations": "L'AI non ha rilevato violazioni automatiche. Lo staff esaminerà la segnalazione.",
-            "report_sent_to_staff": "Segnalazione inviata allo staff."
-        }
+            "report_sent_to_staff": "📋 Segnalazione inviata allo staff per revisione."
+        },
+        "confirm": {
+            "title": "⚖️ **CONFERMA SEGNALAZIONE**",
+            "target": "Utente segnalato",
+            "instruction": "Scegli cosa fare se la votazione ha successo:",
+            "timeout": "Hai 2 minuti per decidere, altrimenti la segnalazione verrà annullata."
+        },
+        "errors": {
+            "reply_required": "⚠️ Rispondi al messaggio dell'utente che vuoi segnalare.",
+            "already_active": "⚠️ C'è già una votazione attiva per questo utente.",
+            "not_initiator": "⚠️ Solo chi ha avviato la segnalazione può scegliere."
+        },
+        "result": {
+            "banned": "🚷 **{user}** è stato BANNATO dalla community.\n📊 Voti: {yes} favorevoli - {no} contrari",
+            "deleted": "🗑️ Il messaggio di **{user}** è stato eliminato.\n📊 Voti: {yes} favorevoli - {no} contrari",
+            "saved": "🛡️ **{user}** è SALVO! La community ha deciso di non intervenire."
+        },
+        "no_reason": "Nessun motivo specificato"
     },
     "logger": {
         "title": "📋 **REGISTRO AZIONI**",

@@ -80,7 +80,7 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'report_context_messages',
     'report_action_scam',
     'report_action_nsfw',
-    'report_action_spam',
+    'report_action_hate',
     // Modal Pattern System
     'modal_enabled',
     'modal_action',

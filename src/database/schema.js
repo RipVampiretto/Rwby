@@ -123,7 +123,7 @@ async function createTables() {
             report_context_messages INTEGER DEFAULT 10,
             report_action_scam TEXT DEFAULT 'report_only',
             report_action_nsfw TEXT DEFAULT 'report_only',
-            report_action_spam TEXT DEFAULT 'report_only',
+            report_action_hate TEXT DEFAULT 'report_only',
             
             -- Modal Pattern System
             modal_enabled BOOLEAN DEFAULT FALSE,

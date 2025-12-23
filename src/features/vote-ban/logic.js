@@ -1,14 +1,14 @@
 async function createVote(db, params) {
-    const { target, chat, initiator, reason, required, expires, voters } = params;
+    const { target, chat, initiator, reason, required, expires, voters, actionType = 'ban' } = params;
     const result = await db.query(
-        `INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at, votes_yes, voters) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9) RETURNING vote_id`,
+        `INSERT INTO active_votes (target_user_id, target_username, chat_id, initiated_by, reason, required_votes, expires_at, created_at, votes_yes, voters, status) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, 'active') RETURNING vote_id`,
         [
             target.id,
             target.username || target.first_name,
             chat.id,
             initiator.id,
-            reason,
+            `[${actionType.toUpperCase()}] ${reason}`,
             required,
             expires,
             1,
@@ -39,13 +39,32 @@ async function getAllActiveVotes(db) {
     return await db.queryAll("SELECT * FROM active_votes WHERE status = 'active'");
 }
 
-async function updateVote(db, voteId, yes, no, voters) {
-    await db.query('UPDATE active_votes SET votes_yes = $1, votes_no = $2, voters = $3 WHERE vote_id = $4', [
-        yes,
-        no,
-        JSON.stringify(voters),
-        voteId
-    ]);
+async function updateVote(db, voteId, updates) {
+    const setClauses = [];
+    const values = [];
+    let idx = 1;
+
+    if (updates.votes_yes !== undefined) {
+        setClauses.push(`votes_yes = $${idx++}`);
+        values.push(updates.votes_yes);
+    }
+    if (updates.votes_no !== undefined) {
+        setClauses.push(`votes_no = $${idx++}`);
+        values.push(updates.votes_no);
+    }
+    if (updates.voters !== undefined) {
+        setClauses.push(`voters = $${idx++}`);
+        values.push(JSON.stringify(updates.voters));
+    }
+    if (updates.status !== undefined) {
+        setClauses.push(`status = $${idx++}`);
+        values.push(updates.status);
+    }
+
+    if (setClauses.length === 0) return;
+
+    values.push(voteId);
+    await db.query(`UPDATE active_votes SET ${setClauses.join(', ')} WHERE vote_id = $${idx}`, values);
 }
 
 async function setPollMessageId(db, voteId, messageId) {

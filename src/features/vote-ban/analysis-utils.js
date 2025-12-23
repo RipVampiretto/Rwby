@@ -151,7 +151,8 @@ async function analyzeText(text, chatId, config) {
         const result = await aiApi.processWithAI(text, contextMessages, config, reportModel);
 
         if (result.category !== 'safe' && result.confidence >= (config.ai_confidence_threshold || 0.75)) {
-            // Use Smart Report's own category actions (report_action_*), not AI Moderation's
+            // Use Smart Report's own category actions (report_action_*)
+            // Note: 'hate' uses report_action_hate, not report_action_spam
             const actionKey = `report_action_${result.category}`;
             const action = config[actionKey] || 'report_only';
 

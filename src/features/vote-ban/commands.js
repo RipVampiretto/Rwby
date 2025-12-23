@@ -1,12 +1,40 @@
 const logic = require('./logic');
 const actions = require('./actions');
 const ui = require('./ui');
-const { isAdmin, isFromSettingsMenu, safeDelete, safeBan } = require('../../utils/error-handlers');
+const { safeDelete, safeBan } = require('../../utils/error-handlers');
 const smartReport = require('./analysis-utils');
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
+const superAdmin = require('../super-admin');
 const logger = require('../../middlewares/logger');
 const i18n = require('../../i18n');
+
+// Track pending confirmations: `chatId:targetId` -> { timeout, msgId, initiatorId }
+const PENDING_CONFIRMATIONS = new Map();
+
+// Helper: Setup 2-minute confirmation timeout
+function setupConfirmationTimeout(ctx, target, confirmMsg, reason) {
+    const key = `${ctx.chat.id}:${target.id}`;
+    if (PENDING_CONFIRMATIONS.has(key)) {
+        clearTimeout(PENDING_CONFIRMATIONS.get(key).timeout);
+    }
+
+    const timeoutHandle = setTimeout(async () => {
+        PENDING_CONFIRMATIONS.delete(key);
+        try {
+            await ctx.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
+        } catch (e) { }
+        logger.info(`[vote-ban] Confirmation timeout for ${target.id}`);
+    }, 120000); // 2 minutes
+
+    PENDING_CONFIRMATIONS.set(key, {
+        timeout: timeoutHandle,
+        msgId: confirmMsg.message_id,
+        initiatorId: ctx.from.id,
+        targetMsgId: ctx.message?.reply_to_message?.message_id,
+        reason: reason
+    });
+}
 
 function registerCommands(bot, db) {
     // Trigger: @admin, etc. (Smart Report System)
@@ -21,284 +49,246 @@ function registerCommands(bot, db) {
         if (ctx.chat.type === 'private') return next();
 
         const config = await db.getGuildConfig(ctx.chat.id);
+        const votebanEnabled = config.voteban_enabled;
+
+        if (!votebanEnabled) return next();
+
+        // Must reply to a message
+        if (!ctx.message.reply_to_message) {
+            const lang = await i18n.getLanguage(ctx.chat.id);
+            return ctx.reply(i18n.t(lang, 'voteban.errors.reply_required'));
+        }
+
+        const targetMsg = ctx.message.reply_to_message;
+        const target = targetMsg.from;
+
+        if (target.is_bot) return;
+        if (target.id === ctx.from.id) return;
+
+        // Check admin bypass
+        try {
+            const member = await ctx.getChatMember(target.id);
+            if (['creator', 'administrator'].includes(member.status)) {
+                return;
+            }
+        } catch (e) { }
+
+        // Check for existing vote
+        const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
+        if (existing) {
+            const lang = await i18n.getLanguage(ctx.chat.id);
+            return ctx.reply(i18n.t(lang, 'voteban.errors.already_active'), {
+                reply_to_message_id: existing.poll_message_id
+            });
+        }
+
+        const lang = await i18n.getLanguage(ctx.chat.id);
+        const reason = text.replace(/^[@!./]admin\s*/i, '').trim() || i18n.t(lang, 'voteban.no_reason');
 
         // Check report mode
         const reportMode = config.report_mode || 'ai_voteban';
-        const votebanEnabled = config.voteban_enabled;
 
-        // If VoteBan-only mode and voteban is disabled, skip
-        if (reportMode === 'voteban_only' && !votebanEnabled) return;
+        // -- MODE: voteban_only (skip AI) --
+        if (reportMode === 'voteban_only') {
+            logger.info(`[smart-report] VoteBan only mode - showing confirmation`);
+            const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
+            setupConfirmationTimeout(ctx, target, confirmMsg, reason);
+            return;
+        }
 
-        // Get reason from the trigger message
-        const reason = text.replace(/^[@!./]admin\s*/i, '').trim() || 'Nessun motivo specificato';
+        // -- AI ANALYSIS (ai_only or ai_voteban) --
+        logger.info(`[smart-report] Analyzing report with AI...`);
+        const analysisResult = await smartReport.analyzeTarget(ctx, config);
 
-        // =====================================================================
-        // REPLY MODE: User replied to a specific message
-        // =====================================================================
-        if (ctx.message.reply_to_message) {
-            const targetMsg = ctx.message.reply_to_message;
-            const target = targetMsg.from;
+        if (analysisResult.isViolation) {
+            // AI found a violation - execute action based on category
+            logger.info(`[smart-report] Violation: ${analysisResult.category}`);
 
-            if (target.is_bot) return ctx.reply('❌ Non puoi segnalare i bot.');
-            if (target.id === ctx.from.id) return ctx.reply('❌ Non puoi segnalare te stesso.');
+            const action = analysisResult.action || 'report_only';
+            const t = (key, params) => i18n.t(lang, key, params);
 
-            // Check admin bypass
-            try {
-                const member = await ctx.getChatMember(target.id);
-                if (['creator', 'administrator'].includes(member.status)) {
-                    return;
-                }
-            } catch (e) { }
+            if (action === 'delete') {
+                await safeDelete({ message: targetMsg, api: ctx.api, chat: ctx.chat }, 'smart-report');
 
-            // Check initiator tier requirement
-            const reqTier = config.voteban_initiator_tier !== undefined ? config.voteban_initiator_tier : 0;
-            if (reqTier !== -1 && ctx.userTier < reqTier) {
-                return ctx.reply(`❌ Devi essere almeno T${reqTier} per segnalare.`);
-            }
+                // Warning message (auto-delete 1 min)
+                const userName = target.username ? `@${target.username}` : target.first_name;
+                const notifyMsg = await ctx.reply(
+                    t('smart_report.action_delete', { category: analysisResult.category, user: userName }),
+                    { parse_mode: 'Markdown' }
+                );
+                setTimeout(async () => {
+                    try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                }, 60000);
 
-            // Check for existing vote
-            const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
-            if (existing) {
-                return ctx.reply("⚠️ C'è già una votazione attiva per questo utente.", {
-                    reply_to_message_id: existing.poll_message_id
-                });
-            }
+                // Log
+                logAction(config, ctx.chat.id, 'vote_delete', target, ctx.from, analysisResult);
 
-            // ------------------------------------------------------
-            // AI ANALYSIS (if enabled in report_mode)
-            // ------------------------------------------------------
-            if (reportMode === 'ai_only' || reportMode === 'ai_voteban') {
-                logger.info(`[smart-report] Analyzing report in reply mode...`);
-                const analysisResult = await smartReport.analyzeTarget(ctx, config);
+            } else if (action === 'ban') {
+                await safeDelete({ message: targetMsg, api: ctx.api, chat: ctx.chat }, 'smart-report');
+                await safeBan(ctx, target.id, 'smart-report');
 
-                if (analysisResult.isViolation) {
-                    // AI found a violation - execute action
-                    logger.info(
-                        `[smart-report] Violation detected: ${analysisResult.category} - ${analysisResult.reason}`
-                    );
-
-                    const action = analysisResult.action || 'delete';
-                    const i18n = require('../../i18n');
-                    const lang = await i18n.getLanguage(ctx.chat.id);
-                    const t = (key, params) => i18n.t(lang, key, params);
-                    const userReputation = require('../user-reputation');
-
-                    // Delete the offending message first
-                    await safeDelete({ message: targetMsg, api: ctx.api, chat: ctx.chat }, 'smart-report');
-
-                    if (action === 'delete') {
-                        // Send pretty notification (will auto-delete)
-                        const notifyMsg = await ctx.reply(
-                            t('smart_report.action_delete', { category: analysisResult.category }),
-                            { parse_mode: 'Markdown' }
-                        );
-                        // Auto-delete after 1 minute
-                        setTimeout(async () => {
-                            try {
-                                await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                            } catch (e) { }
-                        }, 60000);
-                    } else if (action === 'ban') {
-                        // Ban the user
-                        await safeBan(ctx, target.id, 'smart-report');
-
-                        // Award Flux to reporter (+2)
-                        try {
-                            await userReputation.modifyFlux(ctx.from.id, ctx.chat.id, 2, 'smart_report_valid');
-                        } catch (e) {
-                            logger.warn(`[smart-report] Failed to award Flux: ${e.message}`);
-                        }
-
-                        // Add Like reaction to the report message
-                        try {
-                            await ctx.api.setMessageReaction(ctx.chat.id, ctx.message.message_id, [
-                                { type: 'emoji', emoji: '👍' }
-                            ]);
-                        } catch (e) {
-                            logger.debug(`[smart-report] Failed to add reaction: ${e.message}`);
-                        }
-
-                        // Send pretty notification (will auto-delete)
-                        const notifyMsg = await ctx.reply(
-                            t('smart_report.action_ban', {
-                                category: analysisResult.category,
-                                user: target.first_name || target.username || target.id
-                            }),
-                            { parse_mode: 'Markdown' }
-                        );
-                        // Auto-delete after 1 minute
-                        setTimeout(async () => {
-                            try {
-                                await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                            } catch (e) { }
-                        }, 60000);
-
-                        // Log to admin channel
-                        if (adminLogger.getLogEvent()) {
-                            adminLogger.getLogEvent()({
-                                guildId: ctx.chat.id,
-                                eventType: 'smart_report_ban',
-                                targetUser: target,
-                                executedBy: ctx.from,
-                                reason: `[${analysisResult.category}] ${analysisResult.reason}`,
-                                isGlobal: true
-                            });
-                        }
-                    } else {
-                        // report_only - send to staff
-                        staffCoordination.reviewQueue({
-                            guildId: ctx.chat.id,
-                            source: 'Smart-Report',
-                            user: target,
-                            reason: `[AI] ${analysisResult.category}: ${analysisResult.reason}`,
-                            messageId: targetMsg.message_id,
-                            content: targetMsg.text || targetMsg.caption || '[Media]'
-                        });
-                        const notifyMsg = await ctx.reply(
-                            t('smart_report.action_report', { category: analysisResult.category }),
-                            { parse_mode: 'Markdown' }
-                        );
-                        // Auto-delete after 1 minute
-                        setTimeout(async () => {
-                            try {
-                                await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                            } catch (e) { }
-                        }, 60000);
-                    }
-
-                    return; // Done - AI handled it
-                }
-
-                // AI says SAFE - check fallback behavior
-                if (reportMode === 'ai_only') {
-                    // AI Only mode - send to staff if safe
-                    staffCoordination.reviewQueue({
-                        guildId: ctx.chat.id,
-                        source: 'Smart-Report',
+                // Forward to Parliament
+                if (superAdmin.forwardToParliament) {
+                    await superAdmin.forwardToParliament({
+                        type: 'smart_report_ban',
                         user: target,
-                        reason: `[Manual] ${reason}`,
-                        messageId: targetMsg.message_id,
-                        content: targetMsg.text || targetMsg.caption || '[Media]'
+                        guildName: ctx.chat.title,
+                        guildId: ctx.chat.id,
+                        reason: `[${analysisResult.category}] ${analysisResult.reason}`,
+                        evidence: targetMsg.text || targetMsg.caption || '[Media]'
                     });
-                    return ctx.reply(
-                        `📋 **${t('voteban.log.report_sent')}**\n${t('voteban.log.no_ai_violations')}`,
-                        { parse_mode: 'Markdown' }
-                    );
                 }
 
-                // AI + VoteBan mode: AI says safe, proceed to VoteBan
-                logger.info(`[smart-report] AI says safe, proceeding to VoteBan...`);
-            }
+                // Warning message
+                const userName = target.username ? `@${target.username}` : target.first_name;
+                const notifyMsg = await ctx.reply(
+                    t('smart_report.action_ban', { category: analysisResult.category, user: userName }),
+                    { parse_mode: 'Markdown' }
+                );
+                setTimeout(async () => {
+                    try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                }, 60000);
 
-            // ------------------------------------------------------
-            // VOTEBAN (fallback or primary if voteban_only)
-            // ------------------------------------------------------
-            if (!votebanEnabled) {
-                // VoteBan not enabled, just send to staff
-                staffCoordination.reviewQueue({
+                // Log
+                logAction(config, ctx.chat.id, 'vote_ban', target, ctx.from, analysisResult);
+
+            } else {
+                // report_only
+                await staffCoordination.reviewQueue({
                     guildId: ctx.chat.id,
                     source: 'Smart-Report',
                     user: target,
-                    reason: reason,
+                    reason: `[AI: ${analysisResult.category}] ${analysisResult.reason}`,
                     messageId: targetMsg.message_id,
                     content: targetMsg.text || targetMsg.caption || '[Media]'
                 });
-                return ctx.reply(`📋 **${t('voteban.log.report_sent')}**\n${t('voteban.report_sent_to_staff')}`, { parse_mode: 'Markdown' });
+
+                const notifyMsg = await ctx.reply(t('smart_report.action_report', { category: analysisResult.category }), { parse_mode: 'Markdown' });
+                setTimeout(async () => {
+                    try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                }, 60000);
             }
 
+            return;
+        }
+
+        // AI says SAFE
+        logger.info(`[smart-report] AI says safe.`);
+
+        // -- MODE: ai_only (no voteban fallback) --
+        if (reportMode === 'ai_only') {
+            // Send to staff for manual review
+            await staffCoordination.reviewQueue({
+                guildId: ctx.chat.id,
+                source: 'Smart-Report',
+                user: target,
+                reason: `[Manual Review] ${reason}`,
+                messageId: targetMsg.message_id,
+                content: targetMsg.text || targetMsg.caption || '[Media]'
+            });
+
+            const t = (key, params) => i18n.t(lang, key, params);
+            const notifyMsg = await ctx.reply(t('voteban.log.report_sent_to_staff'), { parse_mode: 'Markdown' });
+            setTimeout(async () => {
+                try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+            }, 60000);
+            return;
+        }
+
+        // -- MODE: ai_voteban (fallback to VoteBan) --
+        logger.info(`[smart-report] AI says safe - showing VoteBan confirmation`);
+        const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
+        setupConfirmationTimeout(ctx, target, confirmMsg, reason);
+    });
+
+    // Callback handlers
+    bot.on('callback_query:data', async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
+
+        // VoteBan Confirmation Handler
+        if (data.startsWith('vb_confirm:')) {
+            const parts = data.split(':');
+            const action = parts[1]; // delete | ban | cancel
+            const targetId = parseInt(parts[2]);
+            const targetMsgId = parseInt(parts[3]);
+            const initiatorId = parseInt(parts[4]);
+
+            // Only initiator can confirm
+            if (ctx.from.id !== initiatorId) {
+                const lang = await i18n.getLanguage(ctx.chat.id);
+                return ctx.answerCallbackQuery(i18n.t(lang, 'voteban.errors.not_initiator'));
+            }
+
+            const key = `${ctx.chat.id}:${targetId}`;
+            const pending = PENDING_CONFIRMATIONS.get(key);
+
+            if (!pending) {
+                return ctx.answerCallbackQuery('⏱️ Timeout');
+            }
+
+            clearTimeout(pending.timeout);
+            PENDING_CONFIRMATIONS.delete(key);
+
+            if (action === 'cancel') {
+                await ctx.deleteMessage();
+                return ctx.answerCallbackQuery('❌ Annullato');
+            }
+
+            // Start VoteBan with chosen action type
+            const config = await db.getGuildConfig(ctx.chat.id);
             const duration = config.voteban_duration_minutes || 30;
             const required = config.voteban_threshold || 5;
-            const expires =
-                duration === 0
-                    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                    : new Date(Date.now() + duration * 60000).toISOString();
+            const expires = duration === 0
+                ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                : new Date(Date.now() + duration * 60000).toISOString();
+
+            // Get target user info
+            let targetUser;
+            try {
+                const member = await ctx.getChatMember(targetId);
+                targetUser = member.user;
+            } catch (e) {
+                targetUser = { id: targetId, first_name: `User ${targetId}` };
+            }
 
             const voters = [{ id: ctx.from.id, name: ctx.from.first_name, vote: 'yes' }];
 
             const voteId = await logic.createVote(db, {
-                target,
+                target: targetUser,
                 chat: ctx.chat,
                 initiator: ctx.from,
-                reason,
+                reason: pending.reason,
                 required,
                 expires,
-                voters
+                voters,
+                actionType: action // 'delete' or 'ban'
             });
 
             const { text: msgText, keyboard } = await ui.getVoteMessage(
                 ctx.chat.id,
-                target,
+                targetUser,
                 ctx.from,
-                reason,
-                1,
-                0,
-                required,
+                action,
+                1, 0, required,
                 expires,
-                voteId,
-                duration === 0
+                voteId
             );
-            const msg = await ctx.reply(msgText, { reply_markup: keyboard, parse_mode: 'Markdown' });
 
-            await logic.setPollMessageId(db, voteId, msg.message_id);
+            // Delete confirmation message and send vote as reply to the reported message
+            await ctx.deleteMessage();
+            const voteMsg = await ctx.api.sendMessage(ctx.chat.id, msgText, {
+                reply_markup: keyboard,
+                parse_mode: 'Markdown',
+                reply_to_message_id: pending.targetMsgId
+            });
+            await logic.setPollMessageId(db, voteId, voteMsg.message_id);
+            await ctx.answerCallbackQuery();
             return;
         }
-
-        // =====================================================================
-        // CONTEXT MODE: No reply - analyze last N messages
-        // =====================================================================
-        // Context mode only works with AI modes (not voteban_only)
-        if (reportMode === 'voteban_only') {
-            return ctx.reply("⚖️ Rispondi al messaggio dell'utente che vuoi segnalare.");
-        }
-
-        const numContext = 10; // Fixed at 10 messages
-        logger.info(`[smart-report] Context mode: analyzing last ${numContext} messages`);
-
-        const analysisResults = await smartReport.analyzeContextMessages(ctx, config, numContext);
-        const violations = analysisResults.filter(r => r.isViolation);
-
-        if (violations.length === 0) {
-            // No violations found - REPORT_ONLY (forced in context mode when no violations)
-            staffCoordination.reviewQueue({
-                guildId: ctx.chat.id,
-                source: 'Smart-Report',
-                user: ctx.from,
-                reason: `[Context Scan] ${reason}`,
-                messageId: ctx.message.message_id,
-                content: `Scansione ultimi ${numContext} messaggi: Nessuna violazione rilevata`
-            });
-            return ctx.reply(
-                `📋 **Context Scan**\nAnalizzati ${analysisResults.length} messaggi.\nNessuna violazione rilevata.\n\n_Segnalazione inviata allo staff per revisione manuale._`,
-                { parse_mode: 'Markdown' }
-            );
-        }
-
-        // Found violations - handle each one
-        let deletedCount = 0;
-        for (const result of violations) {
-            try {
-                await ctx.api.deleteMessage(ctx.chat.id, result.messageId);
-                deletedCount++;
-            } catch (e) {
-                logger.warn(`[smart-report] Failed to delete message ${result.messageId}: ${e.message}`);
-            }
-        }
-
-        await ctx.reply(
-            `🤖 **AI Context Scan**\nAnalizzati: ${analysisResults.length} messaggi\nViolazioni: ${violations.length}\nEliminati: ${deletedCount}\n\nCategorie: ${violations.map(v => v.category).join(', ')}`,
-            { parse_mode: 'Markdown' }
-        );
-    });
-
-    bot.on('callback_query:data', async (ctx, next) => {
-        const data = ctx.callbackQuery.data;
 
         // Config Handlers
         if (data.startsWith('vb_')) {
             const config = await db.getGuildConfig(ctx.chat.id);
-            const fromSettings = isFromSettingsMenu(ctx);
-
-            if (data === 'vb_close') return ctx.deleteMessage();
 
             if (data === 'vb_toggle') {
                 await db.updateGuildConfig(ctx.chat.id, { voteban_enabled: config.voteban_enabled ? 0 : 1 });
@@ -314,36 +304,22 @@ function registerCommands(bot, db) {
                 const idx = durations.indexOf(val);
                 const nextVal = durations[(idx + 1) % durations.length];
                 await db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: nextVal });
-            } else if (data === 'vb_tier') {
-                const val = config.voteban_initiator_tier || 0;
-                const tiers = [0, 1, 2, 3, -1];
-                const idx = tiers.indexOf(val);
-                const nextVal = tiers[(idx + 1) % tiers.length];
-                await db.updateGuildConfig(ctx.chat.id, { voteban_initiator_tier: nextVal });
+            } else if (data.startsWith('vb_cat_')) {
+                const cat = data.replace('vb_cat_', '');
+                const key = `report_action_${cat}`;
+                const current = config[key] || 'report_only';
+                const actions = ['report_only', 'delete', 'ban'];
+                const idx = actions.indexOf(current);
+                const nextVal = actions[(idx + 1) % actions.length];
+                await db.updateGuildConfig(ctx.chat.id, { [key]: nextVal });
             } else if (data === 'vb_mode') {
-                // Cycle through report modes: voteban_only -> ai_only -> ai_voteban
                 const val = config.report_mode || 'ai_voteban';
-                const modes = ['voteban_only', 'ai_only', 'ai_voteban'];
+                const modes = ['ai_only', 'voteban_only', 'ai_voteban'];
                 const idx = modes.indexOf(val);
                 const nextVal = modes[(idx + 1) % modes.length];
                 await db.updateGuildConfig(ctx.chat.id, { report_mode: nextVal });
-            } else if (data === 'vb_ctx') {
-                // Cycle through context message counts: 5 -> 10 -> 15 -> 20
-                const val = config.report_context_messages || 10;
-                const counts = [5, 10, 15, 20];
-                const idx = counts.indexOf(val);
-                const nextVal = counts[(idx + 1) % counts.length];
-                await db.updateGuildConfig(ctx.chat.id, { report_context_messages: nextVal });
-            } else if (data === 'vb_cat_actions') {
-                // Open category actions UI
-                await ui.sendCategoryActionsUI(ctx, db, true);
-                return;
-            } else if (data === 'vb_back_main') {
-                // Back to main report UI from category actions - always show Back since we came from settings
-                await ui.sendConfigUI(ctx, db, true, true);
-                return;
-            } else if (data === 'vb_log_ban') {
-                // Log toggle for vote_ban
+            } else if (data === 'vb_log_ban' || data === 'vb_log_delete') {
+                const logType = data === 'vb_log_ban' ? 'vote_ban' : 'vote_delete';
                 let logEvents = {};
                 if (config.log_events) {
                     if (typeof config.log_events === 'string') {
@@ -352,109 +328,161 @@ function registerCommands(bot, db) {
                         logEvents = config.log_events;
                     }
                 }
-                logEvents['vote_ban'] = !logEvents['vote_ban'];
+                logEvents[logType] = !logEvents[logType];
                 await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
+            } else if (data === 'vb_categories') {
+                await ui.sendCategoryActionsUI(ctx, db, true);
+                return;
+            } else if (data === 'vb_back_main') {
+                await ui.sendConfigUI(ctx, db, true);
+                return;
             }
-            await ui.sendConfigUI(ctx, db, true, fromSettings);
+
+            // Update config UI for category changes
+            if (data.startsWith('vb_cat_')) {
+                await ui.sendCategoryActionsUI(ctx, db, true);
+                return;
+            }
+
+            await ui.sendConfigUI(ctx, db, true);
             return;
         }
 
-        // Smart Report Category Action Handlers
-        if (data.startsWith('report_cat_')) {
-            const cat = data.replace('report_cat_', '');
-            const config = await db.getGuildConfig(ctx.chat.id);
-            const key = `report_action_${cat}`;
-            const current = config[key] || 'report_only';
-
-            // Cycle: report_only -> delete -> ban -> report_only
-            const actions = ['report_only', 'delete', 'ban'];
-            const idx = actions.indexOf(current);
-            const nextVal = actions[(idx + 1) % actions.length];
-
-            await db.updateGuildConfig(ctx.chat.id, { [key]: nextVal });
-            await ui.sendCategoryActionsUI(ctx, db, true);
-            return;
-        }
-
-        // Vote Action Handlers
+        // Vote handlers
         if (data.startsWith('vote_')) {
             const parts = data.split('_');
-            const action = parts[1];
+            const voteType = parts[1]; // 'yes' or 'no'
             const voteId = parseInt(parts[2]);
 
-            if (isNaN(voteId)) return ctx.answerCallbackQuery('Errore: ID votazione non valido.');
-
             const vote = await logic.getVote(db, voteId);
-            if (!vote || vote.status !== 'active') return ctx.answerCallbackQuery('Votazione scaduta o inesistente.');
-
-            const member = await ctx.getChatMember(ctx.from.id);
-            const isAdmin = ['creator', 'administrator'].includes(member.status);
-
-            // Admin Logic
-            if (isAdmin) {
-                if (action === 'yes' || action === 'ban') {
-                    await actions.finalizeVote(ctx, db, vote, 'forced_ban', ctx.from);
-                    return;
-                }
-                if (action === 'no' || action === 'pardon') {
-                    await actions.finalizeVote(ctx, db, vote, 'pardon', ctx.from);
-                    return;
-                }
+            if (!vote || vote.status !== 'active') {
+                return ctx.answerCallbackQuery('❌ Votazione terminata');
             }
 
-            // Voting Logic
+            // Check if already voted
+            let voters = vote.voters || [];
+            if (typeof voters === 'string') {
+                try { voters = JSON.parse(voters); } catch (e) { voters = []; }
+            }
+
+            if (voters.some(v => v.id === ctx.from.id)) {
+                return ctx.answerCallbackQuery('⚠️ Hai già votato');
+            }
+
+            voters.push({ id: ctx.from.id, name: ctx.from.first_name, vote: voteType });
+
+            const yesVotes = voters.filter(v => v.vote === 'yes').length;
+            const noVotes = voters.filter(v => v.vote === 'no').length;
+
+            await logic.updateVote(db, voteId, { voters, votes_yes: yesVotes, votes_no: noVotes });
+
             const config = await db.getGuildConfig(ctx.chat.id);
-            if (ctx.userTier < (config.voteban_voter_tier || 0)) {
-                return ctx.answerCallbackQuery('Tier insufficiente per votare.');
-            }
 
-            let voters = [];
-            try {
-                voters = JSON.parse(vote.voters || '[]');
-            } catch (e) { }
+            // Check if majority reached
+            if (yesVotes >= vote.required_votes) {
+                await logic.updateVote(db, voteId, { status: 'completed' });
 
-            const hasVoted = voters.some(v => (typeof v === 'object' ? v.id : v) === ctx.from.id);
-            if (hasVoted) return ctx.answerCallbackQuery('Hai già votato!');
+                const actionType = vote.action_type || 'ban';
+                const targetId = vote.target_user_id;
 
-            voters.push({ id: ctx.from.id, name: ctx.from.first_name, vote: action });
-            let yes = vote.votes_yes;
-            let no = vote.votes_no;
+                if (actionType === 'ban') {
+                    await safeBan(ctx, targetId, 'vote-ban');
 
-            if (action === 'yes') yes++;
-            else if (action === 'no') no++;
+                    // Forward to Parliament
+                    if (superAdmin.forwardToParliament) {
+                        await superAdmin.forwardToParliament({
+                            type: 'voteban_completed',
+                            user: { id: targetId, first_name: vote.target_username },
+                            guildName: ctx.chat.title,
+                            guildId: ctx.chat.id,
+                            reason: vote.reason,
+                            votes: `${yesVotes}/${vote.required_votes}`
+                        });
+                    }
+                }
 
-            await logic.updateVote(db, voteId, yes, no, voters);
+                // Log
+                logVoteResult(config, ctx.chat.id, actionType, targetId, vote.target_username, yesVotes, noVotes);
 
-            await ctx.answerCallbackQuery('Voto registrato.');
+                const lang = await i18n.getLanguage(ctx.chat.id);
+                const t = (key, params) => i18n.t(lang, key, params);
+                const resultText = actionType === 'ban'
+                    ? t('voteban.result.banned', { user: vote.target_username, yes: yesVotes, no: noVotes })
+                    : t('voteban.result.deleted', { user: vote.target_username, yes: yesVotes, no: noVotes });
 
-            if (yes + no >= vote.required_votes) {
-                vote.votes_yes = yes;
-                vote.votes_no = no;
-                vote.voters = JSON.stringify(voters);
+                await ctx.editMessageText(resultText, { parse_mode: 'Markdown' });
+            } else if (noVotes > vote.required_votes / 2) {
+                // Majority voted no
+                await logic.updateVote(db, voteId, { status: 'rejected' });
 
-                const outcome = yes > no ? 'passed' : 'failed';
-                await actions.finalizeVote(ctx, db, vote, outcome, null);
+                const lang = await i18n.getLanguage(ctx.chat.id);
+                await ctx.editMessageText(i18n.t(lang, 'voteban.result.saved', { user: vote.target_username }), { parse_mode: 'Markdown' });
             } else {
+                // Update vote message
                 const { text, keyboard } = await ui.getVoteMessage(
-                    vote.guild_id,
+                    ctx.chat.id,
                     { id: vote.target_user_id, username: vote.target_username },
-                    { id: vote.initiated_by, username: '...' },
-                    vote.reason,
-                    yes,
-                    no,
-                    vote.required_votes,
+                    null,
+                    vote.action_type || 'ban',
+                    yesVotes, noVotes, vote.required_votes,
                     vote.expires_at,
-                    voteId,
-                    false
+                    voteId
                 );
-                try {
-                    await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
-                } catch (e) { }
+                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
             }
+
+            await ctx.answerCallbackQuery();
+            return;
         }
 
         await next();
     });
+}
+
+// Helper: Log action to admin logger
+function logAction(config, guildId, eventType, targetUser, executor, analysisResult) {
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+
+    if (logEvents[eventType] && adminLogger.getLogEvent()) {
+        adminLogger.getLogEvent()({
+            guildId,
+            eventType,
+            targetUser,
+            executorAdmin: executor,
+            reason: analysisResult ? `[${analysisResult.category}] ${analysisResult.reason}` : 'VoteBan',
+            isGlobal: eventType === 'vote_ban'
+        });
+    }
+}
+
+// Helper: Log vote result
+function logVoteResult(config, guildId, actionType, targetId, targetName, yesVotes, noVotes) {
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+
+    const logKey = actionType === 'ban' ? 'vote_ban' : 'vote_delete';
+    if (logEvents[logKey] && adminLogger.getLogEvent()) {
+        adminLogger.getLogEvent()({
+            guildId,
+            eventType: logKey,
+            targetUser: { id: targetId, first_name: targetName },
+            reason: `VoteBan completed: ${yesVotes} yes, ${noVotes} no`,
+            isGlobal: actionType === 'ban'
+        });
+    }
 }
 
 module.exports = {

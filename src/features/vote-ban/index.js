@@ -20,8 +20,8 @@ function register(bot) {
     logger.info('[vote-ban] Module registered');
 }
 
-function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
-    return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
+function sendConfigUI(ctx, isEdit = false) {
+    return ui.sendConfigUI(ctx, db, isEdit);
 }
 
 module.exports = {
