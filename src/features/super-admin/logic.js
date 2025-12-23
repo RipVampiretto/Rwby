@@ -9,6 +9,7 @@ async function forwardToParliament(bot, db, params) {
         const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
         if (!globalConfig || !globalConfig.parliament_group_id) return;
 
+        // Select topic based on type
         let topicId = null;
         if (globalConfig.global_topics) {
             try {
@@ -16,54 +17,94 @@ async function forwardToParliament(bot, db, params) {
                     typeof globalConfig.global_topics === 'string'
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
-                topicId = topics.bans;
-            } catch (e) {}
+
+                // Route to correct topic
+                if (params.topic) {
+                    topicId = topics[params.topic];
+                } else if (params.type === 'link_unknown' || params.type === 'link_blacklist') {
+                    topicId = topics.link_checks;
+                } else if (params.type === 'keyword') {
+                    topicId = topics.reports || topics.bans;
+                } else {
+                    topicId = topics.bans;
+                }
+            } catch (e) { }
         }
 
-        const keyboard = {
-            inline_keyboard: [
+        // Build keyboard based on type
+        let keyboard = { inline_keyboard: [] };
+
+        if (params.type === 'link_unknown') {
+            // Unknown link - option to whitelist or blacklist
+            const domain = params.evidence?.match(/(https?:\/\/[^\s]+)/)?.[0];
+            let domainHost = '';
+            try { domainHost = new URL(domain || '').hostname; } catch (e) { }
+
+            keyboard.inline_keyboard = [
                 [
-                    { text: '➕ Blacklist Link', callback_data: `bl_link::${params.guildId}:${params.messageId}` },
-                    { text: '➕ Blacklist Parola', callback_data: 'bl_word' }
+                    { text: '✅ Whitelist', callback_data: `wl_domain:${domainHost}` },
+                    { text: '🚫 Blacklist', callback_data: `bl_domain:${domainHost}` }
                 ],
+                [{ text: '❌ Ignora', callback_data: 'parl_dismiss' }]
+            ];
+        } else if (params.type === 'link_blacklist' || params.type === 'keyword') {
+            // Known violation - option to gban user
+            keyboard.inline_keyboard = [
+                [
+                    { text: '🌍 Global Ban Utente', callback_data: `gban:${params.user.id}` },
+                    { text: '✅ Solo Locale', callback_data: 'parl_dismiss' }
+                ]
+            ];
+        } else {
+            // Default ban forwarding (for backward compat)
+            keyboard.inline_keyboard = [
                 [
                     { text: '🌍 Global Ban', callback_data: `gban:${params.user.id}` },
-                    { text: '✅ Solo Locale', callback_data: `gban_skip:${params.messageId}` }
+                    { text: '✅ Solo Locale', callback_data: 'parl_dismiss' }
                 ]
-            ]
-        };
-
-        const linkMatch = params.evidence?.match(/(https?:\/\/[^\s]+)/);
-        if (linkMatch) {
-            try {
-                const url = new URL(linkMatch[0]);
-                keyboard.inline_keyboard[0][0].callback_data = `bl_link:${url.hostname}:${params.guildId}:${params.messageId}`;
-            } catch (e) {}
+            ];
         }
 
-        const text =
-            `🔨 **BAN ESEGUITO**\n\n` +
-            `🏛️ Gruppo: \`${params.guildId}\`\n` +
-            `👤 Utente: [${params.user.first_name}](tg://user?id=${params.user.id}) (\`${params.user.id}\`)\n` +
-            `📊 Flux: ${params.flux}\n` +
-            `⏰ Ora: ${new Date().toISOString().replace('T', ' ').substring(0, 16)}\n\n` +
-            `📝 Motivo: ${params.reason}\n` +
-            `💬 Evidence: "${params.evidence}"`;
+        // Build message based on type
+        let text = '';
+        const userLink = `[${params.user?.first_name || 'Unknown'}](tg://user?id=${params.user?.id || 0})`;
 
-        const sentMsg = await bot.api.sendMessage(globalConfig.parliament_group_id, text, {
+        if (params.type === 'link_unknown') {
+            text = `🔗 **LINK SCONOSCIUTO**\n\n` +
+                `🏛️ Gruppo: ${params.guildName}\n` +
+                `👤 Utente: ${userLink} [\`${params.user?.id}\`]\n` +
+                `🔗 Link: ${params.evidence}\n\n` +
+                `❓ Aggiungere a whitelist o blacklist?`;
+        } else if (params.type === 'link_blacklist') {
+            text = `🚫 **LINK BANNATO**\n\n` +
+                `🏛️ Gruppo: ${params.guildName}\n` +
+                `👤 Utente: ${userLink} [\`${params.user?.id}\`]\n` +
+                `📝 Motivo: ${params.reason}\n` +
+                `🔗 Link: ${params.evidence}\n\n` +
+                `⚠️ Bannare globalmente l'utente?`;
+        } else if (params.type === 'keyword') {
+            text = `🔤 **KEYWORD BANNATA**\n\n` +
+                `🏛️ Gruppo: ${params.guildName}\n` +
+                `👤 Utente: ${userLink} [\`${params.user?.id}\`]\n` +
+                `📝 Motivo: ${params.reason}\n` +
+                `💬 Testo: "${params.evidence?.substring(0, 100)}"\n\n` +
+                `⚠️ Bannare globalmente l'utente?`;
+        } else {
+            // Default format (backward compat)
+            text = `🔨 **BAN ESEGUITO**\n\n` +
+                `🏛️ Gruppo: \`${params.guildId}\`\n` +
+                `👤 Utente: ${userLink} (\`${params.user?.id}\`)\n` +
+                `📊 Flux: ${params.flux || 'N/A'}\n` +
+                `📝 Motivo: ${params.reason}\n` +
+                `💬 Evidence: "${params.evidence}"`;
+        }
+
+        await bot.api.sendMessage(globalConfig.parliament_group_id, text, {
             message_thread_id: topicId,
             parse_mode: 'Markdown',
             reply_markup: keyboard
         });
 
-        const deleteAfter = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        await db.query(
-            `
-            INSERT INTO pending_deletions (message_id, chat_id, created_at, delete_after)
-            VALUES ($1, $2, NOW(), $3)
-        `,
-            [sentMsg.message_id, globalConfig.parliament_group_id, deleteAfter]
-        );
     } catch (e) {
         logger.error(`[super-admin] Forward error: ${e.message}`);
     }
@@ -87,7 +128,7 @@ async function sendGlobalLog(bot, db, event) {
                 else if (event.eventType === 'image_spam_check') threadId = topics.image_spam;
                 else if (event.eventType === 'link_check') threadId = topics.link_checks;
                 else threadId = topics.logs;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const text =
@@ -107,7 +148,7 @@ async function sendGlobalLog(bot, db, event) {
                 await bot.api.sendMessage(globalConfig.global_log_channel, text, { parse_mode: 'Markdown' });
             }
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 
 async function executeGlobalBan(ctx, db, bot, userId) {
@@ -125,7 +166,7 @@ async function executeGlobalBan(ctx, db, bot, userId) {
             try {
                 await bot.api.banChatMember(g.guild_id, userId);
                 count++;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         await ctx.reply(`🌍 Global Ban propagato a ${count} gruppi.`);
@@ -143,7 +184,7 @@ async function cleanupPendingDeletions(db, bot) {
         for (const p of pending) {
             try {
                 await bot.api.deleteMessage(p.chat_id, p.message_id);
-            } catch (e) {}
+            } catch (e) { }
             await db.query('DELETE FROM pending_deletions WHERE id = $1', [p.id]);
         }
     } catch (e) {

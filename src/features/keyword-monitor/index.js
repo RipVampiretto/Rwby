@@ -1,20 +1,18 @@
 // ============================================================================
 // KEYWORD MONITOR MODULE
 // ============================================================================
-// SCOPO: Filtro parole/frasi vietate con supporto regex.
+// SCOPO: Filtro parole/frasi vietate globali.
 // ============================================================================
 
 const logic = require('./logic');
 const commands = require('./commands');
 const ui = require('./ui');
-const wizard = require('./wizard');
 
 let db = null;
 
 function init(database) {
     db = database;
     logic.init(database);
-    wizard.init();
 }
 
 function register(bot) {

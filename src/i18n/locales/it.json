@@ -212,15 +212,13 @@
         }
     },
     "keyword": {
-        "title": "🔤 **PAROLE VIETATE**",
-        "description": "Blocca i messaggi che contengono parole o frasi specifiche vietate. Usa liste globali sempre aggiornate.",
-        "info_title": "Come funziona",
-        "info_1": "Usa le liste condivise di parole pericolose",
-        "global_sync": "Sync Globale",
+        "title": "🔤 **Parole Vietate**",
+        "description": "Elimina automaticamente i messaggi che contengono parole bannate globalmente.",
+        "status": "Stato",
+        "notify": "Log",
         "buttons": {
-            "add": "➕ Aggiungi Parola",
-            "list": "📜 Lista",
-            "sync": "🌐 Sync Globale"
+            "system": "🛡️ Stato",
+            "notify": "📢 Notifica"
         }
     },
     "nsfw": {

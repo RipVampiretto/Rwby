@@ -5,6 +5,7 @@
 // ============================================================================
 
 const logic = require('./logic');
+const actions = require('./actions');
 const commands = require('./commands');
 const ui = require('./ui');
 
@@ -13,6 +14,7 @@ let db = null;
 function init(database) {
     db = database;
     logic.init(database);
+    actions.init(database);
 }
 
 function register(bot) {

@@ -53,6 +53,9 @@ async function scanMessage(ctx, config) {
         if (intelCheck === 'blacklist') {
             return { type: 'blacklist', domain, link };
         }
+
+        // Unknown domain - forward to Parliament for review
+        return { type: 'unknown', domain, link };
     }
 
     return null;

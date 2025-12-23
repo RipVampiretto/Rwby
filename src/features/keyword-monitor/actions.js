@@ -1,58 +1,49 @@
 const logger = require('../../middlewares/logger');
-const { safeDelete, safeBan } = require('../../utils/error-handlers');
-const staffCoordination = require('../staff-coordination');
+const { safeDelete } = require('../../utils/error-handlers');
 const adminLogger = require('../admin-logger');
-const userReputation = require('../user-reputation');
 const superAdmin = require('../super-admin');
 
-async function executeAction(ctx, action, keyword, fullText) {
+async function executeAction(ctx, config, keyword) {
     const user = ctx.from;
 
-    // Determine eventType based on action
-    const eventType = action === 'ban' ? 'keyword_ban' : 'keyword_delete';
-
-    const logParams = {
-        guildId: ctx.chat.id,
-        eventType: eventType,
-        targetUser: user,
-        reason: `Keyword: ${keyword}`,
-        isGlobal: action === 'ban'
-    };
-
-    if (action === 'delete') {
-        await safeDelete(ctx, 'keyword-monitor');
-        if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
-    } else if (action === 'ban') {
-        await safeDelete(ctx, 'keyword-monitor');
-        const banned = await safeBan(ctx, user.id, 'keyword-monitor');
-
-        if (banned) {
-            await ctx.reply(`🚫 **BANNED (Keyword)**\nTrigger: "||${keyword}||"`, { parse_mode: 'MarkdownV2' });
-            userReputation.modifyFlux(user.id, ctx.chat.id, -50, 'keyword_ban');
-
-            if (superAdmin.forwardBanToParliament) {
-                superAdmin.forwardBanToParliament({
-                    user: user,
-                    guildName: ctx.chat.title,
-                    guildId: ctx.chat.id,
-                    reason: `Keyword Ban: ${keyword}`,
-                    evidence: fullText,
-                    flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
-                });
-            }
-
-            if (adminLogger.getLogEvent()) adminLogger.getLogEvent()(logParams);
+    // Parse log events
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
         }
-    } else if (action === 'report_only') {
-        staffCoordination.reviewQueue({
+    }
+
+    // Always delete for global keywords
+    await safeDelete(ctx, 'keyword-monitor');
+
+    // Log only if enabled
+    if (logEvents['keyword_delete'] && adminLogger.getLogEvent()) {
+        adminLogger.getLogEvent()({
             guildId: ctx.chat.id,
-            source: 'Keyword',
-            user: user,
+            eventType: 'keyword_delete',
+            targetUser: user,
             reason: `Keyword: ${keyword}`,
-            messageId: ctx.message.message_id,
-            content: fullText
+            isGlobal: false
         });
     }
+
+    // Forward to Parliament for human review (potential gban)
+    if (superAdmin.forwardToParliament) {
+        superAdmin.forwardToParliament({
+            topic: 'reports',
+            type: 'keyword',
+            user: user,
+            guildName: ctx.chat.title,
+            guildId: ctx.chat.id,
+            reason: `Keyword bandita: ${keyword}`,
+            evidence: ctx.message?.text || 'N/A'
+        });
+    }
+
+    logger.info(`[keyword-monitor] Deleted message from ${user.id} containing keyword: ${keyword}`);
 }
 
 module.exports = {

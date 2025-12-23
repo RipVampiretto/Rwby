@@ -212,15 +212,13 @@
         }
     },
     "keyword": {
-        "title": "🔤 **BANNED WORDS**",
-        "description": "Blocks messages containing specific banned words or phrases. Uses always-updated global lists.",
-        "info_title": "How it works",
-        "info_1": "Uses shared lists of dangerous words",
-        "global_sync": "Global Sync",
+        "title": "🔤 **Banned Words**",
+        "description": "Automatically deletes messages containing globally banned words.",
+        "status": "Status",
+        "notify": "Log",
         "buttons": {
-            "add": "➕ Add Word",
-            "list": "📜 List",
-            "sync": "🌐 Global Sync"
+            "system": "🛡️ Status",
+            "notify": "📢 Notification"
         }
     },
     "nsfw": {
