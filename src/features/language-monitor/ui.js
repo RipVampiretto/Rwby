@@ -28,9 +28,6 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const text =
         `${t('language.title')}\n\n` +
         `${t('language.description')}\n\n` +
-        `ℹ️ **${t('language.info_title')}:**\n` +
-        `• ${t('language.info_1')}\n` +
-        `• ${t('language.info_2')}\n\n` +
         `${t('language.status')}: ${enabled}\n` +
         `${t('language.tier_bypass')}: ${tierDisplay}\n` +
         `${t('language.action')}: ${action}\n` +

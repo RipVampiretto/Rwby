@@ -196,22 +196,19 @@
         }
     },
     "language": {
-        "title": "🌐 **FILTRO LINGUA**",
-        "description": "Blocca i messaggi scritti in lingue non permesse. Utile per gruppi che vogliono mantenere una sola lingua.",
-        "info_title": "Come funziona",
-        "info_1": "Ignora automaticamente messaggi molto corti (emoji, ok, ecc.)",
-        "info_2": "Manda un avviso all'utente prima di eliminare",
+        "title": "🌐 **Lingua**",
+        "description": "Interviene sui messaggi scritti in lingue non consentite.",
         "status": "Stato",
-        "tier_bypass": "Bypass da Tier",
+        "tier_bypass": "Bypass Tier",
         "action": "Azione",
-        "allowed": "Lingue permesse",
+        "allowed": "Lingue",
         "warning": "{user}, in questo gruppo sono permesse solo: {languages}. Per favore, usa una di queste lingue.",
         "log_reason": "Rilevata lingua {detected} (permesse: {allowed})",
         "ban_reason": "Ban Lingua: {detected} non permessa.",
         "buttons": {
-            "filter": "🌐 Filtro",
-            "tier": "👤 Bypass Tier",
-            "action": "👮 Azione"
+            "filter": "🛡️ Stato",
+            "tier": "👤 Bypass",
+            "action": "⚡ Azione"
         }
     },
     "keyword": {

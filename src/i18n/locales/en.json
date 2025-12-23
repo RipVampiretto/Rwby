@@ -196,22 +196,19 @@
         }
     },
     "language": {
-        "title": "🌐 **LANGUAGE FILTER**",
-        "description": "Blocks messages written in languages not allowed. Useful for groups that want to maintain a single language.",
-        "info_title": "How it works",
-        "info_1": "Automatically ignores very short messages (emojis, ok, etc.)",
-        "info_2": "Sends a warning to the user before deleting",
+        "title": "🌐 **Language**",
+        "description": "Takes action on messages written in non-allowed languages.",
         "status": "Status",
         "tier_bypass": "Tier Bypass",
         "action": "Action",
-        "allowed": "Allowed languages",
+        "allowed": "Languages",
         "warning": "{user}, this group only allows: {languages}. Please use one of these languages.",
         "log_reason": "Detected language {detected} (allowed: {allowed})",
         "ban_reason": "Language Ban: {detected} not allowed.",
         "buttons": {
-            "filter": "🌐 Filter",
-            "tier": "👤 Tier Bypass",
-            "action": "👮 Action"
+            "filter": "🛡️ Status",
+            "tier": "👤 Bypass",
+            "action": "⚡ Action"
         }
     },
     "keyword": {
