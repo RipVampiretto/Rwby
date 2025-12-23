@@ -11,7 +11,6 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const config = await db.fetchGuildConfig(guildId);
     const enabled = config.modal_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.modal_action || 'report_only');
-    const tierBypass = config.modal_tier_bypass ?? 2;
 
     // Count active modals for this group's languages
     let allowedLangs = ['it', 'en'];
@@ -36,8 +35,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `• ${t('modals.info_1', { count: activeCount })}\n` +
         `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n\n` +
         `${t('modals.status')}: ${enabled}\n` +
-        `${t('modals.action')}: ${action}\n` +
-        `${t('modals.tier_bypass')}: ${tierBypass}+`;
+        `${t('modals.action')}: ${action}`;
 
     if (!config.staff_group_id && (config.modal_action || 'report_only') === 'report_only') {
         text += `\n${t('common.warnings.no_staff_group')}\n`;
@@ -51,12 +49,6 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         inline_keyboard: [
             [{ text: `${t('modals.buttons.system')}: ${enabled}`, callback_data: 'mdl_toggle' }],
             [{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }],
-            [
-                {
-                    text: `${t('modals.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`,
-                    callback_data: 'mdl_tier'
-                }
-            ],
             [{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: 'mdl_list' }],
             [closeBtn]
         ]

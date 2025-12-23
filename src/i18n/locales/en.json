@@ -58,7 +58,7 @@
             "badwords": "🤬 Bad Words",
             "aimod": "🤖 AI Messages",
             "nsfw": "🖼️ Media Analysis",
-            "modals": "🎭 Scam Patterns",
+            "modals": "🎭 Patterns",
             "antiedit": "✏️ Anti-Edit",
             "voteban": "⚖️ Reports",
             "staff": "👥 Staff Group",
@@ -169,18 +169,17 @@
         }
     },
     "modals": {
-        "title": "📋 **SPAM PATTERNS**",
-        "description": "Automatically recognizes spam messages using predefined patterns. Think of it as a smart anti-spam filter that learns from past attempts.",
+        "title": "📋 **PATTERNS**",
+        "description": "Automatically recognizes suspicious messages using predefined patterns. Think of it as a smart filter that learns from past attempts.",
         "info_title": "How it works",
         "info_1": "Patterns loaded for your languages: {count}",
         "info_2": "Group languages: {languages}",
         "status": "Status",
         "action": "Action",
-        "tier_bypass": "Tier Bypass",
+        "warning": "{user}, your message was deleted because it matched a suspicious pattern.",
         "buttons": {
             "system": "📋 System",
             "action": "👮 Action",
-            "tier": "🎖️ Tier Bypass",
             "manage": "📝 Manage Patterns"
         },
         "list": {

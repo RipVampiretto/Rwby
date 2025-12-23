@@ -58,7 +58,7 @@
             "badwords": "🤬 Parole Vietate",
             "aimod": "🤖 AI Messaggi",
             "nsfw": "🖼️ Analisi Media",
-            "modals": "🎭 Pattern Scam",
+            "modals": "🎭 Pattern",
             "antiedit": "✏️ Anti-Modifica",
             "voteban": "⚖️ Segnalazioni",
             "staff": "👥 Gruppo Staff",
@@ -169,18 +169,17 @@
         }
     },
     "modals": {
-        "title": "📋 **PATTERN DI SPAM**",
-        "description": "Riconosce automaticamente messaggi di spam usando pattern predefiniti. Pensalo come un filtro anti-spam intelligente che impara dai tentativi passati.",
+        "title": "📋 **PATTERN**",
+        "description": "Riconosce automaticamente messaggi sospetti usando pattern predefiniti. Pensalo come un filtro intelligente che impara dai tentativi passati.",
         "info_title": "Come funziona",
         "info_1": "Pattern caricati per le tue lingue: {count}",
         "info_2": "Lingue del gruppo: {languages}",
         "status": "Stato",
         "action": "Azione",
-        "tier_bypass": "Bypass Tier",
+        "warning": "{user}, il tuo messaggio è stato eliminato perché corrisponde a un pattern sospetto.",
         "buttons": {
             "system": "📋 Sistema",
             "action": "👮 Azione",
-            "tier": "🎖️ Bypass Tier",
             "manage": "📝 Gestisci Pattern"
         },
         "list": {
