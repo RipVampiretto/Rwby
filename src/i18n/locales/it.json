@@ -186,18 +186,13 @@
         }
     },
     "link": {
-        "title": "🔗 **CONTROLLO LINK**",
-        "description": "Controlla tutti i link inviati per proteggere il gruppo da siti pericolosi, truffe e phishing.",
-        "info_title": "Come funziona",
-        "info_1": "Blocca automaticamente siti di phishing e truffe conosciute",
-        "info_2": "I link sconosciuti vengono segnalati per una verifica",
+        "title": "🔗 **Link**",
+        "description": "Elimina automaticamente i link a siti bannati globalmente (phishing, truffe, spam).",
         "status": "Stato",
-        "tier_bypass": "Bypass da Tier",
-        "global_sync": "Sync Globale",
+        "notify": "Log",
         "buttons": {
-            "monitor": "🔗 Monitor",
-            "tier": "👤 Bypass Tier",
-            "sync": "🌐 Sync Globale"
+            "system": "🛡️ Stato",
+            "notify": "📢 Notifica"
         }
     },
     "language": {

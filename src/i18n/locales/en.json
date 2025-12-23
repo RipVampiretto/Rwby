@@ -186,18 +186,13 @@
         }
     },
     "link": {
-        "title": "🔗 **LINK CONTROL**",
-        "description": "Checks all links sent to protect the group from dangerous sites, scams, and phishing.",
-        "info_title": "How it works",
-        "info_1": "Automatically blocks known phishing and scam sites",
-        "info_2": "Unknown links are flagged for review",
+        "title": "🔗 **Links**",
+        "description": "Automatically deletes links to globally banned sites (phishing, scams, spam).",
         "status": "Status",
-        "tier_bypass": "Tier Bypass",
-        "global_sync": "Global Sync",
+        "notify": "Log",
         "buttons": {
-            "monitor": "🔗 Monitor",
-            "tier": "👤 Tier Bypass",
-            "sync": "🌐 Global Sync"
+            "system": "�️ Status",
+            "notify": "� Notification"
         }
     },
     "language": {

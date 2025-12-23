@@ -15,19 +15,10 @@ function registerCommands(bot, db) {
         const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.link_enabled) return next();
 
-        // Tier bypass check
-        const tierBypass = config.link_tier_bypass ?? 2;
-        if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
-
+        // Always use global sync - no tier bypass
         const verdict = await logic.scanMessage(ctx, config);
         if (verdict) {
             await actions.executeAction(ctx, verdict);
-            // If blacklist, process stops (message deleted). If unknown, it continues?
-            // Logic in original code: "Only report first unknown link per message" and "next()" was called at the end.
-            // Blacklist deletes message so we should probably stop next() if deleted.
-            // But existing code called next() after processLinks.
-            // Actually, processLinks had a return on blacklist `safeDelete`, but `executeAction` is async.
-            // If we delete, we should probably stop.
             if (verdict.type === 'blacklist') return;
         }
 
@@ -46,14 +37,6 @@ function registerCommands(bot, db) {
 
         if (data === 'lnk_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { link_enabled: config.link_enabled ? 0 : 1 });
-        } else if (data === 'lnk_sync') {
-            await db.updateGuildConfig(ctx.chat.id, { link_sync_global: config.link_sync_global ? 0 : 1 });
-        } else if (data === 'lnk_tier') {
-            const current = config.link_tier_bypass ?? 2;
-            const tiers = [0, 1, 2, 3, -1];
-            const idx = tiers.indexOf(current);
-            const next = tiers[(idx + 1) % tiers.length];
-            await db.updateGuildConfig(ctx.chat.id, { link_tier_bypass: next });
         } else if (data === 'lnk_log_delete') {
             // Log toggle for link_delete
             let logEvents = {};

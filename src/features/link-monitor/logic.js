@@ -43,19 +43,16 @@ async function scanMessage(ctx, config) {
         const domain = getDomain(link);
         if (!domain) continue;
 
-        if (config.link_sync_global) {
-            const intelCheck = await checkIntel(domain);
+        // Always use global intel check
+        const intelCheck = await checkIntel(domain);
 
-            if (intelCheck === 'whitelist') {
-                continue;
-            }
-
-            if (intelCheck === 'blacklist') {
-                return { type: 'blacklist', domain, link };
-            }
+        if (intelCheck === 'whitelist') {
+            continue;
         }
 
-        return { type: 'unknown', domain, link };
+        if (intelCheck === 'blacklist') {
+            return { type: 'blacklist', domain, link };
+        }
     }
 
     return null;
