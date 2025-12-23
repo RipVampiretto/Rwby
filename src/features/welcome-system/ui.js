@@ -28,7 +28,7 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     text += `${t('welcome.welcome_msg')} ${msgEnabled ? (config.welcome_message ? t('common.on') : t('welcome.on_no_msg')) : t('common.off')}\n`;
     text += `${t('welcome.mode')} \`${modeDisplay}\`\n`;
     text += `${t('welcome.timeout')} \`${t('welcome.minutes', { count: timeout })}\`\n`;
-    text += `${t('welcome.autodelete')} \`${autoDelete === 0 ? t('common.off') : t('welcome.seconds', { count: autoDelete })}\`\n`;
+    text += `${t('welcome.autodelete')} \`${autoDelete === 0 ? t('common.off') : t('welcome.minutes', { count: autoDelete })}\`\n`;
     text += `${t('welcome.rules')} ${onOff(rulesEnabled)}\n`;
     text += `${t('welcome.logs_label')} ${onOff(logsEnabled)}\n\n`;
 
@@ -65,7 +65,7 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
                 { text: t('welcome.buttons.timeout', { time: timeout }), callback_data: `wc_cycle:timeout:${timeout}` },
                 {
                     text: t('welcome.buttons.autodelete', {
-                        time: autoDelete === 0 ? t('common.off') : autoDelete + 's'
+                        time: autoDelete === 0 ? t('common.off') : autoDelete + 'm'
                     }),
                     callback_data: `wc_cycle:autodelete:${autoDelete}`
                 }

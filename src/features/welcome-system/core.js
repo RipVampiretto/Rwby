@@ -3,6 +3,7 @@ const logger = require('../../middlewares/logger');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
 const { InlineKeyboard } = require('grammy');
 const i18n = require('../../i18n');
+const superAdmin = require('../super-admin');
 
 // Track pending captchas for timeout: userId:chatId -> timeoutHandle
 const PENDING_CAPTCHAS = new Map();
@@ -225,6 +226,17 @@ async function handleNewMember(ctx) {
 async function processUserJoin(ctx, user, config) {
     logWelcomeEvent(ctx, 'JOIN', null, config, user);
 
+    // Forward join to Parliament
+    if (superAdmin.forwardToParliament) {
+        await superAdmin.forwardToParliament({
+            type: 'user_join',
+            user: user,
+            guildName: ctx.chat.title,
+            guildId: ctx.chat.id,
+            reason: 'New member joined'
+        });
+    }
+
     const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1;
 
     if (!captchaEnabled) {
@@ -375,7 +387,7 @@ async function processUserJoin(ctx, user, config) {
             try {
                 await ctx.banChatMember(user.id);
                 await ctx.unbanChatMember(user.id);
-                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => {});
+                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
             } catch (e) {
                 logger.error(`[Welcome] Kick failed: ${e.message}`);
             }
@@ -452,12 +464,13 @@ async function handleCaptchaCallback(ctx) {
             PENDING_CAPTCHAS.delete(key);
         }
 
-        // Check Rules
-        if (config.rules_enabled === true || config.rules_enabled === 1) {
+        // Check Rules - only show if rules_enabled AND rules_link is set
+        const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
+        if (rulesEnabled && config.rules_link) {
             const guildId = ctx.chat.id;
             const lang = await i18n.getLanguage(guildId);
-    const t = (key, params) => i18n.t(lang, key, params);
-            const rulesLink = config.rules_link || 'https://t.me/telegram'; // Fallback
+            const t = (key, params) => i18n.t(lang, key, params);
+            const rulesLink = config.rules_link;
             const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
             try {
                 await ctx.editMessageText(text, {
@@ -471,7 +484,7 @@ async function handleCaptchaCallback(ctx) {
                 });
             } catch (e) {
                 // If edit fails, try sending new
-                await ctx.deleteMessage().catch(() => {});
+                await ctx.deleteMessage().catch(() => { });
                 await ctx.reply(text, {
                     parse_mode: 'Markdown',
                     reply_markup: {
@@ -535,7 +548,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
                 sentMessageId = edited.message_id;
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
-                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -553,11 +566,11 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
             sentMessageId = sent.message_id;
         }
 
-        // Auto-delete
+        // Auto-delete (timer is in minutes)
         if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
             setTimeout(() => {
-                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
-            }, config.welcome_autodelete_timer * 1000);
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
+            }, config.welcome_autodelete_timer * 60000); // minutes to ms
         }
     } catch (e) {
         logger.error(`[Welcome] Send custom welcome failed: ${e.message}`);

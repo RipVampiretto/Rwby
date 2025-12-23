@@ -94,10 +94,10 @@ async function handleCallback(ctx) {
         return;
     }
 
-    // Cycle AutoDelete
+    // Cycle AutoDelete (minutes: 0=Off, 1, 3, 5, 10)
     if (data.startsWith('wc_cycle:autodelete:')) {
         const current = parseInt(data.split(':')[2]);
-        const steps = [0, 10, 30, 60, 120, 300]; // 0=Off, 10s, 30s, 1m, 2m, 5m
+        const steps = [0, 1, 3, 5, 10]; // 0=Off, 1m, 3m, 5m, 10m
         let idx = steps.indexOf(current);
         if (idx === -1) idx = 0;
         const next = steps[(idx + 1) % steps.length];
