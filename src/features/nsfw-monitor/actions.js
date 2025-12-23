@@ -19,24 +19,47 @@ async function executeAction(ctx, action, reason, type) {
         }
     }
 
+    // Simplify reason for logs (remove technical details like "Frame @...")
+    let simpleReason = reason;
+    try {
+        // Extract category name if possible (remove frame info and percent)
+        // Example: "Frame @3.6s: Real Sex (95%)" -> "Real Sex"
+        // Example: "Real Sex (95%)" -> "Real Sex"
+        const match = reason.match(/(?:Frame @[\d.]+s: )?([^(\n]+)/);
+        if (match && match[1]) {
+            simpleReason = match[1].trim();
+        }
+    } catch (e) {
+        simpleReason = reason;
+    }
+
     const logParams = {
         guildId: ctx.chat.id,
         eventType: 'media_delete',
         targetUser: user,
-        reason: `Media (${type}): ${reason}`,
+        reason: `Categoria vietata: ${simpleReason}`,
         isGlobal: false
     };
 
     if (action === 'delete') {
+        // Forward original media to Log Channel (if set) BEFORE deleting
+        if (config.log_channel_id) {
+            try {
+                await ctx.api.forwardMessage(config.log_channel_id, ctx.chat.id, ctx.message.message_id);
+            } catch (e) {
+                // Ignore forward errors (channel not found, permission etc)
+            }
+        }
+
         // Forward original media to Parliament BEFORE deleting (with gban option)
         if (superAdmin.forwardMediaToParliament) {
             const caption = `🖼️ **CONTENUTO NON CONFORME**\n\n` +
                 `🏛️ Gruppo: ${ctx.chat.title}\n` +
                 `👤 Utente: [${user.first_name}](tg://user?id=${user.id}) [\`${user.id}\`]\n` +
-                `📝 Categoria: ${reason}\n` +
+                `📝 Categoria: ${reason}\n` + // Keep detailed reason for Parliament
                 `📁 Tipo: ${type}`;
 
-            await superAdmin.forwardMediaToParliament('reports', ctx, caption, [
+            await superAdmin.forwardMediaToParliament('image_spam', ctx, caption, [
                 [
                     { text: '🌍 Global Ban Utente', callback_data: `gban:${user.id}` },
                     { text: '✅ Ignora', callback_data: 'parl_dismiss' }
