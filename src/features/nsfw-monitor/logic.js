@@ -498,7 +498,8 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
     targetFrames = Math.max(MIN_FRAMES, Math.min(targetFrames, MAX_FRAMES));
 
     // Adjust if video is shorter than MIN_FRAMES seconds
-    const actualFrames = Math.min(targetFrames, Math.floor(duration));
+    // Ensure at least 1 frame for sub-second videos (Math.floor would return 0)
+    const actualFrames = Math.max(1, Math.min(targetFrames, Math.floor(duration) || 1));
 
     logger.info(`[nsfw-monitor] 🎬 Duration: ${duration.toFixed(1)}s → Extracting ${actualFrames} frames uniformly`);
 
