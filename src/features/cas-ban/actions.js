@@ -4,10 +4,13 @@
 
 const logger = require('../../middlewares/logger');
 const { safeDelete, safeBan } = require('../../utils/error-handlers');
-const adminLogger = require('../admin-logger');
 
 let db = null;
 let _botInstance = null;
+
+// Aggregation queue: { logChannelId: { timer, bans: [{user, groups: []}] } }
+const BAN_QUEUE = new Map();
+const QUEUE_DELAY_MS = 5000; // 5 seconds to aggregate
 
 function init(database, bot) {
     db = database;
@@ -26,21 +29,119 @@ async function handleCasBan(ctx) {
         const banned = await safeBan(ctx, user.id, 'cas-ban');
 
         if (banned) {
-            if (adminLogger.getLogEvent()) {
-                adminLogger.getLogEvent()({
-                    guildId: ctx.chat.id,
-                    eventType: 'ban',
-                    targetUser: user,
-                    executorAdmin: null,
-                    reason: 'CAS Ban (Combot Anti-Spam)',
-                    isGlobal: false
-                });
+            const config = await db.getGuildConfig(ctx.chat.id);
+
+            // Queue notification if enabled
+            if (config.casban_notify && config.log_channel_id) {
+                queueBanNotification(config.log_channel_id, user, ctx.chat, 'CAS Ban');
             }
+
             logger.info(`[cas-ban] Banned user ${user.id} from chat ${ctx.chat.id}`);
         }
     } catch (e) {
         logger.error(`[cas-ban] Failed to handle CAS ban: ${e.message}`);
     }
+}
+
+/**
+ * Queue a ban notification for aggregation
+ */
+function queueBanNotification(logChannelId, user, group, reason) {
+    if (!BAN_QUEUE.has(logChannelId)) {
+        BAN_QUEUE.set(logChannelId, {
+            timer: null,
+            bans: new Map() // userId -> { user, groups: [], reason }
+        });
+    }
+
+    const queue = BAN_QUEUE.get(logChannelId);
+
+    // Add or update user in queue
+    if (queue.bans.has(user.id)) {
+        // User already in queue, add group
+        const entry = queue.bans.get(user.id);
+        entry.groups.push({
+            id: group.id,
+            title: group.title || `Chat ${group.id}`
+        });
+    } else {
+        // New user
+        queue.bans.set(user.id, {
+            user: user,
+            reason: reason,
+            groups: [{
+                id: group.id,
+                title: group.title || `Chat ${group.id}`
+            }]
+        });
+    }
+
+    // Reset timer
+    if (queue.timer) {
+        clearTimeout(queue.timer);
+    }
+
+    queue.timer = setTimeout(() => {
+        flushBanQueue(logChannelId);
+    }, QUEUE_DELAY_MS);
+}
+
+/**
+ * Flush the ban queue and send aggregated notification
+ */
+async function flushBanQueue(logChannelId) {
+    if (!_botInstance) return;
+
+    const queue = BAN_QUEUE.get(logChannelId);
+    if (!queue || queue.bans.size === 0) return;
+
+    try {
+        const bans = Array.from(queue.bans.values());
+        const botInfo = await _botInstance.api.getMe();
+
+        // Build message in requested format
+        let text = `🚷 #BAN\n`;
+
+        // Bot who executed the bans
+        const botLink = `[${botInfo.first_name}](tg://user?id=${botInfo.id})`;
+        text += `• Di: ${botLink} [${botInfo.id}]\n`;
+
+        // List all banned users
+        for (const ban of bans.slice(0, 30)) {
+            const userLink = `[${ban.user.first_name || ban.user.username || 'User'}](tg://user?id=${ban.user.id})`;
+            text += `• A: ${userLink} [${ban.user.id}]\n`;
+        }
+
+        // Collect all unique groups
+        const allGroups = new Map();
+        for (const ban of bans) {
+            for (const group of ban.groups) {
+                allGroups.set(group.id, group.title);
+            }
+        }
+
+        // List groups
+        for (const [groupId, groupTitle] of allGroups) {
+            text += `- ${groupTitle} ✅ [\`${groupId}\`]\n`;
+        }
+
+        // Add hashtags for all user IDs
+        const hashtags = bans.slice(0, 30).map(b => `#id${b.user.id}`).join(' ');
+        text += hashtags;
+
+        if (bans.length > 30) {
+            text += `\n_...e altri ${bans.length - 30} utenti_`;
+        }
+
+        await _botInstance.api.sendMessage(logChannelId, text, { parse_mode: 'Markdown' });
+
+        logger.info(`[cas-ban] Sent aggregated notification to ${logChannelId}: ${bans.length} users`);
+    } catch (e) {
+        logger.error(`[cas-ban] Failed to send aggregated notification: ${e.message}`);
+    }
+
+    // Clear queue
+    BAN_QUEUE.delete(logChannelId);
 }
 
 /**
@@ -52,17 +153,32 @@ async function processNewCasBans(newUsers) {
     logger.info(`[cas-ban] Processing ${newUsers.length} new CAS bans...`);
 
     // Get all guilds for global ban (async PostgreSQL)
-    const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
+    const guilds = await db.queryAll('SELECT guild_id FROM guild_config WHERE casban_enabled = true');
     let globalBanCount = 0;
     let failedBans = 0;
 
     const usersToProcess = newUsers.slice(0, 100);
 
+    // Group guilds by log_channel_id for aggregated notifications
+    const guildConfigs = await Promise.all(
+        guilds.map(g => db.getGuildConfig(g.guild_id))
+    );
+
     for (const user of usersToProcess) {
-        for (const guild of guilds) {
+        for (let i = 0; i < guilds.length; i++) {
+            const guildId = guilds[i].guild_id;
+            const config = guildConfigs[i];
+
             try {
-                await _botInstance.api.banChatMember(guild.guild_id, user.user_id);
+                await _botInstance.api.banChatMember(guildId, user.user_id);
                 globalBanCount++;
+
+                // Queue notification if enabled
+                if (config.casban_notify && config.log_channel_id) {
+                    // Create fake user object for notification
+                    const fakeUser = { id: user.user_id, first_name: `User ${user.user_id}` };
+                    queueBanNotification(config.log_channel_id, fakeUser, { id: guildId, title: `Group ${guildId}` }, 'CAS Sync');
+                }
             } catch (e) {
                 failedBans++;
             }
@@ -95,7 +211,7 @@ async function notifyParliament(newUsers, banCount, guildCount) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const processedCount = Math.min(newUsers.length, 100);
@@ -121,5 +237,6 @@ async function notifyParliament(newUsers, banCount, guildCount) {
 module.exports = {
     init,
     handleCasBan,
-    processNewCasBans
+    processNewCasBans,
+    queueBanNotification // Export for use by other modules (gban)
 };

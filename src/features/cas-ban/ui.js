@@ -8,16 +8,13 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     const config = await db.fetchGuildConfig(guildId);
     const enabled = config.casban_enabled !== 0 ? t('common.on') : t('common.off');
+    const notifyEnabled = config.casban_notify !== 0 ? t('common.on') : t('common.off');
 
     const text =
         `${t('blacklist.title')}\n\n` +
         `${t('blacklist.description')}\n\n` +
-        `ℹ️ **${t('blacklist.info_title')}:**\n` +
-        `• ${t('blacklist.info_1')}\n` +
-        `• ${t('blacklist.info_2')}\n` +
-        `• ${t('blacklist.info_3')}\n` +
-        `• ${t('blacklist.info_4')}\n\n` +
-        `${t('common.status')}: ${enabled}`;
+        `${t('blacklist.status')}: ${enabled}\n` +
+        `${t('blacklist.notify')}: ${notifyEnabled}`;
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
@@ -26,6 +23,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const keyboard = {
         inline_keyboard: [
             [{ text: `${t('blacklist.buttons.system')}: ${enabled}`, callback_data: 'cas_toggle' }],
+            [{ text: `${t('blacklist.buttons.notify')}: ${notifyEnabled}`, callback_data: 'cas_notify' }],
             [closeBtn]
         ]
     };

@@ -42,10 +42,8 @@
     },
     "settings": {
         "main": {
-            "title": "⚙️ **PANNELLO DI CONTROLLO**",
-            "subtitle": "Scegli cosa vuoi configurare:",
-            "warning_disabled": "⚠️ Di default tutti i moduli sono disattivati. Attiva solo quelli che ti servono.",
-            "warning_staff": "⚠️ Per usare SEGNALA devi prima configurare il Gruppo Staff.",
+            "title": "⚙️ **Impostazioni**",
+            "subtitle": "Scegli una delle impostazioni che vuoi modificare.",
             "close": "❌ Chiudi"
         },
         "buttons": {
@@ -320,16 +318,13 @@
         }
     },
     "blacklist": {
-        "title": "🚫 **LISTA NERA GLOBALE**",
-        "description": "Sistema unificato di protezione. Banna automaticamente utenti malevoli dalle liste esterne (CAS) e dai ban interni emessi dal Parliament.",
-        "info_title": "Come funziona",
-        "info_1": "Controlla la lista CAS (Combot Anti-Spam) aggiornata ogni 24h",
-        "info_2": "Controlla i ban globali interni emessi dal Parliament",
-        "info_3": "Banna automaticamente gli utenti quando scrivono o entrano",
-        "info_4": "Un unico toggle per tutte le blacklist",
+        "title": "🚫 **Blacklist**",
+        "description": "Banna automaticamente gli utenti bannati globalmente quando scrivono o entrano nel gruppo.",
         "status": "Stato",
+        "notify": "Log",
         "buttons": {
-            "system": "🚫 Sistema"
+            "system": "🛡️ Stato",
+            "notify": "📢 Notifica"
         }
     },
     "staff": {

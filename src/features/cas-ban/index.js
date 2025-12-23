@@ -93,6 +93,13 @@ function register(bot) {
             return;
         }
 
+        if (data === 'cas_notify') {
+            const newState = !config.casban_notify;
+            await db.updateGuildConfig(ctx.chat.id, { casban_notify: newState ? 1 : 0 });
+            await ui.sendConfigUI(ctx, db, true, fromSettings);
+            return;
+        }
+
         await next();
     });
 

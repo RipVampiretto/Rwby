@@ -42,10 +42,8 @@
     },
     "settings": {
         "main": {
-            "title": "⚙️ **CONTROL PANEL**",
-            "subtitle": "Choose what you want to configure:",
-            "warning_disabled": "⚠️ All modules are disabled by default. Enable only those you need.",
-            "warning_staff": "⚠️ To use REPORT mode you must first configure the Staff Group.",
+            "title": "⚙️ **Settings**",
+            "subtitle": "Choose one of the settings you want to change.",
             "close": "❌ Close"
         },
         "buttons": {
@@ -320,16 +318,13 @@
         }
     },
     "blacklist": {
-        "title": "🚫 **GLOBAL BLACKLIST**",
-        "description": "Unified protection system. Automatically bans malicious users from external lists (CAS) and internal bans issued by Parliament.",
-        "info_title": "How it works",
-        "info_1": "Checks CAS (Combot Anti-Spam) list updated every 24h",
-        "info_2": "Checks internal global bans issued by Parliament",
-        "info_3": "Automatically bans users when they write or join",
-        "info_4": "Single toggle for all blacklists",
+        "title": "🚫 **Blacklist**",
+        "description": "Automatically ban globally banned users when they write or join the group.",
         "status": "Status",
+        "notify": "Log",
         "buttons": {
-            "system": "🚫 System"
+            "system": "🛡️ Status",
+            "notify": "📢 Notification"
         }
     },
     "staff": {

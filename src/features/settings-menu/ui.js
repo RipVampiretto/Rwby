@@ -11,17 +11,7 @@ async function sendMainMenu(ctx, isEdit = false) {
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
 
-    // Check if staff group is configured
-    const config = db ? await db.fetchGuildConfig(guildId) : null;
-    const hasStaffGroup = config && config.staff_group_id;
-
-    // Build warning text
-    let warningText = `\n\n${t('settings.main.warning_disabled')}`;
-    if (!hasStaffGroup) {
-        warningText += `\n${t('settings.main.warning_staff')}`;
-    }
-
-    const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}${warningText}`;
+    const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
 
     // Layout: Grouped by function for better UX
     // Groups: Ingresso → Contenuti → AI → Anti-Abuso → Admin
