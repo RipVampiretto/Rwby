@@ -190,6 +190,7 @@
         "description": "Elimina automaticamente i link a siti bannati globalmente (phishing, truffe, spam).",
         "status": "Stato",
         "notify": "Log",
+        "warning": "{user}, il tuo messaggio è stato eliminato perché conteneva un link a un sito non consentito.",
         "buttons": {
             "system": "🛡️ Stato",
             "notify": "📢 Notifica"
@@ -216,6 +217,7 @@
         "description": "Elimina automaticamente i messaggi che contengono parole bannate globalmente.",
         "status": "Stato",
         "notify": "Log",
+        "warning": "{user}, il tuo messaggio è stato eliminato perché conteneva parole non consentite.",
         "buttons": {
             "system": "🛡️ Stato",
             "notify": "📢 Notifica"

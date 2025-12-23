@@ -190,9 +190,10 @@
         "description": "Automatically deletes links to globally banned sites (phishing, scams, spam).",
         "status": "Status",
         "notify": "Log",
+        "warning": "{user}, your message was deleted because it contained a link to a forbidden site.",
         "buttons": {
-            "system": "�️ Status",
-            "notify": "� Notification"
+            "system": "🛡️ Status",
+            "notify": "📢 Notification"
         }
     },
     "language": {
@@ -216,6 +217,7 @@
         "description": "Automatically deletes messages containing globally banned words.",
         "status": "Status",
         "notify": "Log",
+        "warning": "{user}, your message was deleted because it contained forbidden words.",
         "buttons": {
             "system": "🛡️ Status",
             "notify": "📢 Notification"
