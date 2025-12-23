@@ -23,6 +23,10 @@ function forwardToParliament(params) {
     return logic.forwardToParliament(_botInstance, db, params);
 }
 
+function forwardMediaToParliament(topic, ctx, caption, customKeyboard) {
+    return logic.forwardMediaToParliament(_botInstance, db, topic, ctx, caption, customKeyboard);
+}
+
 function sendGlobalLog(event) {
     return logic.sendGlobalLog(_botInstance, db, event);
 }
@@ -35,6 +39,7 @@ module.exports = {
     init,
     register,
     forwardToParliament,
+    forwardMediaToParliament,
     sendGlobalLog,
     syncGlobalBansToGuild
 };

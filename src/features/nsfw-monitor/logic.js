@@ -605,7 +605,7 @@ function extractFrame(videoPath, timestamp, outputPath) {
 }
 
 /**
- * All available NSFW categories with descriptions
+ * All available media analysis categories with descriptions
  */
 const NSFW_CATEGORIES = {
     safe: { name: 'Safe', description: 'Normal, appropriate content', blockable: false },
@@ -624,6 +624,11 @@ const NSFW_CATEGORIES = {
         description: 'Stylized/anime blood, injuries, graphic violence',
         blockable: true
     },
+    scam_visual: {
+        name: 'Visual Scams',
+        description: 'Screenshots of scams, phishing, crypto scams, fake giveaways',
+        blockable: true
+    },
     minors: {
         name: 'Minors (CSAM)',
         description: 'Any sexualized content involving minors',
@@ -636,7 +641,7 @@ const NSFW_CATEGORIES = {
  * Get default blocked categories
  */
 function getDefaultBlockedCategories() {
-    return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'drawn_gore', 'minors'];
+    return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'drawn_gore', 'minors', 'scam_visual'];
 }
 
 async function callVisionLLM(base64Image, caption = null, chatId = null) {
@@ -701,6 +706,12 @@ Scores are RELATIVE STRENGTH signals, NOT calibrated probabilities.
 - drawn_gore:
   Stylized, illustrated, animated, or video game depictions of blood,
   injuries, or graphic violence.
+
+- scam_visual:
+  Screenshots of scams, phishing attempts, crypto scams, fake giveaways,
+  fake investment opportunities, or fraudulent offers.
+  Look for: promises of money, cryptocurrency logos with suspicious text,
+  screenshots of fake conversations, "you won" messages.
 
 - minors:
   ANY sexualized content involving minors or individuals that appear to be minors.
@@ -779,6 +790,9 @@ CATEGORIES
   Stylized, illustrated, animated, or video game depictions of blood,
   injuries, or graphic violence.
 
+- scam_visual:
+  Screenshots of scams, phishing, crypto scams, fake giveaways.
+
 - minors:
   ANY sexualized content involving minors or individuals who appear to be minors.
 
@@ -825,6 +839,7 @@ Respond ONLY with a valid JSON object in the following exact structure:
     "hentai": 0.0,
     "real_gore": 0.0,
     "drawn_gore": 0.0,
+    "scam_visual": 0.0,
     "minors": 0.0
   },
   "primary_category": "...",

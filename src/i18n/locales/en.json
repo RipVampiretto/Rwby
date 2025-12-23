@@ -10,6 +10,10 @@
         "action": "Action",
         "tier_bypass": "Tier Bypass",
         "threshold": "Sensitivity",
+        "actions": {
+            "delete": "DELETE",
+            "report": "REPORT"
+        },
         "delete": "DELETE",
         "ban": "BAN",
         "report_only": "REPORT",
@@ -53,7 +57,7 @@
             "lang": "🌐 Language",
             "badwords": "🤬 Bad Words",
             "aimod": "🤖 AI Messages",
-            "nsfw": "🔞 AI Images",
+            "nsfw": "🖼️ Media Analysis",
             "modals": "🎭 Scam Patterns",
             "antiedit": "✏️ Anti-Edit",
             "voteban": "⚖️ Reports",
@@ -223,67 +227,68 @@
             "notify": "📢 Notification"
         }
     },
-    "nsfw": {
-        "title": "🔞 **ADULT CONTENT FILTER**",
-        "description": "Analyzes photos, videos and images to find inappropriate content like nudity or violence. Protects the group from shocking content.",
-        "info_title": "How it works",
-        "info_1": "Works on Photos, Videos, GIFs and Stickers",
-        "info_2": "Blocks pornography and violent images",
-        "info_3": "Videos take a few seconds to analyze",
+    "media": {
+        "title": "🖼️ **Media Analysis**",
+        "description": "Analyzes photos, videos and other media to find non-compliant content: NSFW, scams, visual spam and more.",
         "status": "Status",
         "tier_bypass": "Tier Bypass",
         "action": "Action",
         "threshold": "Sensitivity",
         "check_types": "Check",
         "blocked_categories": "Blocked categories",
+        "warning": "{user}, your media was deleted because it violates the group rules.",
         "buttons": {
-            "monitor": "🔞 Monitor",
-            "tier": "👤 Tier Bypass",
-            "action": "👮 Action",
+            "monitor": "🖼️ Monitor",
+            "tier": "👤 Bypass",
+            "action": "⚡ Action",
             "threshold": "📊 Threshold",
-            "categories": "🚫 Configure Categories"
+            "categories": "🚫 Categories",
+            "notify": "Log"
         },
         "categories_ui": {
-            "title": "🚫 <b>CONTENT CATEGORIES</b>",
-            "subtitle": "Select which content types to block. Selected categories will be detected and the configured action will be executed.",
+            "title": "🚫 <b>MEDIA CATEGORIES</b>",
+            "subtitle": "Select which content types to block.",
             "legend_title": "<b>Legend:</b>",
-            "legend_blocked": "✅ = Blocked (will be flagged/deleted)",
-            "legend_always": "🔒 = Always blocked (cannot be changed)",
-            "back": "⬅️ Go back",
-            "noop": "🔒 This category cannot be modified"
+            "legend_blocked": "✅ = Blocked",
+            "legend_always": "🔒 = Always blocked",
+            "back": "⬅️ Back"
         },
         "categories": {
             "suggestive": {
                 "name": "Provocative Poses",
-                "desc": "Revealing clothes, sexy poses (e.g. influencers in bikinis)"
+                "desc": "Revealing clothes, sexy poses"
             },
             "figures_nsfw": {
-                "name": "Figures/Statues",
-                "desc": "Action figures, statues or collectibles with adult themes"
+                "name": "Nude Figures",
+                "desc": "Adult themed statues or action figures"
             },
             "real_nudity": {
                 "name": "Real Nudity",
-                "desc": "Photos/videos with nudity of real people"
+                "desc": "Photos/videos with nudity"
             },
             "real_sex": {
                 "name": "Sexual Acts",
-                "desc": "Photos/videos of real sexual acts (pornography)"
+                "desc": "Pornography"
             },
             "hentai": {
                 "name": "Hentai",
-                "desc": "Anime/manga with explicit sexual content"
+                "desc": "Explicit anime/manga"
             },
             "real_gore": {
                 "name": "Real Gore",
-                "desc": "Photos/videos with blood, injuries, real graphic violence"
+                "desc": "Blood, injuries, graphic violence"
             },
             "drawn_gore": {
                 "name": "Drawn Gore",
-                "desc": "Anime/drawings/videogames with blood, injuries, stylized graphic violence"
+                "desc": "Violence in anime/drawings"
+            },
+            "scam_visual": {
+                "name": "Scams & Fraud",
+                "desc": "Screenshots of scams, phishing, crypto scam"
             },
             "minors": {
                 "name": "Minors (CSAM)",
-                "desc": "Any sexualized content involving minors - ALWAYS BLOCKED"
+                "desc": "ALWAYS BLOCKED"
             }
         }
     },

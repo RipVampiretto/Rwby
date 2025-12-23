@@ -110,6 +110,65 @@ async function forwardToParliament(bot, db, params) {
     }
 }
 
+/**
+ * Forward media (photo/video) to Parliament with custom caption and keyboard
+ */
+async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyboard = null) {
+    if (!bot) return logger.error('[super-admin] Bot instance missing in forwardMediaToParliament');
+
+    try {
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        // Select topic
+        let topicId = null;
+        if (globalConfig.global_topics) {
+            try {
+                const topics =
+                    typeof globalConfig.global_topics === 'string'
+                        ? JSON.parse(globalConfig.global_topics)
+                        : globalConfig.global_topics;
+                topicId = topics[topic] || topics.reports || topics.bans;
+            } catch (e) { }
+        }
+
+        const keyboard = customKeyboard ? { inline_keyboard: customKeyboard } : null;
+
+        // Forward based on media type
+        const msg = ctx.message;
+        const options = {
+            message_thread_id: topicId,
+            caption: caption,
+            parse_mode: 'Markdown',
+            ...(keyboard && { reply_markup: keyboard })
+        };
+
+        if (msg.photo) {
+            const photo = msg.photo[msg.photo.length - 1];
+            await bot.api.sendPhoto(globalConfig.parliament_group_id, photo.file_id, options);
+        } else if (msg.video) {
+            await bot.api.sendVideo(globalConfig.parliament_group_id, msg.video.file_id, options);
+        } else if (msg.animation) {
+            await bot.api.sendAnimation(globalConfig.parliament_group_id, msg.animation.file_id, options);
+        } else if (msg.sticker) {
+            // Stickers can't have caption, send as two messages
+            await bot.api.sendSticker(globalConfig.parliament_group_id, msg.sticker.file_id, {
+                message_thread_id: topicId
+            });
+            await bot.api.sendMessage(globalConfig.parliament_group_id, caption, {
+                message_thread_id: topicId,
+                parse_mode: 'Markdown',
+                ...(keyboard && { reply_markup: keyboard })
+            });
+        } else if (msg.document) {
+            await bot.api.sendDocument(globalConfig.parliament_group_id, msg.document.file_id, options);
+        }
+
+    } catch (e) {
+        logger.error(`[super-admin] ForwardMedia error: ${e.message}`);
+    }
+}
+
 async function sendGlobalLog(bot, db, event) {
     try {
         const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
@@ -268,6 +327,7 @@ async function syncGlobalBansToGuild(bot, db, guildId) {
 
 module.exports = {
     forwardToParliament,
+    forwardMediaToParliament,
     sendGlobalLog,
     executeGlobalBan,
     cleanupPendingDeletions,

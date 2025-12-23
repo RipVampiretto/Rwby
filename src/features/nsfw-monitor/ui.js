@@ -9,13 +9,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const t = (key, params) => i18n.t(lang, key, params);
 
     logger.debug(
-        `[nsfw-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`
+        `[media-monitor] sendConfigUI called - isEdit: ${isEdit}, fromSettings: ${fromSettings}, chatId: ${guildId}`
     );
 
     try {
         const config = await db.fetchGuildConfig(guildId);
         const enabled = config.nsfw_enabled ? t('common.on') : t('common.off');
-        const action = i18n.formatAction(guildId, config.nsfw_action || 'delete');
+
+        // Only DELETE or REPORT - no BAN
+        const action = config.nsfw_action === 'report_only' ? t('common.actions.report') : t('common.actions.delete');
         const thr = (config.nsfw_threshold || 0.7) * 100;
         const tierBypass = config.nsfw_tier_bypass ?? 2;
 
@@ -39,25 +41,6 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         }
         const blockedCount = blockedCategories.length;
 
-        let text =
-            `${t('nsfw.title')}\n\n` +
-            `${t('nsfw.description')}\n\n` +
-            `ℹ️ <b>${t('nsfw.info_title')}:</b>\n` +
-            `• ${t('nsfw.info_1')}\n` +
-            `• ${t('nsfw.info_2')}\n` +
-            `• ${t('nsfw.info_3')}\n\n` +
-            `${t('nsfw.status')}: ${enabled}\n` +
-            `${t('nsfw.tier_bypass')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
-            `${t('nsfw.action')}: ${action}\n` +
-            `${t('nsfw.threshold')}: ${thr}%\n` +
-            `${t('nsfw.check_types')}: Foto ${p} | Video ${v} | GIF ${g} | Sticker ${s}\n` +
-            `🚫 ${t('nsfw.blocked_categories')}: ${blockedCount}`;
-
-        // Add warning if action is report_only and no staff group
-        if (config.nsfw_action === 'report_only' && !config.staff_group_id) {
-            text += `\n${t('common.warnings.no_staff_group')}`;
-        }
-
         // Parse log events
         let logEvents = {};
         if (config.log_events) {
@@ -67,8 +50,22 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
                 logEvents = config.log_events;
             }
         }
-        const logDel = logEvents['nsfw_delete'] ? '✅' : '❌';
-        const logBan = logEvents['nsfw_ban'] ? '✅' : '❌';
+        const logDel = logEvents['media_delete'] ? t('common.on') : t('common.off');
+
+        let text =
+            `${t('media.title')}\n\n` +
+            `${t('media.description')}\n\n` +
+            `${t('media.status')}: ${enabled}\n` +
+            `${t('media.tier_bypass')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}\n` +
+            `${t('media.action')}: ${action}\n` +
+            `${t('media.threshold')}: ${thr}%\n` +
+            `${t('media.check_types')}: 📷${p} 📹${v} 🎬${g} 🪙${s}\n` +
+            `🚫 ${t('media.blocked_categories')}: ${blockedCount}`;
+
+        // Add warning if action is report_only and no staff group
+        if (config.nsfw_action === 'report_only' && !config.staff_group_id) {
+            text += `\n${t('common.warnings.no_staff_group')}`;
+        }
 
         const closeBtn = fromSettings
             ? { text: t('common.back'), callback_data: 'settings_main' }
@@ -76,42 +73,31 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
         const keyboard = {
             inline_keyboard: [
-                [{ text: `${t('nsfw.buttons.monitor')}: ${enabled}`, callback_data: 'nsf_toggle' }],
+                [{ text: `${t('media.buttons.monitor')}: ${enabled}`, callback_data: 'nsf_toggle' }],
+                [{ text: `${t('media.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: 'nsf_tier' }],
                 [
-                    {
-                        text: `${t('nsfw.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`,
-                        callback_data: 'nsf_tier'
-                    }
-                ],
-                [
-                    { text: `${t('nsfw.buttons.action')}: ${action}`, callback_data: 'nsf_act' },
-                    { text: `${t('nsfw.buttons.threshold')}: ${thr}%`, callback_data: 'nsf_thr' }
+                    { text: `${t('media.buttons.action')}: ${action}`, callback_data: 'nsf_act' },
+                    { text: `${t('media.buttons.threshold')}: ${thr}%`, callback_data: 'nsf_thr' }
                 ],
                 [
                     { text: `📷 ${p}`, callback_data: 'nsf_tog_photo' },
-                    { text: `📹 ${v}`, callback_data: 'nsf_tog_video' }
-                ],
-                [
+                    { text: `📹 ${v}`, callback_data: 'nsf_tog_video' },
                     { text: `🎬 ${g}`, callback_data: 'nsf_tog_gif' },
                     { text: `🪙 ${s}`, callback_data: 'nsf_tog_sticker' }
                 ],
-                [{ text: `${t('nsfw.buttons.categories')} (${blockedCount})`, callback_data: 'nsf_categories' }],
-                // Log toggles
-                [
-                    { text: `📋 Log 🗑️${logDel}`, callback_data: 'nsf_log_delete' },
-                    { text: `📋 Log 🚷${logBan}`, callback_data: 'nsf_log_ban' }
-                ],
+                [{ text: `${t('media.buttons.categories')} (${blockedCount})`, callback_data: 'nsf_categories' }],
+                [{ text: `📢 ${t('media.buttons.notify')}: ${logDel}`, callback_data: 'nsf_log_delete' }],
                 [closeBtn]
             ]
         };
 
         if (isEdit) {
-            await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'nsfw-monitor');
+            await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'media-monitor');
         } else {
-            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
         }
     } catch (e) {
-        logger.error(`[nsfw-monitor] sendConfigUI error: ${e.message}`);
+        logger.error(`[media-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
         } catch (e2) { }
@@ -139,34 +125,25 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
         }
     }
 
-    // Build text with legend and descriptions
-    let text = `${t('nsfw.categories_ui.title')}\n\n`;
-    text += `${t('nsfw.categories_ui.subtitle')}\n\n`;
-    text += `${t('nsfw.categories_ui.legend_title')}\n`;
-    text += `${t('nsfw.categories_ui.legend_blocked')}\n`;
-    text += `${t('nsfw.categories_ui.legend_always')}\n\n`;
-
-    // Add category descriptions
-    for (const [catId, catInfo] of Object.entries(NSFW_CATEGORIES)) {
-        if (catId === 'safe') continue;
-        const catName = t(`nsfw.categories.${catId}.name`);
-        const catDesc = t(`nsfw.categories.${catId}.desc`);
-        text += `• <b>${catName}</b>: ${catDesc}\n`;
-    }
-    text += '\n'; // Add a newline after descriptions for better spacing
+    // Build text
+    let text = `${t('media.categories_ui.title')}\n\n`;
+    text += `${t('media.categories_ui.subtitle')}\n\n`;
+    text += `${t('media.categories_ui.legend_title')}\n`;
+    text += `${t('media.categories_ui.legend_blocked')}\n`;
+    text += `${t('media.categories_ui.legend_always')}\n`;
 
     // Build keyboard - one row per category
     const keyboard = { inline_keyboard: [] };
 
     for (const [catId, catInfo] of Object.entries(NSFW_CATEGORIES)) {
-        if (catId === 'safe') continue; // Don't show "safe" category
+        if (catId === 'safe') continue;
 
         const isBlocked = blockedCategories.includes(catId);
         const isAlwaysBlocked = catInfo.alwaysBlocked === true;
         const canToggle = catInfo.blockable !== false && !isAlwaysBlocked;
 
         // Get localized name
-        const catName = t(`nsfw.categories.${catId}.name`);
+        const catName = t(`media.categories.${catId}.name`);
 
         let statusIcon;
         if (isAlwaysBlocked) {
@@ -182,20 +159,19 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
         if (canToggle) {
             keyboard.inline_keyboard.push([{ text: btnText, callback_data: `nsf_cat_${catId}` }]);
         } else {
-            // Non-clickable (always blocked)
             keyboard.inline_keyboard.push([{ text: btnText, callback_data: `nsf_noop` }]);
         }
     }
 
     // Back button
     keyboard.inline_keyboard.push([
-        { text: t('nsfw.categories_ui.back'), callback_data: fromSettings ? 'nsf_back_settings' : 'nsf_back' }
+        { text: t('media.categories_ui.back'), callback_data: fromSettings ? 'nsf_back_settings' : 'nsf_back' }
     ]);
 
     try {
-        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'nsfw-monitor');
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'media-monitor');
     } catch (e) {
-        logger.error(`[nsfw-monitor] sendCategoriesUI error: ${e.message}`);
+        logger.error(`[media-monitor] sendCategoriesUI error: ${e.message}`);
     }
 }
 

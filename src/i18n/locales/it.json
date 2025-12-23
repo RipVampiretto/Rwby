@@ -10,6 +10,10 @@
         "action": "Azione",
         "tier_bypass": "Bypass da Tier",
         "threshold": "Sensibilità",
+        "actions": {
+            "delete": "ELIMINA",
+            "report": "SEGNALA"
+        },
         "delete": "ELIMINA",
         "ban": "BANNA",
         "report_only": "SEGNALA",
@@ -53,7 +57,7 @@
             "lang": "🌐 Lingua",
             "badwords": "🤬 Parole Vietate",
             "aimod": "🤖 AI Messaggi",
-            "nsfw": "🔞 AI Immagini",
+            "nsfw": "🖼️ Analisi Media",
             "modals": "🎭 Pattern Scam",
             "antiedit": "✏️ Anti-Modifica",
             "voteban": "⚖️ Segnalazioni",
@@ -223,67 +227,68 @@
             "notify": "📢 Notifica"
         }
     },
-    "nsfw": {
-        "title": "🔞 **FILTRO CONTENUTI ADULTI**",
-        "description": "Analizza foto, video e immagini per trovare contenuti non adatti come nudità o violenza. Protegge il gruppo da contenuti scioccanti.",
-        "info_title": "Come funziona",
-        "info_1": "Funziona su Foto, Video, GIF e Sticker",
-        "info_2": "Blocca pornografia e immagini violente",
-        "info_3": "I video richiedono qualche secondo per essere analizzati",
+    "media": {
+        "title": "🖼️ **Analisi Media**",
+        "description": "Analizza foto, video e altri media per trovare contenuti non conformi: NSFW, truffe, spam visivo e altro.",
         "status": "Stato",
-        "tier_bypass": "Bypass da Tier",
+        "tier_bypass": "Bypass Tier",
         "action": "Azione",
         "threshold": "Sensibilità",
         "check_types": "Controlla",
         "blocked_categories": "Categorie bloccate",
+        "warning": "{user}, il tuo media è stato eliminato perché non conforme alle regole del gruppo.",
         "buttons": {
-            "monitor": "🔞 Monitor",
-            "tier": "👤 Bypass Tier",
-            "action": "👮 Azione",
+            "monitor": "🖼️ Monitor",
+            "tier": "👤 Bypass",
+            "action": "⚡ Azione",
             "threshold": "📊 Soglia",
-            "categories": "🚫 Configura Categorie"
+            "categories": "🚫 Categorie",
+            "notify": "Log"
         },
         "categories_ui": {
-            "title": "🚫 <b>CATEGORIE CONTENUTI</b>",
-            "subtitle": "Seleziona quali tipi di contenuti bloccare. Quelli selezionati verranno rilevati e verrà eseguita l'azione configurata.",
+            "title": "🚫 <b>CATEGORIE MEDIA</b>",
+            "subtitle": "Seleziona quali tipi di contenuti bloccare.",
             "legend_title": "<b>Legenda:</b>",
-            "legend_blocked": "✅ = Bloccata (verrà segnalata/eliminata)",
-            "legend_always": "🔒 = Sempre bloccata (non modificabile)",
-            "back": "⬅️ Torna indietro",
-            "noop": "🔒 Questa categoria non può essere modificata"
+            "legend_blocked": "✅ = Bloccata",
+            "legend_always": "🔒 = Sempre bloccata",
+            "back": "⬅️ Indietro"
         },
         "categories": {
             "suggestive": {
                 "name": "Pose Provocanti",
-                "desc": "Vestiti rivelatori, pose sexy (es. influencer in bikini)"
+                "desc": "Vestiti rivelatori, pose sexy"
             },
             "figures_nsfw": {
-                "name": "Figure/Statuine",
-                "desc": "Action figures, statuine o oggetti da collezione a tema adulto"
+                "name": "Statuine Nude",
+                "desc": "Statuine o action figures a tema adulto"
             },
             "real_nudity": {
                 "name": "Nudità Reale",
-                "desc": "Foto/video con nudità di persone reali"
+                "desc": "Foto/video con nudità"
             },
             "real_sex": {
                 "name": "Atti Sessuali",
-                "desc": "Foto/video di atti sessuali reali (pornografia)"
+                "desc": "Pornografia"
             },
             "hentai": {
                 "name": "Hentai",
-                "desc": "Anime/manga con contenuti sessuali espliciti"
+                "desc": "Anime/manga espliciti"
             },
             "real_gore": {
                 "name": "Gore Reale",
-                "desc": "Foto/video con sangue, ferite, violenza grafica reale"
+                "desc": "Sangue, ferite, violenza grafica"
             },
             "drawn_gore": {
                 "name": "Gore Stilizzato",
-                "desc": "Anime/disegni/videogiochi con sangue, ferite, violenza grafica stilizzata"
+                "desc": "Violenza in anime/disegni"
+            },
+            "scam_visual": {
+                "name": "Truffe & Scam",
+                "desc": "Screenshot di truffe, phishing, crypto scam"
             },
             "minors": {
                 "name": "Minori (CSAM)",
-                "desc": "Qualsiasi contenuto sessualizzato con minori - SEMPRE BLOCCATO"
+                "desc": "SEMPRE BLOCCATO"
             }
         }
     },

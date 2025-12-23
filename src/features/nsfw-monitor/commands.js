@@ -157,10 +157,11 @@ function registerCommands(bot, db) {
             await logic.testConnection(ctx);
             return;
         } else if (data === 'nsf_act') {
-            const acts = ['delete', 'ban', 'report_only'];
+            // Only delete or report - no ban
+            const acts = ['delete', 'report_only'];
             let cur = config.nsfw_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
-            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
+            const nextAct = acts[(acts.indexOf(cur) + 1) % acts.length];
             await db.updateGuildConfig(ctx.chat.id, { nsfw_action: nextAct });
         } else if (data === 'nsf_thr') {
             let thr = config.nsfw_threshold || 0.7;
@@ -173,9 +174,8 @@ function registerCommands(bot, db) {
                 await db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
             }
         } else if (data.startsWith('nsf_log_')) {
-            // Log toggle: nsf_log_delete or nsf_log_ban
-            const logType = data.replace('nsf_log_', ''); // 'delete' or 'ban'
-            const logKey = `nsfw_${logType}`;
+            // Log toggle for media_delete
+            const logKey = 'media_delete';
 
             // Get current log events
             let logEvents = {};
