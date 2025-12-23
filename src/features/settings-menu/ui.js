@@ -25,10 +25,9 @@ async function sendMainMenu(ctx, isEdit = false) {
 
             // ━━━ PROTEZIONE AI ━━━
             [
-                { text: `${t('settings.buttons.aimod')}`, callback_data: 'set_goto:aimod' },
-                { text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' }
+                { text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' },
+                { text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' }
             ],
-            [{ text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' }],
 
             // ━━━ FILTRI LOCALI ━━━
             [

@@ -21,7 +21,7 @@ const flags = {
     languageMonitor: true,
     modalPatterns: true,
     linkMonitor: true,
-    aiModeration: true,
+    aiModeration: false, // DISABLED TEMPORARILY
     antiEditAbuse: true,
     intelligentProfiler: false, // DISABLED BY DEFAULT
     nsfwMonitor: true,
