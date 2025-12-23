@@ -1,7 +1,7 @@
 const detection = require('./detection');
 const actions = require('./actions');
 const ui = require('./ui');
-const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
+const { isAdmin } = require('../../utils/error-handlers');
 
 function registerCommands(bot, db) {
     // Middleware: language detection
@@ -20,10 +20,6 @@ function registerCommands(bot, db) {
         // Config check
         const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.lang_enabled) return next();
-
-        // Tier bypass check
-        const tierBypass = config.lang_tier_bypass ?? 2;
-        if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) return next();
 
         // Min length check
         if (ctx.message.text.length < (config.lang_min_chars || 20)) return next();
@@ -55,7 +51,7 @@ function registerCommands(bot, db) {
             return;
         }
 
-        // 2. Franc Detection
+        // 2. ELD Detection
         if (text.length >= (config.lang_min_chars || 20)) {
             const detected = await detection.detectLanguage(text);
             if (detected && !allowed.includes(detected)) {
@@ -73,24 +69,16 @@ function registerCommands(bot, db) {
         if (!data.startsWith('lng_')) return next();
 
         const config = await db.getGuildConfig(ctx.chat.id);
-        const fromSettings = isFromSettingsMenu(ctx);
-
-        if (data === 'lng_close') return ctx.deleteMessage();
 
         if (data === 'lng_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { lang_enabled: config.lang_enabled ? 0 : 1 });
         } else if (data === 'lng_act') {
-            const acts = ['delete', 'ban', 'report_only'];
+            // Only two actions: delete and report_only
+            const acts = ['delete', 'report_only'];
             let cur = config.lang_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
-            const nextAct = acts[(acts.indexOf(cur) + 1) % 3];
+            const nextAct = acts[(acts.indexOf(cur) + 1) % 2];
             await db.updateGuildConfig(ctx.chat.id, { lang_action: nextAct });
-        } else if (data === 'lng_tier') {
-            const current = config.lang_tier_bypass ?? 2;
-            const tiers = [0, 1, 2, 3, -1];
-            const idx = tiers.indexOf(current);
-            const next = tiers[(idx + 1) % tiers.length];
-            await db.updateGuildConfig(ctx.chat.id, { lang_tier_bypass: next });
         } else if (data.startsWith('lng_set:')) {
             const lang = data.split(':')[1];
             let allowed = [];
@@ -114,7 +102,7 @@ function registerCommands(bot, db) {
             }
             await db.updateGuildConfig(ctx.chat.id, { allowed_languages: JSON.stringify(allowed) });
         } else if (data.startsWith('lng_log_')) {
-            // Log toggle: lng_log_delete or lng_log_ban
+            // Log toggle: lng_log_delete or lng_log_report
             const logType = data.replace('lng_log_', '');
             const logKey = `lang_${logType}`;
 
@@ -130,7 +118,7 @@ function registerCommands(bot, db) {
             await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         }
 
-        await ui.sendConfigUI(ctx, db, true, fromSettings);
+        await ui.sendConfigUI(ctx, db, true);
     });
 }
 

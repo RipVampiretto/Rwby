@@ -1,9 +1,7 @@
 const adminLogger = require('../admin-logger');
-const userReputation = require('../user-reputation');
-const superAdmin = require('../super-admin');
 const staffCoordination = require('../staff-coordination');
 const i18n = require('../../i18n');
-const { safeDelete, safeBan } = require('../../utils/error-handlers');
+const { safeDelete } = require('../../utils/error-handlers');
 
 async function executeAction(ctx, config, detected, allowed) {
     const action = config.lang_action || 'delete';
@@ -29,7 +27,7 @@ async function executeAction(ctx, config, detected, allowed) {
             detected: detected.toUpperCase(),
             allowed: allowed.join(', ').toUpperCase()
         }),
-        isGlobal: action === 'ban'
+        isGlobal: false
     };
 
     // Get translation for this guild's UI language
@@ -56,30 +54,7 @@ async function executeAction(ctx, config, detected, allowed) {
                 } catch (e) { }
             }, 60000);
         } catch (e) { }
-    } else if (action === 'ban') {
-        await safeDelete(ctx, 'language-monitor');
-        const banned = await safeBan(ctx, user.id, 'language-monitor');
 
-        if (banned) {
-            userReputation.modifyFlux(user.id, ctx.chat.id, -20, 'lang_ban');
-
-            if (superAdmin.forwardBanToParliament) {
-                superAdmin.forwardBanToParliament({
-                    user: user,
-                    guildName: ctx.chat.title,
-                    guildId: ctx.chat.id,
-                    reason: i18n.t(lang, 'language.ban_reason', { detected: detected.toUpperCase() }),
-                    evidence: ctx.message.text,
-                    flux: userReputation.getLocalFlux(user.id, ctx.chat.id)
-                });
-            }
-
-            // Log only if enabled
-            if (logEvents['lang_ban'] && adminLogger.getLogEvent()) {
-                logParams.eventType = 'ban';
-                adminLogger.getLogEvent()(logParams);
-            }
-        }
     } else if (action === 'report_only') {
         const sent = await staffCoordination.reviewQueue({
             guildId: ctx.chat.id,

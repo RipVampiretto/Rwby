@@ -1,7 +1,7 @@
 const { safeEdit } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 
-async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
+async function sendConfigUI(ctx, db, isEdit = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
@@ -9,12 +9,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const config = await db.fetchGuildConfig(guildId);
     const enabled = config.lang_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.lang_action || 'delete');
-    const tierBypass = config.lang_tier_bypass ?? 2;
-    const tierDisplay = tierBypass === -1 ? 'OFF' : `${tierBypass}+`;
 
     let allowed = [];
     if (config.allowed_languages) {
-        // Handle both string (legacy) and array (PostgreSQL JSONB) formats
         if (Array.isArray(config.allowed_languages)) {
             allowed = config.allowed_languages;
         } else if (typeof config.allowed_languages === 'string') {
@@ -25,13 +22,16 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
     if (allowed.length === 0) allowed = ['it', 'en'];
 
-    const text =
+    let text =
         `${t('language.title')}\n\n` +
         `${t('language.description')}\n\n` +
         `${t('language.status')}: ${enabled}\n` +
-        `${t('language.tier_bypass')}: ${tierDisplay}\n` +
         `${t('language.action')}: ${action}\n` +
         `${t('language.allowed')}: ${allowed.join(', ').toUpperCase()}`;
+
+    if (!config.staff_group_id && (config.lang_action || 'delete') === 'report_only') {
+        text += `\n${t('common.warnings.no_staff_group')}\n`;
+    }
 
     // Language toggles
     const common = ['it', 'en', 'ru', 'es', 'fr', 'de'];
@@ -54,26 +54,20 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         }
     }
     const logDel = logEvents['lang_delete'] ? '✅' : '❌';
-    const logBan = logEvents['lang_ban'] ? '✅' : '❌';
     const logRep = logEvents['lang_report'] ? '✅' : '❌';
 
-    const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: 'settings_main' }
-        : { text: t('common.close'), callback_data: 'lng_close' };
-
+    // Always show Back button (only accessible from settings)
     const keyboard = {
         inline_keyboard: [
             [{ text: `${t('language.buttons.filter')}: ${enabled}`, callback_data: 'lng_toggle' }],
-            [{ text: `${t('language.buttons.tier')}: ${tierDisplay}`, callback_data: 'lng_tier' }],
             ...langRows,
             [{ text: `${t('language.buttons.action')}: ${action}`, callback_data: 'lng_act' }],
-            // Log toggles
+            // Log toggles (only delete and report, no ban)
             [
                 { text: `Log 🗑️${logDel}`, callback_data: 'lng_log_delete' },
-                { text: `Log 🚷${logBan}`, callback_data: 'lng_log_ban' },
                 { text: `Log 📢${logRep}`, callback_data: 'lng_log_report' }
             ],
-            [closeBtn]
+            [{ text: t('common.back'), callback_data: 'settings_main' }]
         ]
     };
 
