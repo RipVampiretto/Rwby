@@ -21,8 +21,8 @@ function register(bot) {
     commands.registerCommands(bot, db);
 }
 
-function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
-    return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
+function sendConfigUI(ctx, isEdit = false) {
+    return ui.sendConfigUI(ctx, db, isEdit);
 }
 
 module.exports = {

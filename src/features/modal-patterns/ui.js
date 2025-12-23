@@ -3,7 +3,7 @@ const manage = require('./manage');
 const { safeEdit } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 
-async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
+async function sendConfigUI(ctx, db, isEdit = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
@@ -41,16 +41,13 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         text += `\n${t('common.warnings.no_staff_group')}\n`;
     }
 
-    const closeBtn = fromSettings
-        ? { text: t('common.back'), callback_data: 'settings_main' }
-        : { text: t('common.close'), callback_data: 'mdl_close' };
-
+    // Always show Back button to settings (this UI is only accessible from settings)
     const keyboard = {
         inline_keyboard: [
             [{ text: `${t('modals.buttons.system')}: ${enabled}`, callback_data: 'mdl_toggle' }],
             [{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }],
             [{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: 'mdl_list' }],
-            [closeBtn]
+            [{ text: t('common.back'), callback_data: 'settings_main' }]
         ]
     };
 
@@ -61,7 +58,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
 }
 
-async function sendModalListUI(ctx, db, isEdit = false, fromSettings = false) {
+async function sendModalListUI(ctx, db, isEdit = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);

@@ -2,7 +2,7 @@ const logic = require('./logic');
 const actions = require('./actions');
 const ui = require('./ui');
 const manage = require('./manage');
-const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
+const { isAdmin } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 function registerCommands(bot, db) {
@@ -32,12 +32,10 @@ function registerCommands(bot, db) {
         if (!data.startsWith('mdl_')) return next();
 
         const config = await db.getGuildConfig(ctx.chat.id);
-        const fromSettings = isFromSettingsMenu(ctx);
-
-        if (data === 'mdl_close') return ctx.deleteMessage();
 
         if (data === 'mdl_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { modal_enabled: config.modal_enabled ? 0 : 1 });
+            await ui.sendConfigUI(ctx, db, true);
         } else if (data === 'mdl_act') {
             // Only two actions: report_only and delete
             const acts = ['report_only', 'delete'];
@@ -45,20 +43,16 @@ function registerCommands(bot, db) {
             if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 2];
             await db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
+            await ui.sendConfigUI(ctx, db, true);
         } else if (data === 'mdl_list') {
-            await ui.sendModalListUI(ctx, db, true, fromSettings);
-            return;
+            await ui.sendModalListUI(ctx, db, true);
         } else if (data === 'mdl_back') {
-            await ui.sendConfigUI(ctx, db, true, fromSettings);
-            return;
+            await ui.sendConfigUI(ctx, db, true);
         } else if (data.startsWith('mdl_tog:')) {
             const modalId = parseInt(data.split(':')[1]);
             manage.toggleGuildModal(ctx.chat.id, modalId);
-            await ui.sendModalListUI(ctx, db, true, fromSettings);
-            return;
+            await ui.sendModalListUI(ctx, db, true);
         }
-
-        await ui.sendConfigUI(ctx, db, true, fromSettings);
     });
 
     logger.info('[modal-patterns] Module registered');
