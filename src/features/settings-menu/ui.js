@@ -13,18 +13,13 @@ async function sendMainMenu(ctx, isEdit = false) {
 
     const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
 
-    // Layout: Grouped by function for better UX
-    // Groups: Ingresso → Contenuti → AI → Anti-Abuso → Admin
+    // Layout: Organized by category for better UX
     const keyboard = {
         inline_keyboard: [
-            // ━━━ INGRESSO ━━━
-            [{ text: `${t('settings.buttons.welcome')}`, callback_data: 'set_goto:welcome' }],
-            [{ text: `${t('settings.buttons.casban')}`, callback_data: 'set_goto:casban' }],
-
-            // ━━━ FILTRI CONTENUTI ━━━
+            // ━━━ PROTEZIONE GLOBALE (intel condiviso) ━━━
             [
-                { text: `${t('settings.buttons.links')}`, callback_data: 'set_goto:links' },
-                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' }
+                { text: `${t('settings.buttons.casban')}`, callback_data: 'set_goto:casban' },
+                { text: `${t('settings.buttons.links')}`, callback_data: 'set_goto:links' }
             ],
             [{ text: `${t('settings.buttons.badwords')}`, callback_data: 'set_goto:badwords' }],
 
@@ -35,15 +30,23 @@ async function sendMainMenu(ctx, isEdit = false) {
             ],
             [{ text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' }],
 
-            // ━━━ ANTI-ABUSO ━━━
+            // ━━━ FILTRI LOCALI ━━━
             [
-                { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' },
+                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' },
+                { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' }
+            ],
+
+            // ━━━ INGRESSO & MODERAZIONE ━━━
+            [
+                { text: `${t('settings.buttons.welcome')}`, callback_data: 'set_goto:welcome' },
                 { text: `${t('settings.buttons.voteban')}`, callback_data: 'set_goto:voteban' }
             ],
 
-            // ━━━ AMMINISTRAZIONE ━━━
-            [{ text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' }],
-            [{ text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }],
+            // ━━━ ADMIN ━━━
+            [
+                { text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' },
+                { text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }
+            ],
             [{ text: `${t('settings.main.close')}`, callback_data: 'settings_close' }]
         ]
     };
