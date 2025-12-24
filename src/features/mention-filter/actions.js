@@ -76,7 +76,6 @@ async function executeAction(ctx, config, verdict) {
             `${t('mention.staff_alert.title')}\n\n` +
             `${t('mention.staff_alert.group')}: ${ctx.chat.title}\n` +
             `${t('mention.staff_alert.user')}: ${userName} [<code>${user.id}</code>]\n` +
-            `${t('mention.staff_alert.reason')}: ${reasonText}\n` +
             `${t('mention.staff_alert.mentioned')}: @${username}\n\n` +
             `<a href="${messageLink}">${t('mention.staff_alert.go_to_message')}</a>`;
 
