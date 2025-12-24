@@ -59,13 +59,13 @@ async function createTables() {
             -- Media Filter (ex NSFW)
             media_enabled BOOLEAN DEFAULT FALSE,
             media_action TEXT DEFAULT 'delete',
-            media_check_photos BOOLEAN DEFAULT TRUE,
-            media_check_videos BOOLEAN DEFAULT TRUE,
-            media_check_gifs BOOLEAN DEFAULT TRUE,
+            media_check_photos BOOLEAN DEFAULT FALSE,
+            media_check_videos BOOLEAN DEFAULT FALSE,
+            media_check_gifs BOOLEAN DEFAULT FALSE,
             media_check_stickers BOOLEAN DEFAULT FALSE,
             media_frame_interval INTEGER DEFAULT 5,
             media_tier_bypass INTEGER DEFAULT 2,
-            media_blocked_categories JSONB DEFAULT '["real_nudity","real_sex","hentai","real_gore","drawn_gore","minors","scam_visual"]'::jsonb,
+            media_blocked_categories JSONB DEFAULT '["minors"]'::jsonb,
             
             -- Report System (ex VoteBan)
             report_enabled BOOLEAN DEFAULT FALSE,
@@ -132,7 +132,6 @@ async function createTables() {
             user_id BIGINT PRIMARY KEY,
             global_flux INTEGER DEFAULT 0,
             groups_participated INTEGER DEFAULT 0,
-            total_violations INTEGER DEFAULT 0,
             last_sync TIMESTAMPTZ DEFAULT NOW()
         )
     `);
@@ -165,7 +164,6 @@ async function createTables() {
             category TEXT DEFAULT 'custom',
             severity INTEGER DEFAULT 1,
             match_whole_word BOOLEAN DEFAULT FALSE,
-            bypass_tier INTEGER DEFAULT 2,
             created_at TIMESTAMPTZ DEFAULT NOW()
         )
     `);
@@ -258,7 +256,7 @@ async function createTables() {
             patterns JSONB DEFAULT '[]',
             action TEXT DEFAULT 'report_only',
             similarity_threshold REAL DEFAULT 0.6,
-            enabled BOOLEAN DEFAULT TRUE,
+            enabled BOOLEAN DEFAULT FALSE,
             created_by BIGINT,
             created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -272,9 +270,9 @@ async function createTables() {
     await query(`
         CREATE TABLE IF NOT EXISTS guild_pattern_overrides (
             guild_id BIGINT NOT NULL,
-            pattern_id INTEGER NOT NULL,
+            modal_id INTEGER NOT NULL,
             enabled BOOLEAN DEFAULT TRUE,
-            PRIMARY KEY (guild_id, pattern_id)
+            PRIMARY KEY (guild_id, modal_id)
         )
     `);
 

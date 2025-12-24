@@ -87,6 +87,46 @@ async function modifyFlux(db, userId, guildId, delta, reason) {
     `,
         [userId, guildId, newFlux]
     );
+
+    // Sync global stats
+    await syncGlobalUserStats(db, userId);
+}
+
+/**
+ * Sync user's global stats (flux sum, groups count)
+ */
+async function syncGlobalUserStats(db, userId) {
+    try {
+        // Calculate global stats from local trust fluxes
+        const stats = await db.queryOne(
+            `
+            SELECT 
+                COUNT(DISTINCT guild_id) as groups_participated,
+                COALESCE(SUM(local_flux), 0) as total_flux
+            FROM user_trust_flux 
+            WHERE user_id = $1
+            `,
+            [userId]
+        );
+
+        const groups = parseInt(stats?.groups_participated || 0);
+        const flux = parseInt(stats?.total_flux || 0);
+
+        await db.query(
+            `
+            INSERT INTO user_global_flux (user_id, global_flux, groups_participated, last_sync)
+            VALUES ($1, $2, $3, NOW())
+            ON CONFLICT (user_id) DO UPDATE SET
+                global_flux = EXCLUDED.global_flux,
+                groups_participated = EXCLUDED.groups_participated,
+                last_sync = NOW()
+            `,
+            [userId, flux, groups]
+        );
+    } catch (e) {
+        // Log but don't fail the main flow
+        console.error(`[reputation] Failed to sync global stats for ${userId}: ${e.message}`);
+    }
 }
 
 function getTierName(tier) {
@@ -100,5 +140,6 @@ module.exports = {
     getLocalFlux,
     getGlobalFlux,
     modifyFlux,
+    syncGlobalUserStats,
     getTierName
 };
