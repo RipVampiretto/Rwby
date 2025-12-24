@@ -29,7 +29,7 @@ async function forwardToParliament(bot, db, params) {
                 } else {
                     topicId = topics.bans;
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Build keyboard based on type
@@ -41,7 +41,7 @@ async function forwardToParliament(bot, db, params) {
             let domainHost = '';
             try {
                 domainHost = new URL(domain || '').hostname;
-            } catch (e) {}
+            } catch (e) { }
 
             keyboard.inline_keyboard = [
                 [
@@ -139,7 +139,7 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.reports || topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const keyboard = customKeyboard ? { inline_keyboard: customKeyboard } : null;
@@ -202,7 +202,7 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.image_spam || topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Build media group
@@ -278,7 +278,7 @@ async function sendGlobalLog(bot, db, event) {
                 else if (event.eventType === 'image_spam_check') threadId = topics.image_spam;
                 else if (event.eventType === 'link_check') threadId = topics.link_checks;
                 else threadId = topics.logs;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const text =
@@ -298,7 +298,7 @@ async function sendGlobalLog(bot, db, event) {
                 await bot.api.sendMessage(globalConfig.global_log_channel, text, { parse_mode: 'HTML' });
             }
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 
 async function executeGlobalBan(ctx, db, bot, userId) {
@@ -316,7 +316,7 @@ async function executeGlobalBan(ctx, db, bot, userId) {
             try {
                 await bot.api.banChatMember(g.guild_id, userId);
                 count++;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         await ctx.reply(`🌍 Global Ban propagato a ${count} gruppi.`);
@@ -334,7 +334,7 @@ async function cleanupPendingDeletions(db, bot) {
         for (const p of pending) {
             try {
                 await bot.api.deleteMessage(p.chat_id, p.message_id);
-            } catch (e) {}
+            } catch (e) { }
             await db.query('DELETE FROM pending_deletions WHERE id = $1', [p.id]);
         }
     } catch (e) {
@@ -412,6 +412,43 @@ async function syncGlobalBansToGuild(bot, db, guildId) {
     return { success, failed };
 }
 
+/**
+ * Notify Parliament about a new group registration
+ */
+async function notifyNewGroup(bot, db, guildId, guildName) {
+    try {
+        const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
+
+        let threadId = null;
+        if (globalConfig.global_topics) {
+            try {
+                const topics =
+                    typeof globalConfig.global_topics === 'string'
+                        ? JSON.parse(globalConfig.global_topics)
+                        : globalConfig.global_topics;
+                threadId = topics.add_group;
+            } catch (e) { }
+        }
+
+        if (!threadId) return;
+
+        const text =
+            `🆕 <b>NEW GROUP REGISTERED</b>\n\n` +
+            `📛 Name: <b>${guildName}</b>\n` +
+            `🆔 ID: <code>${guildId}</code>\n` +
+            `📅 Date: ${new Date().toISOString()}`;
+
+        await bot.api.sendMessage(globalConfig.parliament_group_id, text, {
+            message_thread_id: threadId,
+            parse_mode: 'HTML'
+        });
+
+    } catch (e) {
+        logger.error(`[super-admin] notifyNewGroup error: ${e.message}`);
+    }
+}
+
 module.exports = {
     forwardToParliament,
     forwardMediaToParliament,
@@ -421,5 +458,6 @@ module.exports = {
     cleanupPendingDeletions,
     setupParliament,
     getStats,
-    syncGlobalBansToGuild
+    syncGlobalBansToGuild,
+    notifyNewGroup
 };

@@ -55,7 +55,14 @@ bot.use(async (ctx, next) => {
         await db.upsertUser(ctx.from);
     }
     if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
-        await db.upsertGuild(ctx.chat);
+        const isNew = await db.upsertGuild(ctx.chat);
+
+        if (isNew && features.isEnabled('superAdmin')) {
+            // Don't await to not block the main flow
+            superAdmin.notifyNewGroup(ctx.chat.id, ctx.chat.title).catch(err => {
+                logger.error(`[index] Failed to notify new group: ${err.message}`);
+            });
+        }
 
         // Global Ban Check - if blacklist is enabled, check internal global bans
         // (CAS bans are checked in the cas-ban module)

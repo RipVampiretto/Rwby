@@ -191,17 +191,22 @@ async function updateGuildConfig(guildId, updates) {
  */
 async function upsertGuild(chat) {
     const { id, title } = chat;
-    if (!title) return; // Should have title if group/supergroup
+    if (!title) return false; // Should have title if group/supergroup
 
-    await query(
+    const result = await queryOne(
         `
         INSERT INTO guild_config (guild_id, guild_name) VALUES ($1, $2)
         ON CONFLICT (guild_id) DO UPDATE SET 
             guild_name = EXCLUDED.guild_name,
             updated_at = NOW()
+        RETURNING created_at, updated_at
     `,
         [id, title]
     );
+
+    // If created_at equals updated_at, it means it was just inserted
+    // (since update would change updated_at to now, while created_at remains old)
+    return result && result.created_at.getTime() === result.updated_at.getTime();
 }
 
 // Alias for backwards compatibility (both names now point to same function)

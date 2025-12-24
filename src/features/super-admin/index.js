@@ -46,5 +46,8 @@ module.exports = {
     forwardMediaToParliament,
     forwardAlbumToParliament,
     sendGlobalLog,
-    syncGlobalBansToGuild
+    syncGlobalBansToGuild,
+    notifyNewGroup: function (guildId, guildName) {
+        return logic.notifyNewGroup(_botInstance, db, guildId, guildName);
+    }
 };
