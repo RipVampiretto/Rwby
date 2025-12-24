@@ -31,7 +31,10 @@ async function sendMainMenu(ctx, isEdit = false) {
                 { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' },
                 { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' }
             ],
-            [{ text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' }],
+            [
+                { text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' },
+                { text: `${t('settings.buttons.mentions')}`, callback_data: 'set_goto:mentions' }
+            ],
 
             // ━━━ GLOBALE ━━━
             [{ text: `${t('settings.headers.global')}`, callback_data: 'settings_main' }],

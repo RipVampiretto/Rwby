@@ -99,6 +99,11 @@ async function createTables() {
             rules_link TEXT,
             captcha_logs_enabled BOOLEAN DEFAULT FALSE,
             
+            -- Mention Filter (External @username scam detection)
+            mention_filter_enabled BOOLEAN DEFAULT FALSE,
+            mention_filter_action TEXT DEFAULT 'report_only',
+            mention_filter_notify BOOLEAN DEFAULT FALSE,
+            
             -- UI Language
             ui_language TEXT DEFAULT 'en',
             

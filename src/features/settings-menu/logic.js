@@ -13,6 +13,7 @@ const staffCoordination = require('../staff-coordination');
 const spamPatterns = require('../spam-patterns');
 const globalBlacklist = require('../global-blacklist');
 const welcomeSystem = require('../welcome-system');
+const mentionFilter = require('../mention-filter');
 
 async function routeToFeature(ctx, feature) {
     switch (feature) {
@@ -50,6 +51,9 @@ async function routeToFeature(ctx, feature) {
             break;
         case 'casban':
             if (globalBlacklist.sendConfigUI) await globalBlacklist.sendConfigUI(ctx, true, true);
+            break;
+        case 'mentions':
+            if (mentionFilter.sendConfigUI) await mentionFilter.sendConfigUI(ctx, true, true);
             break;
         case 'ui_lang':
             await ui.sendLanguageUI(ctx);

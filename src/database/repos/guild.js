@@ -64,6 +64,10 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'rules_enabled',
     'rules_link',
     'captcha_logs_enabled',
+    // Mention Filter
+    'mention_filter_enabled',
+    'mention_filter_action',
+    'mention_filter_notify',
     // UI Language
     'ui_language'
 ]);
@@ -156,7 +160,9 @@ async function updateGuildConfig(guildId, updates) {
         'welcome_msg_enabled',
         'captcha_enabled',
         'rules_enabled',
-        'captcha_logs_enabled'
+        'captcha_logs_enabled',
+        'mention_filter_enabled',
+        'mention_filter_notify'
     ]);
 
     // Build parameterized query

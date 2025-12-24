@@ -20,6 +20,7 @@ const flags = {
     linkFilter: true,
     editMonitor: true,
     mediaFilter: true,
+    mentionFilter: true,
 
     // Community / Interactive
     reportSystem: true,

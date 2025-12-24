@@ -1,0 +1,54 @@
+const { safeEdit } = require('../../utils/error-handlers');
+const i18n = require('../../i18n');
+
+async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
+    const guildId = ctx.chat.id;
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
+
+    const config = await db.fetchGuildConfig(guildId);
+    const enabled = config.mention_filter_enabled ? t('common.on') : t('common.off');
+    const action = config.mention_filter_action || 'report_only';
+    const actionText = action === 'delete' ? t('common.delete') : t('common.report_only');
+
+    // Parse log events
+    const notify = config.mention_filter_notify ? t('common.on') : t('common.off');
+
+    let text = `${t('mention.title')}\n\n` +
+        `${t('mention.description')}\n\n` +
+        `${t('mention.status')}: ${enabled}`;
+
+    // Show details only when enabled
+    if (config.mention_filter_enabled) {
+        text += `\n${t('mention.action')}: ${actionText}`;
+        text += `\n${t('mention.notify')}: ${notify}`;
+    }
+
+    const closeBtn = fromSettings
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'mnt_close' };
+
+    // Build keyboard dynamically
+    const rows = [];
+    rows.push([{ text: `${t('mention.buttons.system')}: ${enabled}`, callback_data: 'mnt_toggle' }]);
+
+    // Show options only when enabled
+    if (config.mention_filter_enabled) {
+        rows.push([{ text: `${t('mention.buttons.action')}: ${actionText}`, callback_data: 'mnt_action' }]);
+        rows.push([{ text: `${t('mention.buttons.notify')}: ${notify}`, callback_data: 'mnt_notify' }]);
+    }
+
+    rows.push([closeBtn]);
+
+    const keyboard = { inline_keyboard: rows };
+
+    if (isEdit) {
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'mention-filter');
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+    }
+}
+
+module.exports = {
+    sendConfigUI
+};

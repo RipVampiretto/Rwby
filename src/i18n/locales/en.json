@@ -94,7 +94,8 @@
             "voteban": "⚖️ Reports",
             "staff": "👥 Staff Group",
             "logger": "📋 Action Log",
-            "ui_language": "🌍 Bot Language"
+            "ui_language": "🌍 Bot Language",
+            "mentions": "👤 Mentions"
         },
         "language": {
             "title": "🌍 <b>INTERFACE LANGUAGE</b>",
@@ -261,6 +262,20 @@
         "warning": "{user}, your message was deleted because it contained forbidden words.",
         "buttons": {
             "system": "🛡️ Status",
+            "notify": "📢 Notification"
+        }
+    },
+    "mention": {
+        "title": "👤 <b>External Mentions</b>",
+        "description": "Detects when users mention external accounts (@username) that are not in the group. Uses advanced algorithms to classify potential scam/recruitment messages.",
+        "status": "Status",
+        "action": "Action",
+        "notify": "Log",
+        "warning_scam": "{user}, your message was removed because it appears to be a scam or recruitment attempt.",
+        "warning_gbanned": "{user}, your message was removed because you mentioned a globally banned user: {mentioned}",
+        "buttons": {
+            "system": "🛡️ Status",
+            "action": "⚡ Action",
             "notify": "📢 Notification"
         }
     },

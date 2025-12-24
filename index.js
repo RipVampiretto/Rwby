@@ -34,6 +34,7 @@ const languageFilter = require("./src/features/language-filter");
 const spamPatterns = require("./src/features/spam-patterns");
 const linkFilter = require("./src/features/link-filter");
 const mediaFilter = require("./src/features/media-filter");
+const mentionFilter = require("./src/features/mention-filter");
 
 // Community/Interactive modules
 const reportSystem = require("./src/features/report-system");
@@ -147,6 +148,10 @@ if (features.isEnabled('spamPatterns')) {
 if (features.isEnabled('linkFilter')) {
     linkFilter.init(db);
     linkFilter.register(bot);
+}
+if (features.isEnabled('mentionFilter')) {
+    mentionFilter.init(db);
+    mentionFilter.register(bot);
 }
 
 // Detection: Edit monitoring

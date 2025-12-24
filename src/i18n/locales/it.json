@@ -94,7 +94,8 @@
             "voteban": "⚖️ Segnalazioni",
             "staff": "👥 Gruppo Staff",
             "logger": "📋 Registro Azioni",
-            "ui_language": "🌍 Lingua Bot"
+            "ui_language": "🌍 Lingua Bot",
+            "mentions": "👤 Menzioni"
         },
         "language": {
             "title": "🌍 <b>LINGUA INTERFACCIA</b>",
@@ -261,6 +262,20 @@
         "warning": "{user}, il tuo messaggio è stato eliminato perché conteneva parole non consentite.",
         "buttons": {
             "system": "🛡️ Stato",
+            "notify": "📢 Notifica"
+        }
+    },
+    "mention": {
+        "title": "👤 <b>Menzioni Esterne</b>",
+        "description": "Rileva quando gli utenti menzionano account (@username) che non sono nel gruppo. Usa algoritmi avanzati per classificare potenziali scam/truffe di reclutamento.",
+        "status": "Stato",
+        "action": "Azione",
+        "notify": "Log",
+        "warning_scam": "{user}, il tuo messaggio è stato rimosso perché sembra essere una truffa o un tentativo di reclutamento.",
+        "warning_gbanned": "{user}, il tuo messaggio è stato rimosso perché hai menzionato un utente bannato globalmente: {mentioned}",
+        "buttons": {
+            "system": "🛡️ Stato",
+            "action": "⚡ Azione",
             "notify": "📢 Notifica"
         }
     },

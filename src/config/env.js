@@ -76,7 +76,8 @@ const config = {
     LM_STUDIO: {
         url: process.env.LM_STUDIO_URL,
         model: process.env.LM_STUDIO_MODEL,
-        nsfwModel: process.env.LM_STUDIO_NSFW_MODEL
+        nsfwModel: process.env.LM_STUDIO_NSFW_MODEL,
+        scamModel: process.env.LM_STUDIO_SCAM_MODEL || process.env.LM_STUDIO_MODEL // fallback to text model
     },
 
     // AI Timeouts (in milliseconds)

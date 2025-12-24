@@ -100,6 +100,18 @@ async function forwardToParliament(bot, db, params) {
                 `${t('common.logs.reason')}: ${params.reason}\n` +
                 `${t('common.logs.text')}: "${params.evidence?.substring(0, 100)}"\n\n` +
                 `${t('common.logs.global_ban_question')}`;
+        } else if (params.type === 'mention_scam' || params.type === 'mention_gbanned') {
+            // Mention filter detection
+            const title = params.type === 'mention_gbanned'
+                ? '🚫 <b>GBANNED USER MENTIONED</b>'
+                : '👤 <b>SUSPICIOUS MENTION DETECTED</b>';
+            text =
+                `${title}\n\n` +
+                `${t('common.logs.group')}: ${params.guildName}\n` +
+                `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
+                `${t('common.logs.reason')}: ${params.reason}\n` +
+                `${t('common.logs.evidence')}: "${params.evidence?.substring(0, 500)}"\n\n` +
+                `${t('common.logs.global_ban_question')}`;
         } else {
             // Default format (backward compat)
             text =
