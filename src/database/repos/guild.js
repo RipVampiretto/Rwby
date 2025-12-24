@@ -29,7 +29,6 @@ const GUILD_CONFIG_COLUMNS = new Set([
     // Media Filter
     'media_enabled',
     'media_action',
-    'media_threshold',
     'media_check_photos',
     'media_check_videos',
     'media_check_gifs',

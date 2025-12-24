@@ -440,32 +440,35 @@ async function checkImage(imagePath, config, reasons, caption = null, chatId = n
         blockedCategories.push('minors');
     }
 
-    const threshold = config.media_threshold || 0.7;
-    const scores = res.scores || {};
+    const primaryCategory = res.primary_category || 'safe';
 
-    // Check minors FIRST with absolute priority (lower threshold)
-    if (scores.minors && scores.minors >= 0.5) {
+    // SPECIAL CASE: Minors (CSAM) - Absolute Priority check on scores if available
+    // Even if primary_category is different, if minors score is high, we catch it.
+    if (res.scores && res.scores.minors >= 0.5) {
         const categoryInfo = NSFW_CATEGORIES.minors;
-        logger.warn(`[media-filter] 🚨 MINORS DETECTED: score=${scores.minors} (>= 0.5)`);
-        reasons.push(`${categoryInfo.name} (${Math.round(scores.minors * 100)}%)`);
+        logger.warn(`[media-filter] 🚨 MINORS DETECTED by score: ${res.scores.minors}`);
+        reasons.push(`${categoryInfo.name} (Score: ${Math.round(res.scores.minors * 100)}%)`);
         return true;
     }
 
-    // Check all blocked categories
-    for (const category of blockedCategories) {
-        const score = scores[category] || 0;
-        if (score >= threshold) {
-            const categoryInfo = NSFW_CATEGORIES[category] || { name: category };
-            logger.warn(`[media-filter] ⚠️ Blocked category detected: ${category} (${score} >= ${threshold})`);
-            reasons.push(`${categoryInfo.name} (${Math.round(score * 100)}%)`);
-            return true;
-        }
+    // CHECK 1: Is primary category blocked?
+    if (blockedCategories.includes(primaryCategory)) {
+        const categoryInfo = NSFW_CATEGORIES[primaryCategory] || { name: primaryCategory };
+        logger.warn(`[media-filter] 🚨 VIOLATION: Primary category '${primaryCategory}' is blocked.`);
+        reasons.push(`${categoryInfo.name} (Primary Category)`);
+        return true;
     }
 
+    // CHECK 2: Is primary category 'safe'? If not, check if it should be blocked by severity?
+    // Actually, user requested strict reliance on primary_category matching blocked list.
+    // So if primary_category is safe/suggestive (and suggestive isn't blocked), we allow it.
+
     logger.debug(
-        `[media-filter] ✅ Image passed check - primary: ${res.primary_category}, uncertainty: ${res.uncertainty}`
+        `[media-filter] ✅ Image passed check - primary: ${res.primary_category} not in blocked list`
     );
     return false;
+
+
 }
 
 async function checkVideo(videoPath, config, reasons, caption = null, chatId = null) {

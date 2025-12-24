@@ -170,10 +170,6 @@ function registerCommands(bot, db) {
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % acts.length];
             await db.updateGuildConfig(ctx.chat.id, { media_action: nextAct });
-        } else if (data === 'nsf_thr') {
-            let thr = config.media_threshold || 0.7;
-            thr = thr >= 0.9 ? 0.5 : thr + 0.1;
-            await db.updateGuildConfig(ctx.chat.id, { media_threshold: parseFloat(thr.toFixed(1)) });
         } else if (data.startsWith('nsf_tog_')) {
             const type = data.split('_')[2]; // photo, video, gif, sticker
             const key = `nsfw_check_${type}s`;
@@ -190,7 +186,7 @@ function registerCommands(bot, db) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) {}
+                    } catch (e) { }
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }

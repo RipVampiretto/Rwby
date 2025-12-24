@@ -59,7 +59,6 @@ async function createTables() {
             -- Media Filter (ex NSFW)
             media_enabled BOOLEAN DEFAULT FALSE,
             media_action TEXT DEFAULT 'delete',
-            media_threshold REAL DEFAULT 0.7,
             media_check_photos BOOLEAN DEFAULT TRUE,
             media_check_videos BOOLEAN DEFAULT TRUE,
             media_check_gifs BOOLEAN DEFAULT TRUE,
