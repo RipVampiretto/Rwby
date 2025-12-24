@@ -35,7 +35,7 @@ function getActionDisplay(action, t) {
     return actions[action] || actions['report_only'];
 }
 
-async function sendConfigUI(ctx, db, isEdit = false) {
+async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
@@ -55,25 +55,24 @@ async function sendConfigUI(ctx, db, isEdit = false) {
             report: t('report.modes.report')
         }[reportMode] || t('report.modes.vote');
 
-    // Build text based on mode
+    // Build text
     let text =
         `${t('report.title')}\n\n` +
         `${t('report.description')}\n\n` +
-        `ℹ️ **${t('report.how_to_use')}:**\n` +
-        `${t('report.usage_info')}\n\n` +
-        `📊 **${t('report.modes_title')}:**\n` +
-        `• **${t('report.modes.vote')}** - ${t('report.modes.vote_desc')}\n` +
-        `• **${t('report.modes.report')}** - ${t('report.modes.report_desc')}\n\n` +
-        `**${t('report.settings_section')}**\n` +
-        `${t('report.status')}: ${enabled}\n` +
-        `${t('report.report_mode')}: ${modeDisplay}`;
+        `${t('report.status')}: ${enabled}`;
 
-    if (reportMode === 'vote') {
-        text += `\n${t('report.votes_required')}: ${thr}\n${t('report.timer')}: ${durDisplay}`;
-    }
+    // Show details only when enabled
+    if (config.report_enabled) {
+        text += `\n${t('report.report_mode')}: ${modeDisplay}`;
 
-    if (reportMode === 'report' && !config.staff_group_id) {
-        text += `\n\n${t('common.warnings.no_staff_group')}`;
+        if (reportMode === 'vote') {
+            text += `\n${t('report.votes_required')}: ${thr}`;
+            text += `\n${t('report.timer')}: ${durDisplay}`;
+        }
+
+        if (reportMode === 'report' && !config.staff_group_id) {
+            text += `\n\n${t('common.warnings.no_staff_group')}`;
+        }
     }
 
     // Parse log events
@@ -82,7 +81,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -91,26 +90,35 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const logDel = logEvents['vote_delete'] ? '✅' : '❌';
     const logReport = logEvents['report_log'] ? '✅' : '❌';
 
-    // Build keyboard based on mode
+    // Close/Back button
+    const closeBtn = fromSettings
+        ? { text: t('common.back'), callback_data: 'settings_main' }
+        : { text: t('common.close'), callback_data: 'vb_close' };
+
+    // Build keyboard
     const rows = [
-        [{ text: `${t('report.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }],
-        [{ text: `${t('report.buttons.report_mode')}: ${modeDisplay}`, callback_data: 'vb_mode' }]
+        [{ text: `${t('report.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }]
     ];
 
-    if (reportMode === 'vote') {
-        // Vote mode: show threshold, duration, vote logs
-        rows.push([{ text: `${t('report.buttons.threshold')}: ${thr}`, callback_data: 'vb_thr' }]);
-        rows.push([{ text: `${t('report.buttons.duration')}: ${durDisplay}`, callback_data: 'vb_dur' }]);
-        rows.push([
-            { text: `Log 🗑️${logDel}`, callback_data: 'vb_log_delete' },
-            { text: `Log 🚷${logBan}`, callback_data: 'vb_log_ban' }
-        ]);
-    } else {
-        // Report mode: show only report log
-        rows.push([{ text: `Log 📩${logReport}`, callback_data: 'vb_log_report' }]);
+    // Show options only when enabled
+    if (config.report_enabled) {
+        rows.push([{ text: `${t('report.buttons.report_mode')}: ${modeDisplay}`, callback_data: 'vb_mode' }]);
+
+        if (reportMode === 'vote') {
+            // Vote mode: show threshold, duration, vote logs
+            rows.push([{ text: `${t('report.buttons.threshold')}: ${thr}`, callback_data: 'vb_thr' }]);
+            rows.push([{ text: `${t('report.buttons.duration')}: ${durDisplay}`, callback_data: 'vb_dur' }]);
+            rows.push([
+                { text: `Log 🗑️${logDel}`, callback_data: 'vb_log_delete' },
+                { text: `Log 🚷${logBan}`, callback_data: 'vb_log_ban' }
+            ]);
+        } else {
+            // Report mode: show only report log
+            rows.push([{ text: `Log 📩${logReport}`, callback_data: 'vb_log_report' }]);
+        }
     }
 
-    rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
+    rows.push([closeBtn]);
 
     const keyboard = { inline_keyboard: rows };
 

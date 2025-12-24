@@ -20,8 +20,8 @@ function register(bot) {
     logger.info('[report-system] Module registered');
 }
 
-function sendConfigUI(ctx, isEdit = false) {
-    return ui.sendConfigUI(ctx, db, isEdit);
+function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
+    return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
 }
 
 module.exports = {

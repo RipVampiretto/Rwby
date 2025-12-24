@@ -66,6 +66,36 @@ async function executeAction(ctx, config, verdict) {
         }
 
         logger.info(`[mention-filter] Deleted message from ${user.id} - ${reasonText}`);
+    } else if (action === 'report_only' && config.staff_group_id) {
+        // Report to staff group (not Parliament, that's separate)
+        const messageText = ctx.message.text || ctx.message.caption || '[No text]';
+        const chatIdStr = String(ctx.chat.id).replace('-100', '');
+        const messageLink = `https://t.me/c/${chatIdStr}/${ctx.message.message_id}`;
+
+        const staffAlertText =
+            `${t('mention.staff_alert.title')}\n\n` +
+            `${t('mention.staff_alert.group')}: ${ctx.chat.title}\n` +
+            `${t('mention.staff_alert.user')}: ${userName} [<code>${user.id}</code>]\n` +
+            `${t('mention.staff_alert.reason')}: ${reasonText}\n` +
+            `${t('mention.staff_alert.mentioned')}: @${username}\n\n` +
+            `<a href="${messageLink}">${t('mention.staff_alert.go_to_message')}</a>`;
+
+        try {
+            await ctx.api.sendMessage(config.staff_group_id, staffAlertText, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: t('mention.staff_alert.btn_delete'), callback_data: `mnt_staff_del:${ctx.chat.id}:${ctx.message.message_id}` },
+                            { text: t('mention.staff_alert.btn_ignore'), callback_data: 'mnt_staff_ignore' }
+                        ]
+                    ]
+                }
+            });
+            logger.info(`[mention-filter] Reported to staff group for ${user.id}`);
+        } catch (e) {
+            logger.warn(`[mention-filter] Could not send to staff group: ${e.message}`);
+        }
     }
 
     // Log to group's log channel if enabled
@@ -84,7 +114,7 @@ async function executeAction(ctx, config, verdict) {
         });
     }
 
-    // Always forward to Parliament for review
+    // ALWAYS forward to Parliament for review (regardless of action)
     if (superAdmin.forwardToParliament) {
         const messageText = ctx.message.text || ctx.message.caption || '[No text]';
 

@@ -57,10 +57,47 @@ function registerCommands(bot, db) {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('mnt_')) return next();
 
+        if (data === 'mnt_close') return ctx.deleteMessage();
+
+        // Staff group action handlers (can be called from any chat where staff receives alerts)
+        if (data.startsWith('mnt_staff_del:')) {
+            const parts = data.split(':');
+            const targetChatId = parseInt(parts[1]);
+            const targetMsgId = parseInt(parts[2]);
+
+            const i18n = require('../../i18n');
+            const lang = await i18n.getLanguage(ctx.chat.id);
+            const t = (key, params) => i18n.t(lang, key, params);
+
+            try {
+                await ctx.api.deleteMessage(targetChatId, targetMsgId);
+                await ctx.editMessageText(
+                    ctx.callbackQuery.message.text + `\n\n${t('mention.staff_alert.deleted_by', { name: ctx.from.first_name })}`,
+                    { parse_mode: 'HTML' }
+                );
+                await ctx.answerCallbackQuery('✅');
+            } catch (e) {
+                await ctx.answerCallbackQuery('❌');
+            }
+            return;
+        }
+
+        if (data === 'mnt_staff_ignore') {
+            const i18n = require('../../i18n');
+            const lang = await i18n.getLanguage(ctx.chat.id);
+            const t = (key, params) => i18n.t(lang, key, params);
+
+            await ctx.editMessageText(
+                ctx.callbackQuery.message.text + `\n\n${t('mention.staff_alert.ignored_by', { name: ctx.from.first_name })}`,
+                { parse_mode: 'HTML' }
+            );
+            await ctx.answerCallbackQuery('✅');
+            return;
+        }
+
+        // Config handlers - need to get config from the correct chat
         const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
-
-        if (data === 'mnt_close') return ctx.deleteMessage();
 
         if (data === 'mnt_toggle') {
             await db.updateGuildConfig(ctx.chat.id, {
