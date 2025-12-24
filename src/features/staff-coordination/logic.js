@@ -1,6 +1,53 @@
 const logger = require('../../middlewares/logger');
 const adminLogger = require('../admin-logger');
 const i18n = require('../../i18n');
+const ui = require('./ui');
+const wizard = require('./wizard');
+const { updateGuildConfig } = require('../../database/repos/guild');
+
+async function handleCallback(ctx, db) {
+    const data = ctx.callbackQuery.data;
+
+    // Wizard Prompts
+    if (data === 'stf_wizard:group') {
+        wizard.startSession(ctx.from.id, ctx.chat.id, ctx.callbackQuery.message.message_id, 'set_staff_group');
+        return ui.sendWizardPrompt(ctx, 'set_staff_group');
+    }
+
+    if (data === 'stf_wizard:channel') {
+        wizard.startSession(ctx.from.id, ctx.chat.id, ctx.callbackQuery.message.message_id, 'set_log_channel');
+        return ui.sendWizardPrompt(ctx, 'set_log_channel');
+    }
+
+    // Deletion Actions
+    if (data === 'stf_del:group') {
+        const lang = await i18n.getLanguage(ctx.chat.id);
+        const t = (key, params) => i18n.t(lang, key, params);
+
+        await updateGuildConfig(ctx.chat.id, { staff_group_id: null });
+
+        // Refresh UI
+        await ui.sendConfigUI(ctx, db, true, true);
+        return ctx.answerCallbackQuery(t('staff.wizard.group_deleted'));
+    }
+
+    if (data === 'stf_del:channel') {
+        const lang = await i18n.getLanguage(ctx.chat.id);
+        const t = (key, params) => i18n.t(lang, key, params);
+
+        await updateGuildConfig(ctx.chat.id, { log_channel_id: null });
+
+        // Refresh UI
+        await ui.sendConfigUI(ctx, db, true, true);
+        return ctx.answerCallbackQuery(t('staff.wizard.channel_deleted'));
+    }
+
+    // Cancel Action
+    if (data === 'stf_cancel') {
+        wizard.stopSession(ctx.from.id, ctx.chat.id);
+        return ui.sendConfigUI(ctx, db, true, true);
+    }
+}
 
 async function reviewQueue(bot, db, params) {
     if (!db) {
@@ -166,5 +213,6 @@ module.exports = {
     addNote,
     getNotes,
     setStaffGroup,
-    handleStaffAction
+    handleStaffAction,
+    handleCallback
 };

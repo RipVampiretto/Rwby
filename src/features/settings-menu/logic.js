@@ -65,8 +65,9 @@ async function routeToFeature(ctx, feature) {
             if (adminLogger.sendConfigUI) await adminLogger.sendConfigUI(ctx, true, true);
             break;
         case 'staff':
-            if (staffCoordination.sendConfigUI) await staffCoordination.sendConfigUI(ctx, true, true);
-            else await ctx.answerCallbackQuery('Configurazione Staff via comandi (/setstaff)');
+            if (staffCoordination.sendConfigUI) {
+                await staffCoordination.sendConfigUI(ctx, true, true);
+            }
             break;
         case 'intel':
             // DISABLED

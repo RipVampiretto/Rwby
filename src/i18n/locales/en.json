@@ -4,6 +4,7 @@
         "off": "❌ OFF",
         "back": "🔙 Back",
         "close": "❌ Close",
+        "cancel": "❌ Cancel",
         "enabled": "Enabled",
         "disabled": "Disabled",
         "status": "Status",
@@ -12,7 +13,8 @@
         "threshold": "Sensitivity",
         "actions": {
             "delete": "DELETE",
-            "report": "REPORT"
+            "report": "REPORT",
+            "set": "SET"
         },
         "delete": "DELETE",
         "ban": "BAN",
@@ -63,8 +65,8 @@
             "settings_cmd": "/settings - 🎛️ <b>CONTROL PANEL</b>",
             "settings_desc": "The centralized panel to manage all group moderation modules. Configure filters, automatic actions, rules and much more in a single intuitive interface.",
             "other_commands": "🛠️ <b>Other Commands:</b>",
-            "setstaff_cmd": "/setstaff \u003cid\u003e - Set the staff group for reports",
-            "notes_cmd": "/notes \u003cid\u003e - View/add notes about a user",
+            "cmd_setstaff": "/setstaff &lt;id&gt; - Set the staff group for reports",
+            "notes_cmd": "/notes &lt;id&gt; - View/add notes about a user",
             "moderation_section": "👮 <b>Collective Moderation:</b>",
             "voteban_trigger": "Reply to a message with @admin, !admin, .admin or /admin to start a ban vote"
         }
@@ -360,9 +362,28 @@
         "staff_group": "Staff Group",
         "set_staff_group": "👥 Staff Group",
         "commands_title": "Available commands",
-        "cmd_setstaff": "/setstaff <id> - Set the staff group",
-        "cmd_notes": "/notes <id> - View user notes",
-        "cmd_notes_add": "/notes add <id> <text> - Add a note",
+        "cmd_setstaff": "/setstaff &lt;id&gt; - Set the staff group",
+        "cmd_notes": "/notes &lt;id&gt; - View user notes",
+        "cmd_notes_add": "/notes add &lt;id&gt; &lt;text&gt; - Add a note",
+        "wizard": {
+            "set_group_title": "👥 Set Staff Group",
+            "set_group_instruction": "Send the Staff Group ID now (e.g. -100123456789).",
+            "set_channel_title": "📢 Set Logging Channel",
+            "set_channel_instruction": "Send the Log Channel ID now (e.g. -100123456789).",
+            "cancel_tip": "Type 'cancel' to abort.",
+            "invalid_id": "⚠️ Invalid ID format. It should be a number (usually starting with -100).",
+            "access_error": "⚠️ Cannot access this group/channel. Ensure the bot is there and has permission to send messages.",
+            "group_saved": "✅ Staff Group set successfully!",
+            "channel_saved": "✅ Log Channel set successfully!",
+            "group_deleted": "🗑️ Staff Group removed.",
+            "channel_deleted": "🗑️ Log Channel removed."
+        },
+        "buttons": {
+            "staff_group_toggle": "👥 Staff: {status}",
+            "channel_toggle": "📢 Log: {status}",
+            "change_staff_group": "✏️ Change Staff Group",
+            "change_channel": "✏️ Change Log Channel"
+        },
         "notes": {
             "title": "📝 Notes for user {id}",
             "empty": "ℹ️ No notes found for this user."

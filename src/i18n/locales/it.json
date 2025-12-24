@@ -13,7 +13,8 @@
         "threshold": "Sensibilità",
         "actions": {
             "delete": "ELIMINA",
-            "report": "SEGNALA"
+            "report": "SEGNALA",
+            "set": "IMPOSTA"
         },
         "delete": "ELIMINA",
         "ban": "BANNA",
@@ -64,8 +65,8 @@
             "settings_cmd": "/settings - 🎛️ <b>PANNELLO DI CONTROLLO</b>",
             "settings_desc": "Il pannello centralizzato per gestire tutti i moduli di moderazione del gruppo. Configura filtri, azioni automatiche, regole e molto altro in un'unica interfaccia intuitiva.",
             "other_commands": "🛠️ <b>Altri Comandi:</b>",
-            "setstaff_cmd": "/setstaff \u003cid\u003e - Imposta il gruppo staff per le segnalazioni",
-            "notes_cmd": "/notes \u003cid\u003e - Visualizza/aggiungi note su un utente",
+            "cmd_setstaff": "/setstaff &lt;id&gt; - Imposta il gruppo staff per le segnalazioni",
+            "notes_cmd": "/notes &lt;id&gt; - Visualizza/aggiungi note su un utente",
             "moderation_section": "👮 <b>Moderazione Collettiva:</b>",
             "voteban_trigger": "Rispondi a un messaggio con @admin, !admin, .admin o /admin per avviare una votazione di ban"
         }
@@ -361,9 +362,28 @@
         "staff_group": "Gruppo Staff",
         "set_staff_group": "👥 Gruppo Staff",
         "commands_title": "Comandi disponibili",
-        "cmd_setstaff": "/setstaff <id> - Imposta il gruppo staff",
-        "cmd_notes": "/notes <id> - Vedi le note su un utente",
-        "cmd_notes_add": "/notes add <id> <testo> - Aggiungi una nota",
+        "cmd_setstaff": "/setstaff &lt;id&gt; - Imposta il gruppo staff",
+        "cmd_notes": "/notes &lt;id&gt; - Vedi le note su un utente",
+        "cmd_notes_add": "/notes add &lt;id&gt; &lt;testo&gt; - Aggiungi una nota",
+        "wizard": {
+            "set_group_title": "👥 Imposta Gruppo Staff",
+            "set_group_instruction": "Invia ora l'ID del Gruppo Staff (es. -100123456789).",
+            "set_channel_title": "📢 Imposta Canale Log",
+            "set_channel_instruction": "Invia ora l'ID del Canale di Log (es. -100123456789).",
+            "cancel_tip": "Scrivi 'cancel' per annullare.",
+            "invalid_id": "⚠️ ID non valido. Deve essere un numero (di solito inizia con -100).",
+            "access_error": "⚠️ Impossibile accedere a questo gruppo/canale. Assicurati che il bot sia presente e abbia i permessi per inviare messaggi.",
+            "group_saved": "✅ Gruppo Staff impostato con successo!",
+            "channel_saved": "✅ Canale Log impostato con successo!",
+            "group_deleted": "🗑️ Gruppo Staff rimosso.",
+            "channel_deleted": "🗑️ Canale Log rimosso."
+        },
+        "buttons": {
+            "staff_group_toggle": "👥 Staff: {status}",
+            "channel_toggle": "📢 Log: {status}",
+            "change_staff_group": "✏️ Cambia Gruppo Staff",
+            "change_channel": "✏️ Cambia Canale Log"
+        },
         "notes": {
             "title": "📝 Note per utente {id}",
             "empty": "ℹ️ Nessuna nota trovata per questo utente."
