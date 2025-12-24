@@ -2,6 +2,7 @@ const logger = require('../../middlewares/logger');
 const actionLog = require('../action-log');
 const { safeDelete } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
+const { queueBanNotification } = require('../global-blacklist/actions');
 
 async function forwardToParliament(bot, db, params) {
     if (!bot) return logger.error('[super-admin] Bot instance missing in forwardToParliament');
@@ -282,8 +283,8 @@ async function sendGlobalLog(bot, db, event) {
         }
 
         const text =
-            `📋 **GLOBAL LOG: ${event.eventType}**\n` +
-            `🏛️ Guild: \`${event.guildId}\`\n` +
+            `📋 <b>GLOBAL LOG: ${event.eventType}</b>\n` +
+            `🏛️ Guild: <code>${event.guildId}</code>\n` +
             `👤 Executor: ${event.executor} | Target: ${event.target}\n` +
             `📝 Reason: ${event.reason}\n` +
             `ℹ️ Details: ${event.details || 'N/A'}`;
@@ -337,6 +338,7 @@ async function executeGlobalBan(ctx, db, bot, userId) {
             // User info not available, use default
         }
 
+        // Get all guilds with their config for notification check
         const guilds = await db.queryAll('SELECT guild_id, guild_name FROM guild_config');
         let count = 0;
         for (const g of guilds) {
@@ -344,16 +346,16 @@ async function executeGlobalBan(ctx, db, bot, userId) {
                 await bot.api.banChatMember(g.guild_id, userId);
                 count++;
 
-                // Send notification to guild's log channel
-                actionLog.logEvent({
-                    guildId: g.guild_id,
-                    guildName: g.guild_name,
-                    eventType: 'gban_ban',
-                    targetUser: targetUser,
-                    executorModule: 'Global Ban',
-                    reason: `Global Ban by ${ctx.from.first_name}`,
-                    isGlobal: true
-                });
+                // Send notification if blacklist_notify is enabled for this guild
+                const config = await db.getGuildConfig(g.guild_id);
+                if (config && config.blacklist_notify && config.log_channel_id) {
+                    queueBanNotification(
+                        config.log_channel_id,
+                        targetUser,
+                        { id: g.guild_id, title: g.guild_name || `Group ${g.guild_id}` },
+                        `Global Ban by ${ctx.from.first_name}`
+                    );
+                }
             } catch (e) { }
         }
 
@@ -404,11 +406,12 @@ async function setupParliament(db, ctx, bot) {
 
     await db.query(
         `
-        INSERT INTO global_config (id, parliament_group_id, global_topics) 
-        VALUES (1, $1, $2)
+        INSERT INTO global_config (id, parliament_group_id, global_topics, global_log_channel) 
+        VALUES (1, $1, $2, $1)
         ON CONFLICT(id) DO UPDATE SET 
             parliament_group_id = $1, 
-            global_topics = $2
+            global_topics = $2,
+            global_log_channel = $1
     `,
         [ctx.chat.id, JSON.stringify(topics)]
     );

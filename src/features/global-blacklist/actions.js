@@ -101,16 +101,17 @@ async function flushBanQueue(logChannelId) {
         const bans = Array.from(queue.bans.values());
         const botInfo = await _botInstance.api.getMe();
 
-        // Build message in requested format
+        // Build message in HTML format
         let text = `🚷 #BAN\n`;
 
         // Bot who executed the bans
-        const botLink = `[${botInfo.first_name}](tg://user?id=${botInfo.id})`;
+        const botLink = `<a href="tg://user?id=${botInfo.id}">${botInfo.first_name}</a>`;
         text += `• Di: ${botLink} [${botInfo.id}]\n`;
 
         // List all banned users
         for (const ban of bans.slice(0, 30)) {
-            const userLink = `[${ban.user.first_name || ban.user.username || 'User'}](tg://user?id=${ban.user.id})`;
+            const userName = ban.user.first_name || ban.user.username || 'User';
+            const userLink = `<a href="tg://user?id=${ban.user.id}">${userName}</a>`;
             text += `• A: ${userLink} [${ban.user.id}]\n`;
         }
 
@@ -124,7 +125,7 @@ async function flushBanQueue(logChannelId) {
 
         // List groups
         for (const [groupId, groupTitle] of allGroups) {
-            text += `- ${groupTitle} ✅ [\`${groupId}\`]\n`;
+            text += `- ${groupTitle} ✅ [<code>${groupId}</code>]\n`;
         }
 
         // Add hashtags for all user IDs
@@ -135,7 +136,7 @@ async function flushBanQueue(logChannelId) {
         text += hashtags;
 
         if (bans.length > 30) {
-            text += `\n_...e altri ${bans.length - 30} utenti_`;
+            text += `\n<i>...e altri ${bans.length - 30} utenti</i>`;
         }
 
         await _botInstance.api.sendMessage(logChannelId, text, { parse_mode: 'HTML' });
@@ -219,7 +220,7 @@ async function notifyParliament(newUsers, banCount, guildCount) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const processedCount = Math.min(newUsers.length, 100);

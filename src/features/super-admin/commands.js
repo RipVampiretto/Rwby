@@ -66,6 +66,59 @@ function registerCommands(bot, db) {
         await ctx.reply('✅ Global Log Channel impostato.');
     });
 
+    // Command: /ungban <user_id>
+    bot.command('ungban', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const userId = args[0];
+
+        if (!userId || isNaN(userId)) {
+            return ctx.reply('❓ Uso: <code>/ungban &lt;user_id&gt;</code>', { parse_mode: 'HTML' });
+        }
+
+        try {
+            // Check if user is globally banned
+            const user = await db.queryOne('SELECT * FROM users WHERE user_id = $1', [userId]);
+            if (!user || !user.is_banned_global) {
+                return ctx.reply(`⚠️ L'utente <code>${userId}</code> non è nella blacklist globale.`, { parse_mode: 'HTML' });
+            }
+
+            // Remove global ban
+            await db.query('UPDATE users SET is_banned_global = FALSE WHERE user_id = $1', [userId]);
+
+            // Try to get user info
+            let userName = 'Unknown';
+            try {
+                const userInfo = await bot.api.getChat(userId);
+                userName = userInfo.first_name || 'Unknown';
+            } catch (e) { }
+
+            // Unban from all groups
+            const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
+            let count = 0;
+            for (const g of guilds) {
+                try {
+                    await bot.api.unbanChatMember(g.guild_id, userId, { only_if_banned: true });
+                    count++;
+                } catch (e) { }
+            }
+
+            await ctx.reply(
+                `✅ <b>Global Unban eseguito</b>\n\n` +
+                `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
+                `📊 Sbannato da: ${count} gruppi\n` +
+                `👮 Eseguito da: ${ctx.from.first_name}`,
+                { parse_mode: 'HTML' }
+            );
+
+            logger.info(`[super-admin] Global Unban: ${userId} by ${ctx.from.id}`);
+        } catch (e) {
+            logger.error(`[super-admin] Ungban error: ${e.message}`);
+            await ctx.reply('❌ Errore: ' + e.message);
+        }
+    });
+
     // Command: /gwhitelist
     bot.command('gwhitelist', async ctx => {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');

@@ -37,8 +37,7 @@ async function logEvent(params) {
         } catch (e) { }
     }
 
-    // Global bans are always logged (critical security event)
-    if (eventType !== 'gban_ban' && !logEvents[eventType]) return;
+    if (!logEvents[eventType]) return;
 
     const moduleName = executorModule || MODULE_MAP[eventType] || 'System';
     const emoji = EMOJI_MAP[eventType] || 'ℹ️';
