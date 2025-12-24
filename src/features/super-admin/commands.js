@@ -37,14 +37,15 @@ function registerCommands(bot, db) {
         try {
             await logic.setupParliament(db, ctx, bot);
             await ctx.reply(
-                '✅ **Parliament Group Configurato**\n\n' +
+                '✅ <b>Parliament Group Configurato</b>\n\n' +
                 'Creati i topic per:\n' +
                 '- Bans (Ban globali)\n' +
                 '- Logs (Sistema)\n' +
                 '- Join Logs (Ingressi)\n' +
                 '- Add Group (Nuovi gruppi)\n' +
                 '- Image Spam (Analisi AI)\n' +
-                '- Link Checks (Link checks)'
+                '- Link Checks (Link checks)',
+                { parse_mode: 'HTML' }
             );
         } catch (e) {
             logger.error(`[super-admin] Setup error: ${e.message}`);
@@ -319,7 +320,7 @@ function registerCommands(bot, db) {
                 [domain, ctx.from.id]
             );
             await ctx.answerCallbackQuery('✅ Whitelisted');
-            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ **${domain} aggiunto alla Whitelist**`, {
+            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ <b>${domain} aggiunto alla Whitelist</b>`, {
                 parse_mode: 'HTML'
             });
         }
@@ -333,7 +334,7 @@ function registerCommands(bot, db) {
                 [domain, ctx.from.id]
             );
             await ctx.answerCallbackQuery('🚫 Blacklisted');
-            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n🚫 **${domain} aggiunto alla Blacklist**`, {
+            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n🚫 <b>${domain} aggiunto alla Blacklist</b>`, {
                 parse_mode: 'HTML'
             });
         }
@@ -353,13 +354,13 @@ function registerCommands(bot, db) {
             });
             await ctx.answerCallbackQuery('Wizard avviato');
             await ctx.reply(
-                `🔗 **AGGIUNGI DOMINIO ALLA BLACKLIST**\n\nScrivi il dominio (es. ${domain || 'example.com'}):`,
-                { reply_markup: { force_reply: true } }
+                `🔗 <b>AGGIUNGI DOMINIO ALLA BLACKLIST</b>\n\nScrivi il dominio (es. ${domain || 'example.com'}):`,
+                { parse_mode: 'HTML', reply_markup: { force_reply: true } }
             );
         } else if (data === 'bl_word') {
             WIZARD_SESSIONS.set(ctx.from.id, { type: 'word', startedAt: Date.now() });
             await ctx.answerCallbackQuery('Wizard avviato');
-            await ctx.reply('🔤 **AGGIUNGI PAROLA**\n\nScrivi la parola:', { reply_markup: { force_reply: true } });
+            await ctx.reply('🔤 <b>AGGIUNGI PAROLA</b>\n\nScrivi la parola:', { parse_mode: 'HTML', reply_markup: { force_reply: true } });
         } else if (data.startsWith('gwl_add:')) {
             const domain = data.split(':')[1];
             await db.query(
@@ -367,7 +368,7 @@ function registerCommands(bot, db) {
                 [domain, ctx.from.id]
             );
             await ctx.answerCallbackQuery('✅ Whitelisted');
-            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ **Aggiunto alla Whitelist**`, {
+            await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ <b>Aggiunto alla Whitelist</b>`, {
                 parse_mode: 'HTML'
             });
         } else return next();
@@ -388,7 +389,7 @@ function registerCommands(bot, db) {
                     "INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'delete', $2)",
                     [input, userId]
                 );
-                await ctx.reply(`✅ Dominio \`${input}\` aggiunto alla Blacklist Globale.`);
+                await ctx.reply(`✅ Dominio <code>${input}</code> aggiunto alla Blacklist Globale.`, { parse_mode: 'HTML' });
                 logger.info(`[super-admin] Global domain blacklist added: ${input}`);
 
                 if (session.origGuildId && session.origMsgId) {
@@ -401,7 +402,7 @@ function registerCommands(bot, db) {
                     "INSERT INTO word_filters (word) VALUES ($1)",
                     [input]
                 );
-                await ctx.reply(`✅ Parola \`${input}\` aggiunta alla Blacklist Globale.`);
+                await ctx.reply(`✅ Parola <code>${input}</code> aggiunta alla Blacklist Globale.`, { parse_mode: 'HTML' });
             }
             WIZARD_SESSIONS.delete(userId);
         } catch (e) {
