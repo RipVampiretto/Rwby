@@ -128,6 +128,11 @@
             "deleted": "🗑️ Il messaggio di **{user}** è stato eliminato.\n📊 Voti: {yes} favorevoli - {no} contrari",
             "saved": "🛡️ **{user}** è SALVO! La community ha deciso di non intervenire."
         },
+        "staff_alert": {
+            "message": "⚠️ <b>ATTENZIONE!</b>\n{reporter} <code>{reporterId}</code> ha richiesto un intervento degli admin nel gruppo \"{group}\"\n\n<b>Utente segnalato:</b> {target} <code>{targetId}</code>\n\n👉🏻 <a href=\"{link}\">Vai al messaggio</a>",
+            "btn_resolved": "✅ Risolto",
+            "resolved_toast": "✅ Segnato come risolto"
+        },
         "no_reason": "Nessun motivo specificato"
     },
     "logger": {

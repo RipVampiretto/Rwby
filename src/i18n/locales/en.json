@@ -127,6 +127,11 @@
             "deleted": "🗑️ **{user}**'s message has been deleted.\n📊 Votes: {yes} for - {no} against",
             "saved": "🛡️ **{user}** is SAFE! The community decided not to act."
         },
+        "staff_alert": {
+            "message": "⚠️ <b>ATTENTION!</b>\n{reporter} <code>{reporterId}</code> requested admin intervention in the group \"{group}\"\n\n<b>Reported user:</b> {target} <code>{targetId}</code>\n\n👉🏻 <a href=\"{link}\">Go to message</a>",
+            "btn_resolved": "✅ Resolved",
+            "resolved_toast": "✅ Marked as resolved"
+        },
         "no_reason": "No reason specified"
     },
     "logger": {

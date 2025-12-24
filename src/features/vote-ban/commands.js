@@ -89,8 +89,89 @@ function registerCommands(bot, db) {
         const lang = await i18n.getLanguage(ctx.chat.id);
         const reason = text.replace(/^[@!./]admin\s*/i, '').trim() || i18n.t(lang, 'report.no_reason');
 
-        // Show confirmation prompt for VoteBan/Delete
-        logger.info(`[report] Showing confirmation for ${target.id}`);
+        // Check report mode
+        const reportMode = config.report_mode || 'vote';
+
+        if (reportMode === 'report') {
+            // MODE: Report only - send to staff group, no voting
+            logger.info(`[report] Report mode - sending to staff for ${target.id}`);
+
+            const staffGroupId = config.staff_group_id;
+            if (!staffGroupId) {
+                const notifyMsg = await ctx.reply(i18n.t(lang, 'common.warnings.no_staff_group'), { parse_mode: 'Markdown' });
+                setTimeout(async () => {
+                    try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                }, 60000);
+                return;
+            }
+
+            // Build message link
+            const chatIdStr = String(ctx.chat.id).replace('-100', '');
+            const messageLink = `https://t.me/c/${chatIdStr}/${targetMsg.message_id}`;
+
+            // Build alert message with localization
+            const t = (key, params) => i18n.t(lang, key, params);
+            const reporterName = ctx.from.first_name;
+            const targetName = target.first_name;
+
+            const alertText = t('report.staff_alert.message', {
+                reporter: reporterName,
+                reporterId: ctx.from.id,
+                group: ctx.chat.title,
+                target: targetName,
+                targetId: target.id,
+                link: messageLink
+            });
+
+            const alertKeyboard = {
+                inline_keyboard: [
+                    [{ text: t('report.staff_alert.btn_resolved'), callback_data: `report_resolved:${ctx.chat.id}` }]
+                ]
+            };
+
+            await ctx.api.sendMessage(staffGroupId, alertText, {
+                reply_markup: alertKeyboard,
+                parse_mode: 'HTML'
+            });
+
+            // Log if enabled
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+
+            if (logEvents['report_log'] && config.log_channel_id) {
+                const logText =
+                    `🆘 #SEGNALAZIONE\n` +
+                    `• Di: ${reporterName} [${ctx.from.id}]\n` +
+                    `• A: ${targetName} [${target.id}]\n` +
+                    `• Gruppo: ${ctx.chat.title} [${ctx.chat.id}]\n` +
+                    `• 👀 [Vai al messaggio](${messageLink})\n` +
+                    `#id${ctx.from.id} #id${target.id}`;
+
+                // Forward message to log channel first
+                try {
+                    await ctx.api.forwardMessage(config.log_channel_id, ctx.chat.id, targetMsg.message_id);
+                } catch (e) { }
+
+                await ctx.api.sendMessage(config.log_channel_id, logText, { parse_mode: 'Markdown' });
+            }
+
+            // Show confirmation message (auto-delete 5 min)
+            const notifyMsg = await ctx.reply(t('report.log.report_sent_to_staff'), { parse_mode: 'Markdown' });
+            setTimeout(async () => {
+                try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+            }, 300000); // 5 minutes
+
+            return;
+        }
+
+        // MODE: Vote - show confirmation prompt for voting
+        logger.info(`[report] Vote mode - showing confirmation for ${target.id}`);
         const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
         setupConfirmationTimeout(ctx, target, confirmMsg, reason);
 
@@ -299,6 +380,22 @@ function registerCommands(bot, db) {
             return;
         }
 
+        // Report Resolved Handler (staff group)
+        if (data.startsWith('report_resolved:')) {
+            const msg = ctx.callbackQuery.message;
+            const adminName = ctx.from.first_name;
+            const adminId = ctx.from.id;
+
+            // Get current text and append resolved info with HTML code tag
+            const currentText = msg.text || '';
+            const newText = currentText + `\n\n~ ✅ ${adminName} <code>${adminId}</code>`;
+
+            // Edit message: remove keyboard, append admin info
+            await ctx.editMessageText(newText, { parse_mode: 'HTML' });
+            await ctx.answerCallbackQuery('✅ Segnato come risolto');
+            return;
+        }
+
         // Config Handlers
         if (data.startsWith('vb_')) {
             const config = await db.getGuildConfig(ctx.chat.id);
@@ -325,8 +422,13 @@ function registerCommands(bot, db) {
                 if (idx === -1) idx = 0; // Handle legacy AI mode values
                 const nextVal = modes[(idx + 1) % modes.length];
                 await db.updateGuildConfig(ctx.chat.id, { report_mode: nextVal });
-            } else if (data === 'vb_log_ban' || data === 'vb_log_delete') {
-                const logType = data === 'vb_log_ban' ? 'vote_ban' : 'vote_delete';
+            } else if (data === 'vb_log_ban' || data === 'vb_log_delete' || data === 'vb_log_report') {
+                const logTypeMap = {
+                    'vb_log_ban': 'vote_ban',
+                    'vb_log_delete': 'vote_delete',
+                    'vb_log_report': 'report_log'
+                };
+                const logType = logTypeMap[data];
                 let logEvents = {};
                 if (config.log_events) {
                     if (typeof config.log_events === 'string') {

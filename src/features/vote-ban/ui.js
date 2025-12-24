@@ -54,6 +54,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         'report': t('report.modes.report')
     }[reportMode] || t('report.modes.vote');
 
+    // Build text based on mode
     let text =
         `${t('report.title')}\n\n` +
         `${t('report.description')}\n\n` +
@@ -64,9 +65,11 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         `• **${t('report.modes.report')}** - ${t('report.modes.report_desc')}\n\n` +
         `**${t('report.settings_section')}**\n` +
         `${t('report.status')}: ${enabled}\n` +
-        `${t('report.report_mode')}: ${modeDisplay}\n` +
-        `${t('report.votes_required')}: ${thr}\n` +
-        `${t('report.timer')}: ${durDisplay}`;
+        `${t('report.report_mode')}: ${modeDisplay}`;
+
+    if (reportMode === 'vote') {
+        text += `\n${t('report.votes_required')}: ${thr}\n${t('report.timer')}: ${durDisplay}`;
+    }
 
     if (reportMode === 'report' && !config.staff_group_id) {
         text += `\n\n${t('common.warnings.no_staff_group')}`;
@@ -83,20 +86,30 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     }
     const logBan = logEvents['vote_ban'] ? '✅' : '❌';
     const logDel = logEvents['vote_delete'] ? '✅' : '❌';
+    const logReport = logEvents['report_log'] ? '✅' : '❌';
 
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('report.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }],
-            [{ text: `${t('report.buttons.report_mode')}: ${modeDisplay}`, callback_data: 'vb_mode' }],
-            [{ text: `${t('report.buttons.threshold')}: ${thr}`, callback_data: 'vb_thr' }],
-            [{ text: `${t('report.buttons.duration')}: ${durDisplay}`, callback_data: 'vb_dur' }],
-            [
-                { text: `Log 🗑️${logDel}`, callback_data: 'vb_log_delete' },
-                { text: `Log 🚷${logBan}`, callback_data: 'vb_log_ban' }
-            ],
-            [{ text: t('common.back'), callback_data: 'settings_main' }]
-        ]
-    };
+    // Build keyboard based on mode
+    const rows = [
+        [{ text: `${t('report.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }],
+        [{ text: `${t('report.buttons.report_mode')}: ${modeDisplay}`, callback_data: 'vb_mode' }]
+    ];
+
+    if (reportMode === 'vote') {
+        // Vote mode: show threshold, duration, vote logs
+        rows.push([{ text: `${t('report.buttons.threshold')}: ${thr}`, callback_data: 'vb_thr' }]);
+        rows.push([{ text: `${t('report.buttons.duration')}: ${durDisplay}`, callback_data: 'vb_dur' }]);
+        rows.push([
+            { text: `Log 🗑️${logDel}`, callback_data: 'vb_log_delete' },
+            { text: `Log 🚷${logBan}`, callback_data: 'vb_log_ban' }
+        ]);
+    } else {
+        // Report mode: show only report log
+        rows.push([{ text: `Log 📩${logReport}`, callback_data: 'vb_log_report' }]);
+    }
+
+    rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'report');
