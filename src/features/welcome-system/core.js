@@ -157,21 +157,26 @@ async function logWelcomeEvent(ctx, type, details, config, userOverride = null) 
     let text = '';
 
     if (type === 'JOIN') {
-        text = `👤 <b>${t('welcome.logs.new_user')}</b>\n`;
-        text += `• ${user.first_name} [<code>${user.id}</code>]\n`;
-        text += `• ${chat.title} [<code>${chat.id}</code>]\n`;
-        text += `#id${user.id}`;
+        text = t('welcome.logs.new_user', {
+            name: user.first_name,
+            userId: user.id,
+            groupName: chat.title,
+            groupId: chat.id
+        });
     } else if (type === 'SUCCESS') {
-        text = `✅ <b>${t('welcome.logs.verification_solved')}</b>\n`;
-        text += `• ${user.first_name} [<code>${user.id}</code>]\n`;
-        text += `• ${chat.title} [<code>${chat.id}</code>]\n`;
-        text += `#id${user.id}`;
+        text = t('welcome.logs.captcha_solved', {
+            name: user.first_name,
+            userId: user.id,
+            groupName: chat.title,
+            groupId: chat.id
+        });
     } else if (type === 'TIMEOUT') {
-        text = `⏰ <b>${t('welcome.logs.verification_expired')}</b>\n`;
-        text += `• ${user.first_name} [<code>${user.id}</code>]\n`;
-        text += `• ${chat.title} [<code>${chat.id}</code>]\n`;
-        text += `• Timeout: ${details.timeout || '?'} min\n`;
-        text += `#id${user.id}`;
+        text = t('welcome.logs.captcha_timeout', {
+            name: user.first_name,
+            userId: user.id,
+            groupName: chat.title,
+            groupId: chat.id
+        });
     }
 
     try {

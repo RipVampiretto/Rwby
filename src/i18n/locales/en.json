@@ -566,10 +566,9 @@
             "no_message": "⚠️ No message to display."
         },
         "logs": {
-            "new_user": "⏱ #CAPTCHA #NEW_USER",
-            "verification_solved": "⏱ #CAPTCHA #VERIFICATION_SOLVED",
-            "verification_failed": "⏱ #CAPTCHA #VERIFICATION_FAILED",
-            "verification_expired": "⏱ #CAPTCHA #VERIFICATION_EXPIRED"
+            "new_user": "⏱️ #CAPTCHA #NEW_USER\n• By: {name} [<code>{userId}</code>]\n• Group: {groupName} [<code>{groupId}</code>]\n#id{userId}",
+            "captcha_solved": "⏱️ #CAPTCHA #SOLVED\n• By: {name} [<code>{userId}</code>]\n• Group: {groupName} [<code>{groupId}</code>]\n#id{userId}",
+            "captcha_timeout": "⏱️ #CAPTCHA #TIMEOUT\n• By: {name} [<code>{userId}</code>]\n• Group: {groupName} [<code>{groupId}</code>]\n#id{userId}"
         }
     },
     "antispam": {
