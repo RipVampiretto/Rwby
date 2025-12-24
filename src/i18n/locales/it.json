@@ -549,7 +549,8 @@
             "emoji_question": "<b> Clicca su: {emoji} </b>",
             "color_question": "<b> Clicca sul cerchio {color} </b>",
             "reverse_question": "<b> Qual è il contrario di: {word}? </b>",
-            "logic_question": "<b> {sequence} </b>"
+            "logic_question": "<b> {sequence} </b>",
+            "fail_message": "⏱️ <b>Tempo scaduto</b>\n\n{name} non ha completato la verifica entro {minutes} minuti ed è stato rimosso dal gruppo.\n\nℹ️ Può riprovare ad entrare in qualsiasi momento."
         },
         "rules_prompt": {
             "title": "📜 <b>Imposta Link Regolamento</b>",

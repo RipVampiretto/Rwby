@@ -403,9 +403,28 @@ async function processUserJoin(ctx, user, config) {
             logger.info(`[Welcome] Kicking ${user.id} for timeout.`);
             logWelcomeEvent(ctx, 'TIMEOUT', { timeout: timeoutMins }, config, user); // Pass user object
             try {
+                // Kick = Ban + Unban
+                // We add a small delay to ensure Telegram processes the state change correctly
                 await ctx.banChatMember(user.id);
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 await ctx.unbanChatMember(user.id);
+
+                logger.debug(`[Welcome] User ${user.id} kicked (banned+unbanned) for timeout.`);
+
                 await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
+
+                // Send temporary kick notification
+                const kickText = t('welcome.captcha_messages.fail_message', {
+                    name: user.first_name,
+                    minutes: timeoutMins
+                });
+                const kickMsg = await ctx.reply(kickText, { parse_mode: 'HTML' });
+
+                // Auto-delete kick notification
+                setTimeout(() => {
+                    ctx.api.deleteMessage(ctx.chat.id, kickMsg.message_id).catch(() => { });
+                }, 10000); // 10 seconds
+
             } catch (e) {
                 logger.error(`[Welcome] Kick failed: ${e.message}`);
             }
@@ -538,8 +557,19 @@ async function completeVerification(ctx, userId) {
         logger.error(`[Welcome] Unrestrict failed: ${e.message}`);
     }
 
-    // Try to edit the existing message (captcha/rules) with the welcome message
-    await sendWelcome(ctx, config, null, ctx.callbackQuery?.message?.message_id);
+    // If welcome message is enabled, try to edit the existing message
+    if (config.welcome_msg_enabled && config.welcome_message) {
+        await sendWelcome(ctx, config, null, ctx.callbackQuery?.message?.message_id);
+    } else {
+        // If welcome message is disabled, simply delete the captcha/rules message
+        if (ctx.callbackQuery?.message?.message_id) {
+            try {
+                await ctx.api.deleteMessage(ctx.chat.id, ctx.callbackQuery.message.message_id);
+            } catch (e) {
+                logger.debug(`[Welcome] Failed to delete captcha message: ${e.message}`);
+            }
+        }
+    }
 }
 
 async function sendWelcome(ctx, config, userOverride = null, messageToEditId = null) {

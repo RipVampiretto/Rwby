@@ -548,7 +548,8 @@
             "emoji_question": "<b> Click on: {emoji} </b>",
             "color_question": "<b> Click on the {color} circle </b>",
             "reverse_question": "<b> What is the opposite of: {word}? </b>",
-            "logic_question": "<b> {sequence} </b>"
+            "logic_question": "<b> {sequence} </b>",
+            "fail_message": "⏱️ <b>Time's up</b>\n\n{name} failed to complete verification within {minutes} minutes and was removed from the group.\n\nℹ️ They can try to join again at any time."
         },
         "rules_prompt": {
             "title": "📜 <b>Set Rules Link</b>",
