@@ -78,7 +78,7 @@ function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image
             if (parsed.primary_category) {
                 conversationName = `NSFW: ${parsed.primary_category}`;
             }
-        } catch (e) { }
+        } catch (e) {}
 
         const conversation = {
             name: conversationName,
@@ -372,7 +372,7 @@ async function processMedia(ctx, config) {
         logger.debug(`[nsfw-monitor] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) { }
+        } catch (e) {}
     }
 }
 
@@ -393,7 +393,7 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[nsfw-monitor] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => { });
+                fs.unlink(dest, () => {});
                 reject(err);
             });
     });
@@ -551,7 +551,9 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
 
             if (isNsfw) {
                 reasons.push(`Frame @${frame.timestamp.toFixed(1)}s: ${frameReasons[0]}`);
-                logger.warn(`[nsfw-monitor] 🚨 NSFW detected at frame ${i + 1} (${frame.timestamp.toFixed(1)}s): ${frameReasons[0]}`);
+                logger.warn(
+                    `[nsfw-monitor] 🚨 NSFW detected at frame ${i + 1} (${frame.timestamp.toFixed(1)}s): ${frameReasons[0]}`
+                );
                 return true;
             }
         }
@@ -564,7 +566,7 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) { }
+            } catch (e) {}
         }
     }
 }
@@ -955,7 +957,6 @@ FINAL NOTES
     }
 }
 
-
 async function testConnection(ctx) {
     try {
         const url = envConfig.LM_STUDIO.url;
@@ -1066,7 +1067,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) { }
+        } catch (e) {}
     }
 }
 

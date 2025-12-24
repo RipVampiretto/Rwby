@@ -100,7 +100,9 @@ function registerCommands(bot, db) {
             let logEvents = {};
             if (config.log_events) {
                 if (typeof config.log_events === 'string') {
-                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                    try {
+                        logEvents = JSON.parse(config.log_events);
+                    } catch (e) {}
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }

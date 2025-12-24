@@ -1,7 +1,7 @@
 /**
  * Album Batching Module for NSFW Monitor
  * Buffers album items and processes them as a single unit
- * 
+ *
  * ARCHITECTURE:
  * 1. When media arrives -> start analysis IMMEDIATELY (non-blocking)
  * 2. Store the analysis Promise in the buffer
@@ -53,7 +53,9 @@ function bufferAlbumItem(ctx, config) {
         await processAlbum(mediaGroupId);
     }, ALBUM_TIMEOUT);
 
-    logger.debug(`[nsfw-monitor] 📦 Buffered album item ${album.analysisPromises.length} for group ${mediaGroupId} - analysis started`);
+    logger.debug(
+        `[nsfw-monitor] 📦 Buffered album item ${album.analysisPromises.length} for group ${mediaGroupId} - analysis started`
+    );
 }
 
 /**
@@ -83,7 +85,9 @@ async function processAlbum(mediaGroupId) {
     ALBUM_BUFFER.delete(mediaGroupId);
 
     const { analysisPromises, config, chatId, userId } = album;
-    logger.info(`[nsfw-monitor] 📦 Waiting for ${analysisPromises.length} album analyses to complete - Chat: ${chatId}, User: ${userId}`);
+    logger.info(
+        `[nsfw-monitor] 📦 Waiting for ${analysisPromises.length} album analyses to complete - Chat: ${chatId}, User: ${userId}`
+    );
 
     // Wait for ALL analyses to complete (this is the key fix!)
     const results = await Promise.all(analysisPromises);

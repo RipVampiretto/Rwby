@@ -61,7 +61,7 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
 
         const flux = await userReputation.getLocalFlux(db, user.id, ctx.chat.id);
         const lang = await i18n.getLanguage(globalConfig.parliament_group_id);
-        const t = (key) => i18n.t(lang, key);
+        const t = key => i18n.t(lang, key);
 
         const text =
             `${t('common.logs.ban_executed_title')}\n\n` +

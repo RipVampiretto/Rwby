@@ -29,7 +29,7 @@ async function forwardToParliament(bot, db, params) {
                 } else {
                     topicId = topics.bans;
                 }
-            } catch (e) { }
+            } catch (e) {}
         }
 
         // Build keyboard based on type
@@ -39,7 +39,9 @@ async function forwardToParliament(bot, db, params) {
             // Unknown link - option to whitelist or blacklist
             const domain = params.evidence?.match(/(https?:\/\/[^\s]+)/)?.[0];
             let domainHost = '';
-            try { domainHost = new URL(domain || '').hostname; } catch (e) { }
+            try {
+                domainHost = new URL(domain || '').hostname;
+            } catch (e) {}
 
             keyboard.inline_keyboard = [
                 [
@@ -72,23 +74,26 @@ async function forwardToParliament(bot, db, params) {
         let text = '';
         const userLink = `<a href="tg://user?id=${params.user?.id || 0}">${params.user?.first_name || 'Unknown'}</a>`;
         const lang = await i18n.getLanguage(globalConfig.parliament_group_id);
-        const t = (key) => i18n.t(lang, key);
+        const t = key => i18n.t(lang, key);
 
         if (params.type === 'link_unknown') {
-            text = `${t('common.logs.unknown_link_title')}\n\n` +
+            text =
+                `${t('common.logs.unknown_link_title')}\n\n` +
                 `${t('common.logs.group')}: ${params.guildName}\n` +
                 `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
                 `${t('common.logs.link')}: ${params.evidence}\n\n` +
                 `${t('common.logs.add_to_list_question')}`;
         } else if (params.type === 'link_blacklist') {
-            text = `${t('common.logs.blacklisted_link_title')}\n\n` +
+            text =
+                `${t('common.logs.blacklisted_link_title')}\n\n` +
                 `${t('common.logs.group')}: ${params.guildName}\n` +
                 `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
                 `${t('common.logs.reason')}: ${params.reason}\n` +
                 `${t('common.logs.link')}: ${params.evidence}\n\n` +
                 `${t('common.logs.global_ban_question')}`;
         } else if (params.type === 'keyword') {
-            text = `${t('common.logs.keyword_title')}\n\n` +
+            text =
+                `${t('common.logs.keyword_title')}\n\n` +
                 `${t('common.logs.group')}: ${params.guildName}\n` +
                 `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
                 `${t('common.logs.reason')}: ${params.reason}\n` +
@@ -96,7 +101,8 @@ async function forwardToParliament(bot, db, params) {
                 `${t('common.logs.global_ban_question')}`;
         } else {
             // Default format (backward compat)
-            text = `${t('common.logs.ban_executed_title')}\n\n` +
+            text =
+                `${t('common.logs.ban_executed_title')}\n\n` +
                 `${t('common.logs.group')}: <code>${params.guildId}</code>\n` +
                 `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
                 `${t('common.logs.flux')}: ${params.flux || 'N/A'}\n` +
@@ -109,7 +115,6 @@ async function forwardToParliament(bot, db, params) {
             parse_mode: 'HTML',
             reply_markup: keyboard
         });
-
     } catch (e) {
         logger.error(`[super-admin] Forward error: ${e.message}`);
     }
@@ -134,7 +139,7 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.reports || topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const keyboard = customKeyboard ? { inline_keyboard: customKeyboard } : null;
@@ -168,7 +173,6 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
         } else if (msg.document) {
             await bot.api.sendDocument(globalConfig.parliament_group_id, msg.document.file_id, options);
         }
-
     } catch (e) {
         logger.error(`[super-admin] ForwardMedia error: ${e.message}`);
     }
@@ -177,7 +181,7 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
 /**
  * Forward album to Parliament with all violating media
  * @param {object} bot - Bot instance
- * @param {object} db - Database instance  
+ * @param {object} db - Database instance
  * @param {string} topic - Topic key
  * @param {Array} violations - Array of {ctx, reason, type}
  * @param {object} info - {groupTitle, user, reason, count}
@@ -198,36 +202,39 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.image_spam || topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         // Build media group
         const lang = await i18n.getLanguage(globalConfig.parliament_group_id);
-        const t = (key) => i18n.t(lang, key);
-        const mediaItems = violations.map((v, idx) => {
-            const msg = v.ctx.message;
-            let item = null;
-            if (msg.photo) {
-                const photo = msg.photo[msg.photo.length - 1];
-                item = { type: 'photo', media: photo.file_id };
-            } else if (msg.video) {
-                item = { type: 'video', media: msg.video.file_id };
-            } else if (msg.animation) {
-                item = { type: 'document', media: msg.animation.file_id };
-            } else if (msg.document) {
-                item = { type: 'document', media: msg.document.file_id };
-            }
-            // Caption on first item
-            if (item && idx === 0) {
-                item.caption = `🖼️ <b>NSFW ALBUM</b>\n\n` +
-                    `${t('common.logs.group')}: ${info.groupTitle}\n` +
-                    `${t('common.logs.user')}: <a href="tg://user?id=${info.user.id}">${info.user.first_name}</a> [<code>${info.user.id}</code>]\n` +
-                    `📁 Media: ${info.count}\n` +
-                    `📝 Categories: ${info.reason}`;
-                item.parse_mode = 'HTML';
-            }
-            return item;
-        }).filter(Boolean);
+        const t = key => i18n.t(lang, key);
+        const mediaItems = violations
+            .map((v, idx) => {
+                const msg = v.ctx.message;
+                let item = null;
+                if (msg.photo) {
+                    const photo = msg.photo[msg.photo.length - 1];
+                    item = { type: 'photo', media: photo.file_id };
+                } else if (msg.video) {
+                    item = { type: 'video', media: msg.video.file_id };
+                } else if (msg.animation) {
+                    item = { type: 'document', media: msg.animation.file_id };
+                } else if (msg.document) {
+                    item = { type: 'document', media: msg.document.file_id };
+                }
+                // Caption on first item
+                if (item && idx === 0) {
+                    item.caption =
+                        `🖼️ <b>NSFW ALBUM</b>\n\n` +
+                        `${t('common.logs.group')}: ${info.groupTitle}\n` +
+                        `${t('common.logs.user')}: <a href="tg://user?id=${info.user.id}">${info.user.first_name}</a> [<code>${info.user.id}</code>]\n` +
+                        `📁 Media: ${info.count}\n` +
+                        `📝 Categories: ${info.reason}`;
+                    item.parse_mode = 'HTML';
+                }
+                return item;
+            })
+            .filter(Boolean);
 
         if (mediaItems.length === 0) return;
 
@@ -237,8 +244,7 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
         });
 
         // Send keyboard separately (can't be attached to media group)
-        await bot.api.sendMessage(globalConfig.parliament_group_id,
-            `⚖️ Actions for ${info.user.first_name}:`, {
+        await bot.api.sendMessage(globalConfig.parliament_group_id, `⚖️ Actions for ${info.user.first_name}:`, {
             message_thread_id: topicId,
             reply_markup: {
                 inline_keyboard: [
@@ -249,7 +255,6 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
                 ]
             }
         });
-
     } catch (e) {
         logger.error(`[super-admin] ForwardAlbum error: ${e.message}`);
     }
@@ -273,7 +278,7 @@ async function sendGlobalLog(bot, db, event) {
                 else if (event.eventType === 'image_spam_check') threadId = topics.image_spam;
                 else if (event.eventType === 'link_check') threadId = topics.link_checks;
                 else threadId = topics.logs;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const text =
@@ -293,7 +298,7 @@ async function sendGlobalLog(bot, db, event) {
                 await bot.api.sendMessage(globalConfig.global_log_channel, text, { parse_mode: 'HTML' });
             }
         }
-    } catch (e) { }
+    } catch (e) {}
 }
 
 async function executeGlobalBan(ctx, db, bot, userId) {
@@ -311,7 +316,7 @@ async function executeGlobalBan(ctx, db, bot, userId) {
             try {
                 await bot.api.banChatMember(g.guild_id, userId);
                 count++;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         await ctx.reply(`🌍 Global Ban propagato a ${count} gruppi.`);
@@ -329,7 +334,7 @@ async function cleanupPendingDeletions(db, bot) {
         for (const p of pending) {
             try {
                 await bot.api.deleteMessage(p.chat_id, p.message_id);
-            } catch (e) { }
+            } catch (e) {}
             await db.query('DELETE FROM pending_deletions WHERE id = $1', [p.id]);
         }
     } catch (e) {

@@ -21,7 +21,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
             try {
                 const parsed = JSON.parse(config.allowed_languages);
                 if (parsed.length > 0) allowedLangs = parsed;
-            } catch (e) { }
+            } catch (e) {}
         }
     }
 
@@ -74,7 +74,7 @@ async function sendModalListUI(ctx, db, isEdit = false) {
             try {
                 const parsed = JSON.parse(config.allowed_languages);
                 if (parsed.length > 0) allowedLangs = parsed;
-            } catch (e) { }
+            } catch (e) {}
         }
     }
 

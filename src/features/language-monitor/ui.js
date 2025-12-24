@@ -17,7 +17,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         } else if (typeof config.allowed_languages === 'string') {
             try {
                 allowed = JSON.parse(config.allowed_languages);
-            } catch (e) { }
+            } catch (e) {}
         }
     }
     if (allowed.length === 0) allowed = ['it', 'en'];
@@ -48,7 +48,9 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }

@@ -23,7 +23,7 @@ function setupConfirmationTimeout(ctx, target, confirmMsg, reason) {
         PENDING_CONFIRMATIONS.delete(key);
         try {
             await ctx.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
-        } catch (e) { }
+        } catch (e) {}
         logger.info(`[vote-ban] Confirmation timeout for ${target.id}`);
     }, 120000); // 2 minutes
 
@@ -58,7 +58,9 @@ function registerCommands(bot, db) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const notifyMsg = await ctx.reply(i18n.t(lang, 'report.errors.reply_required'));
             setTimeout(async () => {
-                try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                try {
+                    await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
+                } catch (e) {}
             }, 60000);
             return;
         }
@@ -75,7 +77,7 @@ function registerCommands(bot, db) {
             if (['creator', 'administrator'].includes(member.status)) {
                 return;
             }
-        } catch (e) { }
+        } catch (e) {}
 
         // Check for existing vote
         const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
@@ -98,9 +100,13 @@ function registerCommands(bot, db) {
 
             const staffGroupId = config.staff_group_id;
             if (!staffGroupId) {
-                const notifyMsg = await ctx.reply(i18n.t(lang, 'common.warnings.no_staff_group'), { parse_mode: 'HTML' });
+                const notifyMsg = await ctx.reply(i18n.t(lang, 'common.warnings.no_staff_group'), {
+                    parse_mode: 'HTML'
+                });
                 setTimeout(async () => {
-                    try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                    try {
+                        await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
+                    } catch (e) {}
                 }, 60000);
                 return;
             }
@@ -138,7 +144,9 @@ function registerCommands(bot, db) {
             let logEvents = {};
             if (config.log_events) {
                 if (typeof config.log_events === 'string') {
-                    try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                    try {
+                        logEvents = JSON.parse(config.log_events);
+                    } catch (e) {}
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
@@ -158,7 +166,7 @@ function registerCommands(bot, db) {
                 // Forward message to log channel first
                 try {
                     await ctx.api.forwardMessage(config.log_channel_id, ctx.chat.id, targetMsg.message_id);
-                } catch (e) { }
+                } catch (e) {}
 
                 await ctx.api.sendMessage(config.log_channel_id, logText, { parse_mode: 'HTML' });
             }
@@ -166,7 +174,9 @@ function registerCommands(bot, db) {
             // Show confirmation message (auto-delete 5 min)
             const notifyMsg = await ctx.reply(t('report.log.report_sent_to_staff'), { parse_mode: 'HTML' });
             setTimeout(async () => {
-                try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+                try {
+                    await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
+                } catch (e) {}
             }, 300000); // 5 minutes
 
             return;
@@ -334,9 +344,10 @@ function registerCommands(bot, db) {
             const config = await db.getGuildConfig(ctx.chat.id);
             const duration = config.voteban_duration_minutes || 30;
             const required = config.voteban_threshold || 5;
-            const expires = duration === 0
-                ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                : new Date(Date.now() + duration * 60000).toISOString();
+            const expires =
+                duration === 0
+                    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                    : new Date(Date.now() + duration * 60000).toISOString();
 
             // Get target user info
             let targetUser;
@@ -365,7 +376,9 @@ function registerCommands(bot, db) {
                 targetUser,
                 ctx.from,
                 action,
-                1, 0, required,
+                1,
+                0,
+                required,
                 expires,
                 voteId
             );
@@ -429,15 +442,17 @@ function registerCommands(bot, db) {
                 await db.updateGuildConfig(ctx.chat.id, { report_mode: nextVal });
             } else if (data === 'vb_log_ban' || data === 'vb_log_delete' || data === 'vb_log_report') {
                 const logTypeMap = {
-                    'vb_log_ban': 'vote_ban',
-                    'vb_log_delete': 'vote_delete',
-                    'vb_log_report': 'report_log'
+                    vb_log_ban: 'vote_ban',
+                    vb_log_delete: 'vote_delete',
+                    vb_log_report: 'report_log'
                 };
                 const logType = logTypeMap[data];
                 let logEvents = {};
                 if (config.log_events) {
                     if (typeof config.log_events === 'string') {
-                        try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                        try {
+                            logEvents = JSON.parse(config.log_events);
+                        } catch (e) {}
                     } else if (typeof config.log_events === 'object') {
                         logEvents = config.log_events;
                     }
@@ -463,7 +478,11 @@ function registerCommands(bot, db) {
             // Check if already voted
             let voters = vote.voters || [];
             if (typeof voters === 'string') {
-                try { voters = JSON.parse(voters); } catch (e) { voters = []; }
+                try {
+                    voters = JSON.parse(voters);
+                } catch (e) {
+                    voters = [];
+                }
             }
 
             if (voters.some(v => v.id === ctx.from.id)) {
@@ -523,9 +542,10 @@ function registerCommands(bot, db) {
 
                 const lang = await i18n.getLanguage(ctx.chat.id);
                 const t = (key, params) => i18n.t(lang, key, params);
-                const resultText = actionType === 'ban'
-                    ? t('report.result.banned', { user: vote.target_username, yes: yesVotes, no: noVotes })
-                    : t('report.result.deleted', { user: vote.target_username, yes: yesVotes, no: noVotes });
+                const resultText =
+                    actionType === 'ban'
+                        ? t('report.result.banned', { user: vote.target_username, yes: yesVotes, no: noVotes })
+                        : t('report.result.deleted', { user: vote.target_username, yes: yesVotes, no: noVotes });
 
                 await ctx.editMessageText(resultText, { parse_mode: 'HTML' });
             } else if (noVotes > vote.required_votes / 2) {
@@ -533,7 +553,9 @@ function registerCommands(bot, db) {
                 await logic.updateVote(db, voteId, { status: 'rejected' });
 
                 const lang = await i18n.getLanguage(ctx.chat.id);
-                await ctx.editMessageText(i18n.t(lang, 'report.result.saved', { user: vote.target_username }), { parse_mode: 'HTML' });
+                await ctx.editMessageText(i18n.t(lang, 'report.result.saved', { user: vote.target_username }), {
+                    parse_mode: 'HTML'
+                });
             } else {
                 // Extract actionType from reason
                 let updateActionType = 'ban';
@@ -547,7 +569,9 @@ function registerCommands(bot, db) {
                     { id: vote.target_user_id, username: vote.target_username },
                     null,
                     updateActionType,
-                    yesVotes, noVotes, vote.required_votes,
+                    yesVotes,
+                    noVotes,
+                    vote.required_votes,
                     vote.expires_at,
                     voteId
                 );
@@ -567,7 +591,9 @@ function logAction(config, guildId, eventType, targetUser, executor, analysisRes
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -590,7 +616,9 @@ function logVoteResult(config, guildId, actionType, targetId, targetName, yesVot
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }

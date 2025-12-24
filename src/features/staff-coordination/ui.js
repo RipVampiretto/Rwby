@@ -24,16 +24,13 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         : { text: t('common.close'), callback_data: 'stf_close' };
 
     const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('logger.set_channel')}`, callback_data: 'stf_set_log_channel' }],
-            [closeBtn]
-        ]
+        inline_keyboard: [[{ text: `${t('logger.set_channel')}`, callback_data: 'stf_set_log_channel' }], [closeBtn]]
     };
 
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) { }
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }

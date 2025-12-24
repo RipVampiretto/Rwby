@@ -25,7 +25,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) { }
+        } catch (e) {}
         return;
     }
 
@@ -55,7 +55,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) { }
+        } catch (e) {}
         return;
     }
 

@@ -7,7 +7,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
-    logger.debug(`[admin-logger] sendConfigUI - log_events raw: ${JSON.stringify(config.log_events)}, type: ${typeof config.log_events}`);
+    logger.debug(
+        `[admin-logger] sendConfigUI - log_events raw: ${JSON.stringify(config.log_events)}, type: ${typeof config.log_events}`
+    );
 
     let logEvents = {};
     if (config.log_events) {
@@ -15,7 +17,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }

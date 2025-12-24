@@ -37,7 +37,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -78,7 +80,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) { }
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
@@ -102,7 +104,7 @@ async function sendCategoryConfigUI(ctx, db, fromSettings = false) {
     const text = `${t('ai.categories.title')}\n${t('ai.categories.subtitle')}`;
     try {
         await ctx.editMessageText(text, { reply_markup: { inline_keyboard: rows }, parse_mode: 'HTML' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 module.exports = {

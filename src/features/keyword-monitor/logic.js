@@ -22,7 +22,7 @@ async function scanMessage(ctx) {
             try {
                 const regex = new RegExp(rule.word, 'i');
                 if (regex.test(text)) match = true;
-            } catch (e) { }
+            } catch (e) {}
         } else {
             if (rule.match_whole_word) {
                 const regex = new RegExp(`\\b${escapeRegExp(rule.word)}\\b`, 'i');

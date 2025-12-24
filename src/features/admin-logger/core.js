@@ -34,7 +34,7 @@ async function logEvent(params) {
             } else {
                 logEvents = parsed;
             }
-        } catch (e) { }
+        } catch (e) {}
     }
 
     if (!logEvents[eventType]) return;
@@ -51,7 +51,7 @@ async function logEvent(params) {
     let botInfo = { first_name: 'Bot', username: 'bot', id: 0 };
     try {
         botInfo = await _botInstance.api.getMe();
-    } catch (e) { }
+    } catch (e) {}
 
     const botLink = botInfo.username
         ? `<a href="https://t.me/${botInfo.username}">${botInfo.first_name}</a>`
@@ -84,7 +84,7 @@ async function logEvent(params) {
                         targetChatId = config.staff_group_id;
                         messageThreadId = topics.logs;
                     }
-                } catch (e) { }
+                } catch (e) {}
             }
 
             await _botInstance.api.sendMessage(targetChatId, text, {
@@ -116,4 +116,3 @@ module.exports = {
     init,
     logEvent
 };
-

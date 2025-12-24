@@ -106,7 +106,10 @@ function registerCommands(bot, db) {
         }
 
         if (!channelId || isNaN(channelId)) {
-            await ctx.reply('❌ ID non valido. Usa un ID numerico (es. `-100123456789`). Scrivi "cancel" per annullare.', { parse_mode: 'HTML' });
+            await ctx.reply(
+                '❌ ID non valido. Usa un ID numerico (es. `-100123456789`). Scrivi "cancel" per annullare.',
+                { parse_mode: 'HTML' }
+            );
             return;
         }
 

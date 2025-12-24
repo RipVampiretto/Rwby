@@ -13,7 +13,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }

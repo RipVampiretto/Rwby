@@ -45,7 +45,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         let logEvents = {};
         if (config.log_events) {
             if (typeof config.log_events === 'string') {
-                try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+                try {
+                    logEvents = JSON.parse(config.log_events);
+                } catch (e) {}
             } else if (typeof config.log_events === 'object') {
                 logEvents = config.log_events;
             }
@@ -74,7 +76,12 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         const keyboard = {
             inline_keyboard: [
                 [{ text: `${t('media.buttons.monitor')}: ${enabled}`, callback_data: 'nsf_toggle' }],
-                [{ text: `${t('media.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`, callback_data: 'nsf_tier' }],
+                [
+                    {
+                        text: `${t('media.buttons.tier')}: ${tierBypass === -1 ? 'OFF' : tierBypass + '+'}`,
+                        callback_data: 'nsf_tier'
+                    }
+                ],
                 [
                     { text: `${t('media.buttons.action')}: ${action}`, callback_data: 'nsf_act' },
                     { text: `${t('media.buttons.threshold')}: ${thr}%`, callback_data: 'nsf_thr' }
@@ -100,7 +107,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         logger.error(`[media-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
-        } catch (e2) { }
+        } catch (e2) {}
     }
 }
 

@@ -35,7 +35,9 @@ async function runMigrations() {
     const check2 = await query(`SELECT 1 FROM migrations WHERE name = $1`, [migration2]);
     if (check2.rowCount === 0) {
         try {
-            await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_hate TEXT DEFAULT 'report_only'`);
+            await query(
+                `ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS report_action_hate TEXT DEFAULT 'report_only'`
+            );
             await query(`INSERT INTO migrations (name) VALUES ($1)`, [migration2]);
             logger.info(`[migrations] Applied: ${migration2}`);
         } catch (e) {

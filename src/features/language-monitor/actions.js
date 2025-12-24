@@ -12,7 +12,9 @@ async function executeAction(ctx, config, detected, allowed) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -51,16 +53,18 @@ async function executeAction(ctx, config, detected, allowed) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
-
+        } catch (e) {}
     } else if (action === 'report_only') {
         const sent = await staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Language',
             user: user,
-            reason: i18n.t(lang, 'language.log_reason', { detected: detected.toUpperCase(), allowed: allowed.join(', ').toUpperCase() }),
+            reason: i18n.t(lang, 'language.log_reason', {
+                detected: detected.toUpperCase(),
+                allowed: allowed.join(', ').toUpperCase()
+            }),
             messageId: ctx.message.message_id,
             content: ctx.message.text
         });

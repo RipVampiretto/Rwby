@@ -170,13 +170,32 @@ async function updateGuildConfig(guildId, updates) {
 
     // Boolean column names (need 0/1 -> true/false conversion)
     const BOOLEAN_COLUMNS = new Set([
-        'spam_enabled', 'ai_enabled', 'edit_monitor_enabled', 'profiler_enabled',
-        'lang_enabled', 'link_enabled', 'nsfw_enabled', 'visual_enabled',
-        'voteban_enabled', 'modal_enabled', 'casban_enabled', 'welcome_enabled',
-        'captcha_enabled', 'rules_enabled', 'welcome_msg_enabled', 'captcha_logs_enabled',
-        'ai_context_aware', 'edit_lock_tier0', 'keyword_sync_global', 'link_sync_global',
-        'visual_sync_global', 'modal_sync_global', 'nsfw_check_photos', 'nsfw_check_videos',
-        'nsfw_check_gifs', 'nsfw_check_stickers'
+        'spam_enabled',
+        'ai_enabled',
+        'edit_monitor_enabled',
+        'profiler_enabled',
+        'lang_enabled',
+        'link_enabled',
+        'nsfw_enabled',
+        'visual_enabled',
+        'voteban_enabled',
+        'modal_enabled',
+        'casban_enabled',
+        'welcome_enabled',
+        'captcha_enabled',
+        'rules_enabled',
+        'welcome_msg_enabled',
+        'captcha_logs_enabled',
+        'ai_context_aware',
+        'edit_lock_tier0',
+        'keyword_sync_global',
+        'link_sync_global',
+        'visual_sync_global',
+        'modal_sync_global',
+        'nsfw_check_photos',
+        'nsfw_check_videos',
+        'nsfw_check_gifs',
+        'nsfw_check_stickers'
     ]);
 
     // Build parameterized query

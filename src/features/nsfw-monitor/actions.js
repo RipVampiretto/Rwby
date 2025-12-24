@@ -42,7 +42,9 @@ async function executeAction(ctx, action, reason, type) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -79,8 +81,9 @@ async function executeAction(ctx, action, reason, type) {
         // Forward original media to Parliament BEFORE deleting (with gban option)
         if (superAdmin.forwardMediaToParliament) {
             const parlLang = await i18n.getLanguage(ctx.chat.id);
-            const t = (key) => i18n.t(parlLang, key);
-            const caption = `🖼️ <b>NSFW CONTENT</b>\n\n` +
+            const t = key => i18n.t(parlLang, key);
+            const caption =
+                `🖼️ <b>NSFW CONTENT</b>\n\n` +
                 `${t('common.logs.group')}: ${ctx.chat.title}\n` +
                 `${t('common.logs.user')}: <a href="tg://user?id=${user.id}">${user.first_name}</a> [<code>${user.id}</code>]\n` +
                 `📝 Category: ${reason}\n` +
@@ -100,22 +103,23 @@ async function executeAction(ctx, action, reason, type) {
         // Send warning to user (auto-delete after 1 minute)
         try {
             const lang = await i18n.getLanguage(ctx.chat.id);
-            const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
+            const userName = user.username
+                ? `@${user.username}`
+                : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
             const warningMsg = i18n.t(lang, 'media.warning', { user: userName });
 
             const warning = await ctx.reply(warningMsg, { parse_mode: 'HTML' });
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
+        } catch (e) {}
 
         // Log only if enabled
         if (logEvents['media_delete'] && adminLogger.getLogEvent()) {
             adminLogger.getLogEvent()(logParams);
         }
-
     } else if (action === 'report_only') {
         // Forward to staff group for review
         staffCoordination.reviewQueue({
@@ -146,17 +150,23 @@ async function executeAlbumAction(violations, config) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
     }
 
     // Aggregate reasons
-    const categories = [...new Set(violations.map(v => {
-        const match = v.reason?.match(/(?:Frame @[\d.]+s: )?([^(\n]+)/);
-        return match ? match[1].trim() : v.reason;
-    }))];
+    const categories = [
+        ...new Set(
+            violations.map(v => {
+                const match = v.reason?.match(/(?:Frame @[\d.]+s: )?([^(\n]+)/);
+                return match ? match[1].trim() : v.reason;
+            })
+        )
+    ];
     const aggregatedReason = categories.join(', ');
 
     const logParams = {
@@ -169,26 +179,28 @@ async function executeAlbumAction(violations, config) {
 
     if (action === 'delete') {
         // Prepare media group from all violations
-        const mediaItems = violations.map((v, idx) => {
-            const msg = v.ctx.message;
-            let item = null;
-            if (msg.photo) {
-                const photo = msg.photo[msg.photo.length - 1];
-                item = { type: 'photo', media: photo.file_id };
-            } else if (msg.video) {
-                item = { type: 'video', media: msg.video.file_id };
-            } else if (msg.animation) {
-                // Animations can't be in media group, treat as document
-                item = { type: 'document', media: msg.animation.file_id };
-            } else if (msg.document) {
-                item = { type: 'document', media: msg.document.file_id };
-            }
-            // Add caption only to first item
-            if (item && idx === 0) {
-                item.caption = `🚫 Album eliminato: ${aggregatedReason}`;
-            }
-            return item;
-        }).filter(Boolean);
+        const mediaItems = violations
+            .map((v, idx) => {
+                const msg = v.ctx.message;
+                let item = null;
+                if (msg.photo) {
+                    const photo = msg.photo[msg.photo.length - 1];
+                    item = { type: 'photo', media: photo.file_id };
+                } else if (msg.video) {
+                    item = { type: 'video', media: msg.video.file_id };
+                } else if (msg.animation) {
+                    // Animations can't be in media group, treat as document
+                    item = { type: 'document', media: msg.animation.file_id };
+                } else if (msg.document) {
+                    item = { type: 'document', media: msg.document.file_id };
+                }
+                // Add caption only to first item
+                if (item && idx === 0) {
+                    item.caption = `🚫 Album eliminato: ${aggregatedReason}`;
+                }
+                return item;
+            })
+            .filter(Boolean);
 
         // Send album to Log Channel
         if (config.log_channel_id && mediaItems.length > 0) {
@@ -214,8 +226,9 @@ async function executeAlbumAction(violations, config) {
         } else if (superAdmin.forwardMediaToParliament) {
             // Fallback to single media
             const parlLang = await i18n.getLanguage(firstCtx.chat.id);
-            const t = (key) => i18n.t(parlLang, key);
-            const caption = `🖼️ <b>NSFW ALBUM</b>\n\n` +
+            const t = key => i18n.t(parlLang, key);
+            const caption =
+                `🖼️ <b>NSFW ALBUM</b>\n\n` +
                 `${t('common.logs.group')}: ${firstCtx.chat.title}\n` +
                 `${t('common.logs.user')}: <a href="tg://user?id=${user.id}">${user.first_name}</a> [<code>${user.id}</code>]\n` +
                 `📁 Deleted media: ${violations.length}\n` +
@@ -237,7 +250,9 @@ async function executeAlbumAction(violations, config) {
         // Send single warning to user (auto-delete after 1 minute) - use plural version
         try {
             const lang = await i18n.getLanguage(firstCtx.chat.id);
-            const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
+            const userName = user.username
+                ? `@${user.username}`
+                : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
             // Use plural warning for albums
             const warningKey = violations.length > 1 ? 'media.warning_album' : 'media.warning';
             let warningMsg = i18n.t(lang, warningKey, { user: userName, count: violations.length });
@@ -250,15 +265,14 @@ async function executeAlbumAction(violations, config) {
             setTimeout(async () => {
                 try {
                     await firstCtx.api.deleteMessage(firstCtx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
+        } catch (e) {}
 
         // Log only if enabled (single log for entire album)
         if (logEvents['media_delete'] && adminLogger.getLogEvent()) {
             adminLogger.getLogEvent()(logParams);
         }
-
     } else if (action === 'report_only') {
         // Forward to staff group for review (single report)
         staffCoordination.reviewQueue({

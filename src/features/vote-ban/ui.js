@@ -49,10 +49,11 @@ async function sendConfigUI(ctx, db, isEdit = false) {
 
     // Simple modes: vote or report
     const reportMode = config.report_mode || 'vote';
-    const modeDisplay = {
-        'vote': t('report.modes.vote'),
-        'report': t('report.modes.report')
-    }[reportMode] || t('report.modes.vote');
+    const modeDisplay =
+        {
+            vote: t('report.modes.vote'),
+            report: t('report.modes.report')
+        }[reportMode] || t('report.modes.vote');
 
     // Build text based on mode
     let text =
@@ -79,7 +80,9 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
-            try { logEvents = JSON.parse(config.log_events); } catch (e) { }
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -166,7 +169,8 @@ async function sendConfirmationPrompt(ctx, targetUser, targetMsgId) {
 
     const targetName = targetUser.username ? `@${targetUser.username}` : targetUser.first_name;
 
-    const text = `${t('report.confirm.title')}\n\n` +
+    const text =
+        `${t('report.confirm.title')}\n\n` +
         `${t('report.confirm.target')}: ${targetName}\n\n` +
         `${t('report.confirm.instruction')}\n` +
         `_${t('report.confirm.timeout')}_`;
@@ -174,10 +178,18 @@ async function sendConfirmationPrompt(ctx, targetUser, targetMsgId) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: '🗑️ Delete', callback_data: `vb_confirm:delete:${targetUser.id}:${targetMsgId}:${ctx.from.id}` },
+                {
+                    text: '🗑️ Delete',
+                    callback_data: `vb_confirm:delete:${targetUser.id}:${targetMsgId}:${ctx.from.id}`
+                },
                 { text: '🚷 Ban', callback_data: `vb_confirm:ban:${targetUser.id}:${targetMsgId}:${ctx.from.id}` }
             ],
-            [{ text: t('common.cancel'), callback_data: `vb_confirm:cancel:${targetUser.id}:${targetMsgId}:${ctx.from.id}` }]
+            [
+                {
+                    text: t('common.cancel'),
+                    callback_data: `vb_confirm:cancel:${targetUser.id}:${targetMsgId}:${ctx.from.id}`
+                }
+            ]
         ]
     };
 

@@ -69,10 +69,12 @@ function queueBanNotification(logChannelId, user, group, reason) {
         queue.bans.set(user.id, {
             user: user,
             reason: reason,
-            groups: [{
-                id: group.id,
-                title: group.title || `Chat ${group.id}`
-            }]
+            groups: [
+                {
+                    id: group.id,
+                    title: group.title || `Chat ${group.id}`
+                }
+            ]
         });
     }
 
@@ -126,7 +128,10 @@ async function flushBanQueue(logChannelId) {
         }
 
         // Add hashtags for all user IDs
-        const hashtags = bans.slice(0, 30).map(b => `#id${b.user.id}`).join(' ');
+        const hashtags = bans
+            .slice(0, 30)
+            .map(b => `#id${b.user.id}`)
+            .join(' ');
         text += hashtags;
 
         if (bans.length > 30) {
@@ -160,9 +165,7 @@ async function processNewCasBans(newUsers) {
     const usersToProcess = newUsers.slice(0, 100);
 
     // Group guilds by log_channel_id for aggregated notifications
-    const guildConfigs = await Promise.all(
-        guilds.map(g => db.getGuildConfig(g.guild_id))
-    );
+    const guildConfigs = await Promise.all(guilds.map(g => db.getGuildConfig(g.guild_id)));
 
     for (const user of usersToProcess) {
         for (let i = 0; i < guilds.length; i++) {
@@ -177,7 +180,12 @@ async function processNewCasBans(newUsers) {
                 if (config.casban_notify && config.log_channel_id) {
                     // Create fake user object for notification
                     const fakeUser = { id: user.user_id, first_name: `User ${user.user_id}` };
-                    queueBanNotification(config.log_channel_id, fakeUser, { id: guildId, title: `Group ${guildId}` }, 'CAS Sync');
+                    queueBanNotification(
+                        config.log_channel_id,
+                        fakeUser,
+                        { id: guildId, title: `Group ${guildId}` },
+                        'CAS Sync'
+                    );
                 }
             } catch (e) {
                 failedBans++;
@@ -211,7 +219,7 @@ async function notifyParliament(newUsers, banCount, guildCount) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const processedCount = Math.min(newUsers.length, 100);
