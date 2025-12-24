@@ -13,7 +13,10 @@ const actions = require('./actions');
 const envConfig = require('../../config/env');
 
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'nsfw');
-const LM_STUDIO_CONVERSATIONS_DIR = '/Users/ripvampiretto/.lmstudio/conversations/Rwby';
+
+// LM Studio conversation saving (optional - for debugging)
+const LM_STUDIO_CONVERSATIONS_DIR = process.env.LM_STUDIO_CONVERSATIONS_DIR || null;
+const LM_STUDIO_USER_FILES_DIR = process.env.LM_STUDIO_USER_FILES_DIR || null;
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -29,10 +32,16 @@ if (!fs.existsSync(TEMP_DIR)) {
  * @param {object} stats - Response statistics
  */
 function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image, responseText, stats) {
+    // Skip if LM Studio conversation saving is not configured
+    if (!LM_STUDIO_CONVERSATIONS_DIR || !LM_STUDIO_USER_FILES_DIR) {
+        logger.debug('[nsfw-monitor] LM Studio conversation saving disabled (env vars not set)');
+        return;
+    }
+
     try {
         const crypto = require('crypto');
         const chatDir = path.join(LM_STUDIO_CONVERSATIONS_DIR, String(chatId));
-        const userFilesDir = '/Users/ripvampiretto/.lmstudio/user-files';
+        const userFilesDir = LM_STUDIO_USER_FILES_DIR;
 
         // Create directories if they don't exist
         if (!fs.existsSync(chatDir)) {
@@ -78,7 +87,7 @@ function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image
             if (parsed.primary_category) {
                 conversationName = `NSFW: ${parsed.primary_category}`;
             }
-        } catch (e) {}
+        } catch (e) { }
 
         const conversation = {
             name: conversationName,
@@ -372,7 +381,7 @@ async function processMedia(ctx, config) {
         logger.debug(`[nsfw-monitor] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 
@@ -393,7 +402,7 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[nsfw-monitor] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => {});
+                fs.unlink(dest, () => { });
                 reject(err);
             });
     });
@@ -566,7 +575,7 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 }
@@ -1067,7 +1076,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 

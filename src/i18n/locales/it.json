@@ -98,6 +98,13 @@
             "current": "Attuale: {lang}",
             "changed": "✅ Lingua cambiata in {lang}",
             "back": "⬅️ Indietro"
+        },
+        "disabled_modules": {
+            "antispam": "⚠️ Il modulo Anti-Spam è temporaneamente disabilitato.",
+            "profiler": "⚠️ Il modulo Profiler è temporaneamente disabilitato.",
+            "visual": "⚠️ Il Visual Immune System è temporaneamente disabilitato.",
+            "intel": "⚠️ Il modulo Intel Network è temporaneamente disabilitato.",
+            "casban_hint": "CAS Ban attivo. Usa /cassync per la sincronizzazione manuale."
         }
     },
     "report": {

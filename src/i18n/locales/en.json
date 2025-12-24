@@ -98,6 +98,13 @@
             "current": "Current: {lang}",
             "changed": "✅ Language changed to {lang}",
             "back": "⬅️ Back"
+        },
+        "disabled_modules": {
+            "antispam": "⚠️ Anti-Spam module is temporarily disabled.",
+            "profiler": "⚠️ Profiler module is temporarily disabled.",
+            "visual": "⚠️ Visual Immune System is temporarily disabled.",
+            "intel": "⚠️ Intel Network module is temporarily disabled.",
+            "casban_hint": "CAS Ban active. Use /cassync for manual sync."
         }
     },
     "report": {
