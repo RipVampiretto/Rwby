@@ -201,13 +201,14 @@
     },
     "modals": {
         "title": "📋 <b>PATTERN</b>",
-        "description": "Riconosce automaticamente messaggi sospetti usando pattern predefiniti. Pensalo come un filtro intelligente che impara dai tentativi passati.",
+        "description": "Riconosce automaticamente messaggi sospetti usando pattern predefiniti.",
         "info_title": "Come funziona",
         "info_1": "Pattern caricati per le tue lingue: {count}",
         "info_2": "Lingue del gruppo: {languages}",
         "status": "Stato",
         "action": "Azione",
         "warning": "{user}, il tuo messaggio è stato eliminato perché corrisponde a un pattern sospetto.",
+        "warning_dependency": "⚠️ <b>Nota:</b> Usa le lingue definite nel filtro Lingua, ma funziona indipendentemente (puoi disattivare il filtro Lingua).",
         "buttons": {
             "system": "📋 Sistema",
             "action": "👮 Azione",

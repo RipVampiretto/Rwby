@@ -34,6 +34,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         `ℹ️ <b>${t('modals.info_title')}:</b>\n` +
         `• ${t('modals.info_1', { count: activeCount })}\n` +
         `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n\n` +
+        `${t('modals.warning_dependency')}\n\n` +
         `${t('modals.status')}: ${enabled}`;
 
     // Show details only when enabled
