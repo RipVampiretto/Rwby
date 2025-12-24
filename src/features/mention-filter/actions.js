@@ -41,8 +41,8 @@ async function executeAction(ctx, config, verdict) {
         : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
 
     const reasonText = type === 'gbanned'
-        ? `Mentioned globally banned user: @${username}`
-        : `AI Scam Detection (${Math.round(aiResult.confidence * 100)}%): ${aiResult.reason}`;
+        ? t('mention.reason_gbanned', { user: username })
+        : t('mention.reason_scam', { percent: Math.round(aiResult.confidence * 100), reason: aiResult.reason });
 
     // Execute action based on config
     if (action === 'delete' || type === 'gbanned') {

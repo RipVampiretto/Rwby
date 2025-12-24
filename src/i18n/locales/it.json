@@ -273,6 +273,8 @@
         "notify": "Log",
         "warning_scam": "{user}, il tuo messaggio è stato rimosso perché classificato come truffa.",
         "warning_gbanned": "{user}, il tuo messaggio è stato rimosso perché hai menzionato un utente bannato globalmente: {mentioned}",
+        "reason_gbanned": "Menzionato utente bannato globalmente: @{user}",
+        "reason_scam": "Rilevamento Truffa AI ({percent}%): {reason}",
         "buttons": {
             "system": "🛡️ Stato",
             "action": "⚡ Azione",
