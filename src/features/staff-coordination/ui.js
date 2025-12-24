@@ -6,15 +6,15 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
-    const staffGroup = config.staff_group_id ? `✅ Set (${config.staff_group_id})` : t('logger.channel_not_set');
-    const logChannel = config.log_channel_id ? `✅ Set (${config.log_channel_id})` : t('logger.channel_not_set');
+    const staffGroup = config.staff_group_id ? `✅ Set` : t('logger.channel_not_set');
+    const logChannel = config.log_channel_id ? `✅ Set` : t('logger.channel_not_set');
 
     const text =
         `${t('staff.title')}\n\n` +
         `${t('staff.description')}\n\n` +
         `${t('staff.staff_group')}: ${staffGroup}\n` +
         `${t('logger.channel')}: ${logChannel}\n\n` +
-        `**${t('staff.commands_title')}:**\n` +
+        `<b>${t('staff.commands_title')}:</b>\n` +
         `${t('staff.cmd_setstaff')}\n` +
         `${t('staff.cmd_notes')}\n` +
         `${t('staff.cmd_notes_add')}`;
@@ -24,7 +24,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         : { text: t('common.close'), callback_data: 'stf_close' };
 
     const keyboard = {
-        inline_keyboard: [[{ text: `${t('logger.set_channel')}`, callback_data: 'stf_set_log_channel' }], [closeBtn]]
+        inline_keyboard: [
+            [{ text: `${t('staff.set_staff_group')}: ${staffGroup}`, callback_data: 'stf_set_staff_group' }],
+            [{ text: `${t('logger.set_channel')}: ${logChannel}`, callback_data: 'stf_set_log_channel' }],
+            [closeBtn]
+        ]
     };
 
     if (isEdit) {

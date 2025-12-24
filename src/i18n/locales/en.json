@@ -358,6 +358,7 @@
         "title": "👮 <b>STAFF COORDINATION</b>",
         "description": "Tools to coordinate the group's staff.",
         "staff_group": "Staff Group",
+        "set_staff_group": "👥 Staff Group",
         "commands_title": "Available commands",
         "cmd_setstaff": "/setstaff <id> - Set the staff group",
         "cmd_notes": "/notes <id> - View user notes",
@@ -470,7 +471,15 @@
             "set_welcome": "✏️ Set Welcome",
             "remove_welcome": "🗑️ Remove Welcome",
             "preview": "👀 Full Preview",
-            "back_to_menu": "🔙 Back to menu"
+            "back_to_menu": "🔙 Back to menu",
+            "notifications": "📢 Notifications"
+        },
+        "notifications": {
+            "title": "📢 <b>WELCOME NOTIFICATIONS</b>",
+            "description": "Choose which events to log to admin channel.",
+            "join": "👤 New member join",
+            "captcha_pass": "✅ Captcha solved",
+            "captcha_timeout": "⏰ Captcha timeout (kick)"
         },
         "modes": {
             "title": "🎮 <b>Select Captcha Mode</b>",

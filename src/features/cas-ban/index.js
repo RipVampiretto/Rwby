@@ -79,17 +79,50 @@ function register(bot) {
             const newState = !config.casban_enabled;
             await db.updateGuildConfig(ctx.chat.id, { casban_enabled: newState ? 1 : 0 });
 
-            // When enabling, sync all existing internal global bans to this group
+            // Update UI immediately
+            await ui.sendConfigUI(ctx, db, true, fromSettings);
+
+            // When enabling, sync all existing internal global bans to this group (in background)
             if (newState) {
-                await ctx.answerCallbackQuery({ text: '🔄 Sincronizzazione blacklist in corso...' });
+                // Send sync start message (will be deleted after 30s)
+                const syncMsg = await ctx.reply('🔄 Sincronizzazione blacklist globale in corso...');
 
-                const superAdmin = require('../super-admin');
-                const result = await superAdmin.syncGlobalBansToGuild(ctx.chat.id);
+                // Run sync in background
+                (async () => {
+                    try {
+                        const superAdmin = require('../super-admin');
+                        const result = await superAdmin.syncGlobalBansToGuild(ctx.chat.id);
 
-                logger.info(`[cas-ban] Blacklist sync to ${ctx.chat.id}: ${result.success} internal gbans applied`);
+                        logger.info(`[cas-ban] Blacklist sync to ${ctx.chat.id}: ${result.success} internal gbans applied`);
+
+                        // Delete sync start message
+                        try {
+                            await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
+                        } catch (e) { }
+
+                        // Send completion message
+                        const completeMsg = await ctx.reply(`✅ Sincronizzazione completata: ${result.success} utenti bannati.`);
+
+                        // Auto-delete after 10s
+                        setTimeout(async () => {
+                            try {
+                                await ctx.api.deleteMessage(ctx.chat.id, completeMsg.message_id);
+                            } catch (e) { }
+                        }, 10000);
+                    } catch (e) {
+                        logger.error(`[cas-ban] Sync failed: ${e.message}`);
+                    }
+                })();
+
+                // Auto-delete sync message after 30s if still exists
+                setTimeout(async () => {
+                    try {
+                        await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
+                    } catch (e) { }
+                }, 30000);
             }
 
-            await ui.sendConfigUI(ctx, db, true, fromSettings);
+            await ctx.answerCallbackQuery();
             return;
         }
 

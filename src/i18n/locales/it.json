@@ -359,6 +359,7 @@
         "title": "👮 <b>COORDINAMENTO STAFF</b>",
         "description": "Strumenti per coordinare lo staff del gruppo.",
         "staff_group": "Gruppo Staff",
+        "set_staff_group": "👥 Gruppo Staff",
         "commands_title": "Comandi disponibili",
         "cmd_setstaff": "/setstaff <id> - Imposta il gruppo staff",
         "cmd_notes": "/notes <id> - Vedi le note su un utente",
@@ -472,7 +473,15 @@
             "set_welcome": "✏️ Imposta Benvenuto",
             "remove_welcome": "🗑️ Rimuovi Benvenuto",
             "preview": "👀 Anteprima Completa",
-            "back_to_menu": "🔙 Torna al menu"
+            "back_to_menu": "🔙 Torna al menu",
+            "notifications": "📢 Notifiche"
+        },
+        "notifications": {
+            "title": "📢 <b>NOTIFICHE WELCOME</b>",
+            "description": "Scegli quali eventi loggare nel canale admin.",
+            "join": "👤 Ingresso nuovo membro",
+            "captcha_pass": "✅ Captcha risolto",
+            "captcha_timeout": "⏰ Captcha timeout (kick)"
         },
         "modes": {
             "title": "🎮 <b>Seleziona Modalità Captcha</b>",

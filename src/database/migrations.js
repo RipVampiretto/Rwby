@@ -45,6 +45,36 @@ async function runMigrations() {
         }
     }
 
+    // Migration: Add keyword_enabled column
+    const migration3 = 'add_keyword_enabled';
+    const check3 = await query(`SELECT 1 FROM migrations WHERE name = $1`, [migration3]);
+    if (check3.rowCount === 0) {
+        try {
+            await query(
+                `ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS keyword_enabled BOOLEAN DEFAULT FALSE`
+            );
+            await query(`INSERT INTO migrations (name) VALUES ($1)`, [migration3]);
+            logger.info(`[migrations] Applied: ${migration3}`);
+        } catch (e) {
+            logger.debug(`[migrations] ${migration3} already applied or failed: ${e.message}`);
+        }
+    }
+
+    // Migration: Add casban_notify column
+    const migration4 = 'add_casban_notify';
+    const check4 = await query(`SELECT 1 FROM migrations WHERE name = $1`, [migration4]);
+    if (check4.rowCount === 0) {
+        try {
+            await query(
+                `ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS casban_notify BOOLEAN DEFAULT FALSE`
+            );
+            await query(`INSERT INTO migrations (name) VALUES ($1)`, [migration4]);
+            logger.info(`[migrations] Applied: ${migration4}`);
+        } catch (e) {
+            logger.debug(`[migrations] ${migration4} already applied or failed: ${e.message}`);
+        }
+    }
+
     logger.info('[migrations] Schema is up to date');
 }
 

@@ -22,23 +22,29 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
     const logDel = logEvents['link_delete'] ? t('common.on') : t('common.off');
 
-    const text =
-        `${t('link.title')}\n\n` +
-        `${t('link.description')}\n\n` +
-        `${t('link.status')}: ${enabled}\n` +
-        `${t('link.notify')}: ${logDel}`;
+    let text = `${t('link.title')}\n\n` + `${t('link.description')}\n\n` + `${t('link.status')}: ${enabled}`;
+
+    // Show details only when enabled
+    if (config.link_enabled) {
+        text += `\n${t('link.notify')}: ${logDel}`;
+    }
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: 'lnk_close' };
 
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('link.buttons.system')}: ${enabled}`, callback_data: 'lnk_toggle' }],
-            [{ text: `${t('link.buttons.notify')}: ${logDel}`, callback_data: 'lnk_log_delete' }],
-            [closeBtn]
-        ]
-    };
+    // Build keyboard dynamically
+    const rows = [];
+    rows.push([{ text: `${t('link.buttons.system')}: ${enabled}`, callback_data: 'lnk_toggle' }]);
+
+    // Show options only when enabled
+    if (config.link_enabled) {
+        rows.push([{ text: `${t('link.buttons.notify')}: ${logDel}`, callback_data: 'lnk_log_delete' }]);
+    }
+
+    rows.push([closeBtn]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'link-monitor');

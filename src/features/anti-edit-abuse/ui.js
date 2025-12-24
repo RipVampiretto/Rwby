@@ -29,31 +29,43 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     let text =
         `${t('antiedit.title')}\n\n` +
         `${t('antiedit.description')}\n\n` +
-        `ℹ️ **${t('antiedit.info_title')}:**\n` +
+        `ℹ️ <b>${t('antiedit.info_title')}:</b>\n` +
         `• ${t('antiedit.info_1')}\n` +
         `• ${t('antiedit.info_2')}\n` +
         `• ${t('antiedit.info_3')}\n\n` +
-        `${t('antiedit.status')}: ${enabled}\n` +
-        `${t('antiedit.action')}: ${action}\n` +
-        `${t('antiedit.grace_period')}: ${graceDisplay}`;
+        `${t('antiedit.status')}: ${enabled}`;
 
-    if (!config.staff_group_id && (config.edit_action || 'delete') === 'report_only') {
-        text += `\n${t('common.warnings.no_staff_group')}\n`;
+    // Show details only when enabled
+    if (config.edit_monitor_enabled) {
+        text += `\n${t('antiedit.action')}: ${action}`;
+        text += `\n${t('antiedit.grace_period')}: ${graceDisplay}`;
+
+        if (!config.staff_group_id && (config.edit_action || 'delete') === 'report_only') {
+            text += `\n${t('common.warnings.no_staff_group')}`;
+        }
     }
 
-    // Always show Back button
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('antiedit.buttons.monitor')}: ${enabled}`, callback_data: 'edt_toggle' }],
-            [{ text: `${t('antiedit.buttons.action')}: ${action}`, callback_data: 'edt_act' }],
-            [{ text: `${t('antiedit.buttons.grace')}: ${graceDisplay}`, callback_data: 'edt_grace' }],
-            [
-                { text: `Log 🗑️${logDel}`, callback_data: 'edt_log_delete' },
-                { text: `Log 📢${logRep}`, callback_data: 'edt_log_report' }
-            ],
-            [{ text: t('common.back'), callback_data: 'settings_main' }]
-        ]
-    };
+    // Build keyboard dynamically
+    const rows = [];
+    rows.push([{ text: `${t('antiedit.buttons.monitor')}: ${enabled}`, callback_data: 'edt_toggle' }]);
+
+    // Show options only when enabled
+    if (config.edit_monitor_enabled) {
+        rows.push([{ text: `${t('antiedit.buttons.action')}: ${action}`, callback_data: 'edt_act' }]);
+        rows.push([{ text: `${t('antiedit.buttons.grace')}: ${graceDisplay}`, callback_data: 'edt_grace' }]);
+
+        // Show single log button based on action type
+        const currentAction = config.edit_action || 'delete';
+        if (currentAction === 'report_only') {
+            rows.push([{ text: `📢 Log: ${logRep}`, callback_data: 'edt_log_report' }]);
+        } else {
+            rows.push([{ text: `🗑️ Log: ${logDel}`, callback_data: 'edt_log_delete' }]);
+        }
+    }
+
+    rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'anti-edit');

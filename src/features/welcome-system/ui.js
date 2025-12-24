@@ -16,78 +16,97 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     const modes = (config.captcha_mode || 'button').split(',');
     const modeDisplay = modes.length > 1 ? t('welcome.modes_active', { count: modes.length }) : modes[0];
     const timeout = config.kick_timeout || 5;
-
     const autoDelete = config.welcome_autodelete_timer || 0;
     const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
-    const logsEnabled = config.captcha_logs_enabled === true || config.captcha_logs_enabled === 1;
 
     const onOff = enabled => (enabled ? t('common.on') : t('common.off'));
+    const onOffLabel = enabled => (enabled ? 'ON' : 'OFF');
 
+    // Build text
     let text = t('welcome.title') + '\n\n';
     text += `${t('welcome.captcha')} ${onOff(captchaEnabled)}\n`;
     text += `${t('welcome.welcome_msg')} ${msgEnabled ? (config.welcome_message ? t('common.on') : t('welcome.on_no_msg')) : t('common.off')}\n`;
-    text += `${t('welcome.mode')} \`${modeDisplay}\`\n`;
-    text += `${t('welcome.timeout')} \`${t('welcome.minutes', { count: timeout })}\`\n`;
-    text += `${t('welcome.autodelete')} \`${autoDelete === 0 ? t('common.off') : t('welcome.minutes', { count: autoDelete })}\`\n`;
-    text += `${t('welcome.rules')} ${onOff(rulesEnabled)}\n`;
-    text += `${t('welcome.logs_label')} ${onOff(logsEnabled)}\n\n`;
 
-    const onOffLabel = enabled => (enabled ? 'ON' : 'OFF');
+    // Show details only when enabled
+    if (captchaEnabled) {
+        text += `${t('welcome.mode')} <code>${modeDisplay}</code>\n`;
+        text += `${t('welcome.timeout')} <code>${t('welcome.minutes', { count: timeout })}</code>\n`;
+    }
 
-    const keyboard = {
-        inline_keyboard: [
-            // Row 1: Toggles
-            [
-                {
-                    text: t('welcome.buttons.captcha_toggle', { status: onOffLabel(captchaEnabled) }),
-                    callback_data: `wc_toggle:captcha:${captchaEnabled ? 0 : 1}`
-                },
-                {
-                    text: t('welcome.buttons.msg_toggle', { status: onOffLabel(msgEnabled) }),
-                    callback_data: `wc_toggle:msg:${msgEnabled ? 0 : 1}`
-                }
-            ],
-            // Row 2: Advanced Toggles
-            [
-                {
-                    text: t('welcome.buttons.rules_toggle', { status: onOffLabel(rulesEnabled) }),
-                    callback_data: `wc_toggle:rules:${rulesEnabled ? 0 : 1}`
-                },
-                {
-                    text: t('welcome.buttons.logs_toggle', { status: onOffLabel(logsEnabled) }),
-                    callback_data: `wc_toggle:logs:${logsEnabled ? 0 : 1}`
-                }
-            ],
-            // Row 2b: Rules Link (Conditional)
-            ...(rulesEnabled ? [[{ text: t('welcome.buttons.set_rules'), callback_data: 'wc_set_rules' }]] : []),
-            // Row 3: Timers
-            [
-                { text: t('welcome.buttons.timeout', { time: timeout }), callback_data: `wc_cycle:timeout:${timeout}` },
-                {
-                    text: t('welcome.buttons.autodelete', {
-                        time: autoDelete === 0 ? t('common.off') : autoDelete + 'm'
-                    }),
-                    callback_data: `wc_cycle:autodelete:${autoDelete}`
-                }
-            ],
-            // Row 4: Mode
-            [{ text: t('welcome.buttons.choose_mode'), callback_data: `wc_goto:modes` }],
-            // Row 5: Actions
-            [
-                { text: t('welcome.buttons.set_welcome'), callback_data: 'wc_set_msg' },
-                { text: t('welcome.buttons.remove_welcome'), callback_data: 'wc_del_msg' }
-            ],
-            // Row 4: Preview
-            [{ text: t('welcome.buttons.preview'), callback_data: 'wc_goto:preview' }],
-            // Row 5: Back
-            [{ text: t('common.back'), callback_data: 'settings_main' }]
-        ]
-    };
+    if (msgEnabled) {
+        text += `${t('welcome.autodelete')} <code>${autoDelete === 0 ? t('common.off') : t('welcome.minutes', { count: autoDelete })}</code>\n`;
+        text += `${t('welcome.rules')} ${onOff(rulesEnabled)}\n`;
+    }
+
+    // Build keyboard dynamically
+    const rows = [];
+
+    // Row 1: Main toggles
+    rows.push([
+        {
+            text: t('welcome.buttons.captcha_toggle', { status: onOffLabel(captchaEnabled) }),
+            callback_data: `wc_toggle:captcha:${captchaEnabled ? 0 : 1}`
+        },
+        {
+            text: t('welcome.buttons.msg_toggle', { status: onOffLabel(msgEnabled) }),
+            callback_data: `wc_toggle:msg:${msgEnabled ? 0 : 1}`
+        }
+    ]);
+
+    // Captcha options (only when enabled)
+    if (captchaEnabled) {
+        rows.push([{ text: t('welcome.buttons.choose_mode'), callback_data: 'wc_goto:modes' }]);
+        rows.push([
+            { text: t('welcome.buttons.timeout', { time: timeout }), callback_data: `wc_cycle:timeout:${timeout}` }
+        ]);
+    }
+
+    // Welcome message options (only when enabled)
+    if (msgEnabled) {
+        rows.push([
+            { text: t('welcome.buttons.set_welcome'), callback_data: 'wc_set_msg' },
+            { text: t('welcome.buttons.remove_welcome'), callback_data: 'wc_del_msg' }
+        ]);
+        rows.push([{ text: t('welcome.buttons.preview'), callback_data: 'wc_goto:preview' }]);
+
+        // AutoDelete for welcome message
+        rows.push([
+            {
+                text: t('welcome.buttons.autodelete', {
+                    time: autoDelete === 0 ? t('common.off') : autoDelete + 'm'
+                }),
+                callback_data: `wc_cycle:autodelete:${autoDelete}`
+            }
+        ]);
+
+        // Rules toggle (only when welcome enabled)
+        rows.push([
+            {
+                text: t('welcome.buttons.rules_toggle', { status: onOffLabel(rulesEnabled) }),
+                callback_data: `wc_toggle:rules:${rulesEnabled ? 0 : 1}`
+            }
+        ]);
+
+        // Rules link button (only when rules enabled)
+        if (rulesEnabled) {
+            rows.push([{ text: t('welcome.buttons.set_rules'), callback_data: 'wc_set_rules' }]);
+        }
+    }
+
+    // Notifications button (always show when either enabled)
+    if (captchaEnabled || msgEnabled) {
+        rows.push([{ text: t('welcome.buttons.notifications'), callback_data: 'wc_goto:notifications' }]);
+    }
+
+    // Back button
+    rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
@@ -145,7 +164,7 @@ async function sendCaptchaModeMenu(ctx) {
     }
     try {
         await ctx.answerCallbackQuery();
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -206,7 +225,7 @@ async function sendRulesWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -254,7 +273,7 @@ async function sendWizardPrompt(ctx) {
         t('welcome.wizard.buttons_format') +
         '\n' +
         t('welcome.wizard.buttons_example') +
-        '\n\n' +
+        '\\n\\n' +
         t('welcome.wizard.cancel');
 
     const keyboard = {
@@ -263,7 +282,59 @@ async function sendWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
+}
+
+/**
+ * Send Notifications Sub-Menu
+ */
+async function sendNotificationsMenu(ctx, isEdit = false) {
+    const guildId = ctx.chat.id;
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
+    const config = (await getGuildConfig(guildId)) || {};
+
+    // Parse log_events JSON
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+
+    const isOn = key => logEvents[key] ? '✅' : '❌';
+
+    const text =
+        `${t('welcome.notifications.title')}\n\n` +
+        `${t('welcome.notifications.description')}\n\n` +
+        `${t('welcome.notifications.join')} ${isOn('welcome_join')}\n` +
+        `${t('welcome.notifications.captcha_pass')} ${isOn('welcome_captcha_pass')}\n` +
+        `${t('welcome.notifications.captcha_timeout')} ${isOn('welcome_captcha_timeout')}`;
+
+    const keyboard = {
+        inline_keyboard: [
+            [
+                { text: `👤 ${isOn('welcome_join')}`, callback_data: 'wc_log:welcome_join' },
+                { text: `✅ ${isOn('welcome_captcha_pass')}`, callback_data: 'wc_log:welcome_captcha_pass' }
+            ],
+            [
+                { text: `⏰ ${isOn('welcome_captcha_timeout')}`, callback_data: 'wc_log:welcome_captcha_timeout' }
+            ],
+            [{ text: t('common.back'), callback_data: 'wc_goto:main' }]
+        ]
+    };
+
+    if (isEdit) {
+        try {
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+        } catch (e) { }
+    } else {
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
+    }
 }
 
 module.exports = {
@@ -271,5 +342,6 @@ module.exports = {
     sendCaptchaModeMenu,
     sendPreview,
     sendWizardPrompt,
-    sendRulesWizardPrompt
+    sendRulesWizardPrompt,
+    sendNotificationsMenu
 };

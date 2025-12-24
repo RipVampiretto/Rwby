@@ -44,8 +44,8 @@ async function setUserGlobalBan(userId, isBanned) {
  * @returns {Promise<Array<number>>} Array of user IDs
  */
 async function getGloballyBannedUsers() {
-    const rows = await query('SELECT user_id FROM users WHERE is_banned_global = TRUE');
-    return rows.map(r => r.user_id);
+    const result = await query('SELECT user_id FROM users WHERE is_banned_global = TRUE');
+    return (result.rows || []).map(r => r.user_id);
 }
 
 /**

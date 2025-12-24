@@ -2,8 +2,9 @@ const logic = require('./logic');
 const ui = require('./ui');
 const { isAdmin } = require('../../utils/error-handlers');
 
-// Simple wizard session storage for log channel configuration
+// Simple wizard session storage for channel/group configuration
 const LOG_CHANNEL_WIZARDS = new Map();
+const STAFF_GROUP_WIZARDS = new Map();
 
 function registerCommands(bot, db) {
     // Command: /setstaff <id>
@@ -85,27 +86,31 @@ function registerCommands(bot, db) {
         await ctx.reply(text, { parse_mode: 'HTML' });
     });
 
-    // Log channel wizard handler (must come BEFORE callback handler to catch text input)
+    // Wizard handlers for both log channel and staff group (must come BEFORE callback handler)
     bot.on('message:text', async (ctx, next) => {
         const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
-        if (!LOG_CHANNEL_WIZARDS.has(sessionKey)) return next();
+        const isLogWizard = LOG_CHANNEL_WIZARDS.has(sessionKey);
+        const isStaffWizard = STAFF_GROUP_WIZARDS.has(sessionKey);
+
+        if (!isLogWizard && !isStaffWizard) return next();
 
         const text = ctx.message.text.trim();
 
-        // Handle cancel
+        // Handle cancel for both
         if (text.toLowerCase() === 'cancel') {
             LOG_CHANNEL_WIZARDS.delete(sessionKey);
+            STAFF_GROUP_WIZARDS.delete(sessionKey);
             await ctx.reply('❌ Operazione annullata.');
             return;
         }
 
-        // Try to parse as channel ID
-        let channelId;
+        // Try to parse as ID
+        let targetId;
         if (text.match(/^-?\d+$/)) {
-            channelId = parseInt(text);
+            targetId = parseInt(text);
         }
 
-        if (!channelId || isNaN(channelId)) {
+        if (!targetId || isNaN(targetId)) {
             await ctx.reply(
                 '❌ ID non valido. Usa un ID numerico (es. `-100123456789`). Scrivi "cancel" per annullare.',
                 { parse_mode: 'HTML' }
@@ -115,17 +120,24 @@ function registerCommands(bot, db) {
 
         // Try to send a test message
         try {
-            await ctx.api.sendMessage(channelId, '✅ Canale Log configurato correttamente!');
-            await db.updateGuildConfig(ctx.chat.id, { log_channel_id: channelId });
-            await ctx.reply(`✅ Canale Log impostato: \`${channelId}\``, { parse_mode: 'HTML' });
+            if (isLogWizard) {
+                await ctx.api.sendMessage(targetId, '✅ Canale Log configurato correttamente!');
+                await db.updateGuildConfig(ctx.chat.id, { log_channel_id: targetId });
+                await ctx.reply(`✅ Canale Log impostato: <code>${targetId}</code>`, { parse_mode: 'HTML' });
+                LOG_CHANNEL_WIZARDS.delete(sessionKey);
+            } else if (isStaffWizard) {
+                await ctx.api.sendMessage(targetId, '✅ Staff Group configurato correttamente!');
+                await db.updateGuildConfig(ctx.chat.id, { staff_group_id: targetId });
+                await ctx.reply(`✅ Staff Group impostato: <code>${targetId}</code>`, { parse_mode: 'HTML' });
+                STAFF_GROUP_WIZARDS.delete(sessionKey);
+            }
         } catch (e) {
+            const label = isLogWizard ? 'canale' : 'gruppo';
             await ctx.reply(
-                `❌ Impossibile inviare messaggi nel canale \`${channelId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`,
+                `❌ Impossibile inviare messaggi nel ${label} <code>${targetId}</code>.\nAssicurati che il bot sia admin con permessi di scrittura.`,
                 { parse_mode: 'HTML' }
             );
         }
-
-        LOG_CHANNEL_WIZARDS.delete(sessionKey);
     });
 
     // Action Handlers
@@ -146,7 +158,18 @@ function registerCommands(bot, db) {
             LOG_CHANNEL_WIZARDS.set(sessionKey, { startedAt: Date.now() });
 
             await ctx.reply(
-                '📢 **Imposta Canale Log**\n\nInvia l\'ID del canale dove inviare i log (es. `-100123456789`).\n\nScrivi "cancel" per annullare.',
+                '📢 <b>Imposta Canale Log</b>\n\nInvia l\'ID del canale dove inviare i log (es. <code>-100123456789</code>).\n\nScrivi "cancel" per annullare.',
+                { parse_mode: 'HTML' }
+            );
+            await ctx.answerCallbackQuery();
+            return;
+        } else if (data === 'stf_set_staff_group') {
+            // Start wizard to set staff group
+            const sessionKey = `${ctx.from.id}:${ctx.chat.id}`;
+            STAFF_GROUP_WIZARDS.set(sessionKey, { startedAt: Date.now() });
+
+            await ctx.reply(
+                '👥 <b>Imposta Staff Group</b>\n\nInvia l\'ID del gruppo staff dove inviare le segnalazioni (es. <code>-100123456789</code>).\n\nScrivi "cancel" per annullare.',
                 { parse_mode: 'HTML' }
             );
             await ctx.answerCallbackQuery();

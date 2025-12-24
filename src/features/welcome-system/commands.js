@@ -19,13 +19,46 @@ async function handleCallback(ctx) {
                 await ui.sendCaptchaModeMenu(ctx);
             } else if (target === 'preview') {
                 await ui.sendPreview(ctx);
+            } else if (target === 'notifications') {
+                await ui.sendNotificationsMenu(ctx, true);
             }
         } catch (e) {
             logger.error(`[Welcome] Navigation error: ${e.message}`);
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) {}
+        } catch (e) { }
+        return;
+    }
+
+    // Log event toggle (granular notifications)
+    if (data.startsWith('wc_log:')) {
+        const key = data.split(':')[1]; // welcome_join, welcome_captcha_pass, etc.
+        logger.info(`[Welcome] Log toggle: ${key}`);
+
+        try {
+            const config = (await getGuildConfig(ctx.chat.id)) || {};
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try {
+                        logEvents = JSON.parse(config.log_events);
+                    } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+
+            // Toggle the specific key
+            logEvents[key] = !logEvents[key];
+            await updateGuildConfig(ctx.chat.id, { log_events: logEvents });
+            await ui.sendNotificationsMenu(ctx, true);
+        } catch (e) {
+            logger.error(`[Welcome] Log toggle error: ${e.message}`);
+        }
+        try {
+            await ctx.answerCallbackQuery();
+        } catch (e) { }
         return;
     }
 
@@ -55,7 +88,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) {}
+        } catch (e) { }
         return;
     }
 

@@ -22,23 +22,29 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     }
     const logDel = logEvents['keyword_delete'] ? t('common.on') : t('common.off');
 
-    const text =
-        `${t('keyword.title')}\n\n` +
-        `${t('keyword.description')}\n\n` +
-        `${t('keyword.status')}: ${enabled}\n` +
-        `${t('keyword.notify')}: ${logDel}`;
+    let text = `${t('keyword.title')}\n\n` + `${t('keyword.description')}\n\n` + `${t('keyword.status')}: ${enabled}`;
+
+    // Show details only when enabled
+    if (config.keyword_enabled) {
+        text += `\n${t('keyword.notify')}: ${logDel}`;
+    }
 
     const closeBtn = fromSettings
         ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: 'wrd_close' };
 
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('keyword.buttons.system')}: ${enabled}`, callback_data: 'wrd_toggle' }],
-            [{ text: `${t('keyword.buttons.notify')}: ${logDel}`, callback_data: 'wrd_log_delete' }],
-            [closeBtn]
-        ]
-    };
+    // Build keyboard dynamically
+    const rows = [];
+    rows.push([{ text: `${t('keyword.buttons.system')}: ${enabled}`, callback_data: 'wrd_toggle' }]);
+
+    // Show options only when enabled
+    if (config.keyword_enabled) {
+        rows.push([{ text: `${t('keyword.buttons.notify')}: ${logDel}`, callback_data: 'wrd_log_delete' }]);
+    }
+
+    rows.push([closeBtn]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'keyword-monitor');

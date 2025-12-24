@@ -73,6 +73,7 @@ async function createTables() {
             profiler_action_pattern TEXT DEFAULT 'report_only',
             
             -- Keyword Monitor
+            keyword_enabled BOOLEAN DEFAULT FALSE,
             keyword_sync_global BOOLEAN DEFAULT FALSE,
             
             -- Language Monitor
@@ -133,6 +134,7 @@ async function createTables() {
             
             -- CAS Ban / Global Blacklist
             casban_enabled BOOLEAN DEFAULT FALSE,
+            casban_notify BOOLEAN DEFAULT FALSE,
             
             -- Welcome & Captcha System
             welcome_enabled BOOLEAN DEFAULT FALSE,

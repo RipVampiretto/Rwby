@@ -21,7 +21,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
             try {
                 const parsed = JSON.parse(config.allowed_languages);
                 if (parsed.length > 0) allowedLangs = parsed;
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -31,25 +31,33 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     let text =
         `${t('modals.title')}\n\n` +
         `${t('modals.description')}\n\n` +
-        `ℹ️ **${t('modals.info_title')}:**\n` +
+        `ℹ️ <b>${t('modals.info_title')}:</b>\n` +
         `• ${t('modals.info_1', { count: activeCount })}\n` +
         `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n\n` +
-        `${t('modals.status')}: ${enabled}\n` +
-        `${t('modals.action')}: ${action}`;
+        `${t('modals.status')}: ${enabled}`;
 
-    if (!config.staff_group_id && (config.modal_action || 'report_only') === 'report_only') {
-        text += `\n${t('common.warnings.no_staff_group')}\n`;
+    // Show details only when enabled
+    if (config.modal_enabled) {
+        text += `\n${t('modals.action')}: ${action}`;
+
+        if (!config.staff_group_id && (config.modal_action || 'report_only') === 'report_only') {
+            text += `\n${t('common.warnings.no_staff_group')}`;
+        }
     }
 
-    // Always show Back button to settings (this UI is only accessible from settings)
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('modals.buttons.system')}: ${enabled}`, callback_data: 'mdl_toggle' }],
-            [{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }],
-            [{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: 'mdl_list' }],
-            [{ text: t('common.back'), callback_data: 'settings_main' }]
-        ]
-    };
+    // Build keyboard dynamically
+    const rows = [];
+    rows.push([{ text: `${t('modals.buttons.system')}: ${enabled}`, callback_data: 'mdl_toggle' }]);
+
+    // Show options only when enabled
+    if (config.modal_enabled) {
+        rows.push([{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }]);
+        rows.push([{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: 'mdl_list' }]);
+    }
+
+    rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'modal-patterns');
@@ -74,7 +82,7 @@ async function sendModalListUI(ctx, db, isEdit = false) {
             try {
                 const parsed = JSON.parse(config.allowed_languages);
                 if (parsed.length > 0) allowedLangs = parsed;
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 

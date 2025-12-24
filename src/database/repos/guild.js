@@ -40,6 +40,7 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'profiler_action_forward',
     'profiler_action_pattern',
     // Keyword Monitor
+    'keyword_enabled',
     'keyword_sync_global',
     // Language Monitor
     'lang_enabled',
@@ -88,6 +89,7 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'modal_tier_bypass',
     // CAS Ban / Global Blacklist
     'casban_enabled',
+    'casban_notify',
     // Welcome & Captcha System
     'welcome_enabled',
     'welcome_msg_enabled',
@@ -174,6 +176,7 @@ async function updateGuildConfig(guildId, updates) {
         'ai_enabled',
         'edit_monitor_enabled',
         'profiler_enabled',
+        'keyword_enabled',
         'lang_enabled',
         'link_enabled',
         'nsfw_enabled',
@@ -181,6 +184,7 @@ async function updateGuildConfig(guildId, updates) {
         'voteban_enabled',
         'modal_enabled',
         'casban_enabled',
+        'casban_notify',
         'welcome_enabled',
         'captcha_enabled',
         'rules_enabled',

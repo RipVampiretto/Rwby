@@ -120,50 +120,60 @@ function getRandomInt(min, max) {
 /**
  * Handle new chat members
  */
-// Helper for Logging
+// Helper for Logging (uses granular log_events flags)
 async function logWelcomeEvent(ctx, type, details, config) {
-    if (config.captcha_logs_enabled !== 1) return;
-
     const logChannelId = config.log_channel_id;
     if (!logChannelId) return;
+
+    // Parse log_events to check granular flags
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+
+    // Check if this specific event type should be logged
+    const keyMap = {
+        'JOIN': 'welcome_join',
+        'SUCCESS': 'welcome_captcha_pass',
+        'TIMEOUT': 'welcome_captcha_timeout'
+    };
+
+    const logKey = keyMap[type];
+    if (!logKey || !logEvents[logKey]) return;
 
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
-    const user = ctx.from;
+    const user = details.user || ctx.from;
     const chat = ctx.chat;
     let text = '';
 
     if (type === 'JOIN') {
-        text = `${t('welcome.logs.new_user')}\n`;
-        text += `• Di: ${user.first_name} [${user.id}]\n`;
-        text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
-        text += `• ID Gruppo: ${chat.id}\n`;
+        text = `👤 <b>${t('welcome.logs.new_user')}</b>\n`;
+        text += `• ${user.first_name} [<code>${user.id}</code>]\n`;
+        text += `• ${chat.title} [<code>${chat.id}</code>]\n`;
         text += `#id${user.id}`;
     } else if (type === 'SUCCESS') {
-        text = `${t('welcome.logs.verification_solved')}\n`;
-        text += `• Di: ${user.first_name} [${user.id}]\n`;
-        text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
-        text += `• ID Gruppo: ${chat.id}\n`;
-        text += `#id${user.id}`;
-    } else if (type === 'FAIL') {
-        text = `${t('welcome.logs.verification_failed')}\n`;
-        text += `• Di: ${user.first_name} [${user.id}]\n`;
-        text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
-        text += `• ID Gruppo: ${chat.id}\n`;
-        text += `• Motivo: Errore captcha\n`;
+        text = `✅ <b>${t('welcome.logs.verification_solved')}</b>\n`;
+        text += `• ${user.first_name} [<code>${user.id}</code>]\n`;
+        text += `• ${chat.title} [<code>${chat.id}</code>]\n`;
         text += `#id${user.id}`;
     } else if (type === 'TIMEOUT') {
-        text = `${t('welcome.logs.verification_expired')}\n`;
-        text += `• Di: ${user.first_name} [${user.id}]\n`;
-        text += `• Gruppo: ${chat.title} [${chat.id}]\n`;
-        text += `• ID Gruppo: ${chat.id}\n`;
-        text += `• Motivo: Timeout di ${details} minuti\n`;
+        text = `⏰ <b>${t('welcome.logs.verification_expired')}</b>\n`;
+        text += `• ${user.first_name} [<code>${user.id}</code>]\n`;
+        text += `• ${chat.title} [<code>${chat.id}</code>]\n`;
+        text += `• Timeout: ${details.timeout || '?'} min\n`;
         text += `#id${user.id}`;
     }
 
     try {
-        await ctx.api.sendMessage(logChannelId, text);
+        await ctx.api.sendMessage(logChannelId, text, { parse_mode: 'HTML' });
     } catch (e) {
         logger.error(`[Welcome] Failed to send log: ${e.message}`);
     }
@@ -387,7 +397,7 @@ async function processUserJoin(ctx, user, config) {
             try {
                 await ctx.banChatMember(user.id);
                 await ctx.unbanChatMember(user.id);
-                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => {});
+                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
             } catch (e) {
                 logger.error(`[Welcome] Kick failed: ${e.message}`);
             }
@@ -484,7 +494,7 @@ async function handleCaptchaCallback(ctx) {
                 });
             } catch (e) {
                 // If edit fails, try sending new
-                await ctx.deleteMessage().catch(() => {});
+                await ctx.deleteMessage().catch(() => { });
                 await ctx.reply(text, {
                     parse_mode: 'HTML',
                     reply_markup: {
@@ -548,7 +558,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
                 sentMessageId = edited.message_id;
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
-                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -569,7 +579,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
         // Auto-delete (timer is in minutes)
         if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
             setTimeout(() => {
-                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
             }, config.welcome_autodelete_timer * 60000); // minutes to ms
         }
     } catch (e) {

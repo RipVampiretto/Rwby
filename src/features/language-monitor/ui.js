@@ -17,7 +17,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         } else if (typeof config.allowed_languages === 'string') {
             try {
                 allowed = JSON.parse(config.allowed_languages);
-            } catch (e) {}
+            } catch (e) { }
         }
     }
     if (allowed.length === 0) allowed = ['it', 'en'];
@@ -25,53 +25,61 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     let text =
         `${t('language.title')}\n\n` +
         `${t('language.description')}\n\n` +
-        `${t('language.status')}: ${enabled}\n` +
-        `${t('language.action')}: ${action}\n` +
-        `${t('language.allowed')}: ${allowed.join(', ').toUpperCase()}`;
+        `${t('language.status')}: ${enabled}`;
 
-    if (!config.staff_group_id && (config.lang_action || 'delete') === 'report_only') {
-        text += `\n${t('common.warnings.no_staff_group')}\n`;
-    }
+    // Show details only when enabled
+    if (config.lang_enabled) {
+        text += `\n${t('language.action')}: ${action}`;
+        text += `\n${t('language.allowed')}: ${allowed.join(', ').toUpperCase()}`;
 
-    // Language toggles
-    const common = ['it', 'en', 'ru', 'es', 'fr', 'de'];
-    const langButtons = common.map(l => {
-        const isAllowed = allowed.includes(l);
-        return { text: `${isAllowed ? '✅' : '⬜'} ${l.toUpperCase()}`, callback_data: `lng_set:${l}` };
-    });
-    const langRows = [];
-    for (let i = 0; i < langButtons.length; i += 3) {
-        langRows.push(langButtons.slice(i, i + 3));
-    }
-
-    // Parse log events
-    let logEvents = {};
-    if (config.log_events) {
-        if (typeof config.log_events === 'string') {
-            try {
-                logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
-        } else if (typeof config.log_events === 'object') {
-            logEvents = config.log_events;
+        if (!config.staff_group_id && (config.lang_action || 'delete') === 'report_only') {
+            text += `\n${t('common.warnings.no_staff_group')}`;
         }
     }
-    const logDel = logEvents['lang_delete'] ? '✅' : '❌';
-    const logRep = logEvents['lang_report'] ? '✅' : '❌';
 
-    // Always show Back button (only accessible from settings)
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: `${t('language.buttons.filter')}: ${enabled}`, callback_data: 'lng_toggle' }],
-            ...langRows,
-            [{ text: `${t('language.buttons.action')}: ${action}`, callback_data: 'lng_act' }],
-            // Log toggles (only delete and report, no ban)
-            [
-                { text: `Log 🗑️${logDel}`, callback_data: 'lng_log_delete' },
-                { text: `Log 📢${logRep}`, callback_data: 'lng_log_report' }
-            ],
-            [{ text: t('common.back'), callback_data: 'settings_main' }]
-        ]
-    };
+    // Build keyboard dynamically
+    const rows = [];
+    rows.push([{ text: `${t('language.buttons.filter')}: ${enabled}`, callback_data: 'lng_toggle' }]);
+
+    // Show options only when enabled
+    if (config.lang_enabled) {
+        // Language toggles
+        const common = ['it', 'en', 'ru', 'es', 'fr', 'de'];
+        const langButtons = common.map(l => {
+            const isAllowed = allowed.includes(l);
+            return { text: `${isAllowed ? '✅' : '⬜'} ${l.toUpperCase()}`, callback_data: `lng_set:${l}` };
+        });
+        for (let i = 0; i < langButtons.length; i += 3) {
+            rows.push(langButtons.slice(i, i + 3));
+        }
+
+        rows.push([{ text: `${t('language.buttons.action')}: ${action}`, callback_data: 'lng_act' }]);
+
+        // Parse log events and show single log button based on action
+        let logEvents = {};
+        if (config.log_events) {
+            if (typeof config.log_events === 'string') {
+                try {
+                    logEvents = JSON.parse(config.log_events);
+                } catch (e) { }
+            } else if (typeof config.log_events === 'object') {
+                logEvents = config.log_events;
+            }
+        }
+
+        const currentAction = config.lang_action || 'delete';
+        if (currentAction === 'report_only') {
+            const logRep = logEvents['lang_report'] ? t('common.on') : t('common.off');
+            rows.push([{ text: `📢 Log: ${logRep}`, callback_data: 'lng_log_report' }]);
+        } else {
+            const logDel = logEvents['lang_delete'] ? t('common.on') : t('common.off');
+            rows.push([{ text: `🗑️ Log: ${logDel}`, callback_data: 'lng_log_delete' }]);
+        }
+    }
+
+    rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
+
+    const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
         await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'language-monitor');
