@@ -282,12 +282,32 @@ async function sendGlobalLog(bot, db, event) {
             } catch (e) { }
         }
 
-        const text =
-            `📋 <b>GLOBAL LOG: ${event.eventType}</b>\n` +
-            `🏛️ Guild: <code>${event.guildId}</code>\n` +
-            `👤 Executor: ${event.executor} | Target: ${event.target}\n` +
-            `📝 Reason: ${event.reason}\n` +
-            `ℹ️ Details: ${event.details || 'N/A'}`;
+        // Build message based on event type
+        let text = '';
+
+        if (event.eventType === 'user_join') {
+            text = `📥 <b>Nuovo Membro</b>\n\n` +
+                `👤 ${event.target}\n` +
+                `🏠 ${event.details}`;
+        } else if (event.eventType === 'user_leave') {
+            text = `📤 <b>Membro Uscito</b>\n\n` +
+                `👤 ${event.target}\n` +
+                `🏠 ${event.details}`;
+        } else if (event.eventType === 'bot_join') {
+            text = `🤖 <b>Bot Aggiunto</b>\n\n` +
+                `🏠 ${event.details}\n` +
+                `🆔 <code>${event.guildId}</code>`;
+        } else if (event.eventType === 'bot_leave') {
+            text = `👋 <b>Bot Rimosso</b>\n\n` +
+                `🏠 ${event.details}\n` +
+                `🆔 <code>${event.guildId}</code>`;
+        } else {
+            // Generic format for other events
+            text = `📋 <b>${event.eventType.toUpperCase()}</b>\n\n` +
+                `👤 ${event.target}\n` +
+                `🏠 ${event.details || 'N/A'}\n` +
+                `📝 ${event.reason}`;
+        }
 
         try {
             await bot.api.sendMessage(globalConfig.parliament_group_id, text, {
