@@ -76,8 +76,8 @@ function adminOnlyCallbacks() {
         // Check if user is admin
         const isAdmin = await isAdminCached(ctx);
 
-        // Check whitelist first
-        const allowedPrefixes = ['vote_', 'wc:'];
+        // Check whitelist first (public voting callbacks)
+        const allowedPrefixes = ['vote_', 'vb_confirm:', 'wc:'];
         if (allowedPrefixes.some(p => ctx.callbackQuery.data && ctx.callbackQuery.data.startsWith(p))) {
             return next();
         }

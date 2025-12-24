@@ -56,7 +56,11 @@ function registerCommands(bot, db) {
         // Must reply to a message
         if (!ctx.message.reply_to_message) {
             const lang = await i18n.getLanguage(ctx.chat.id);
-            return ctx.reply(i18n.t(lang, 'voteban.errors.reply_required'));
+            const notifyMsg = await ctx.reply(i18n.t(lang, 'report.errors.reply_required'));
+            setTimeout(async () => {
+                try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
+            }, 60000);
+            return;
         }
 
         const targetMsg = ctx.message.reply_to_message;
@@ -77,32 +81,39 @@ function registerCommands(bot, db) {
         const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
         if (existing) {
             const lang = await i18n.getLanguage(ctx.chat.id);
-            return ctx.reply(i18n.t(lang, 'voteban.errors.already_active'), {
+            return ctx.reply(i18n.t(lang, 'report.errors.already_active'), {
                 reply_to_message_id: existing.poll_message_id
             });
         }
 
         const lang = await i18n.getLanguage(ctx.chat.id);
-        const reason = text.replace(/^[@!./]admin\s*/i, '').trim() || i18n.t(lang, 'voteban.no_reason');
+        const reason = text.replace(/^[@!./]admin\s*/i, '').trim() || i18n.t(lang, 'report.no_reason');
 
+        // Show confirmation prompt for VoteBan/Delete
+        logger.info(`[report] Showing confirmation for ${target.id}`);
+        const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
+        setupConfirmationTimeout(ctx, target, confirmMsg, reason);
+
+        /*
+        // ========== AI ANALYSIS (DISABLED) ==========
         // Check report mode
         const reportMode = config.report_mode || 'ai_voteban';
 
         // -- MODE: voteban_only (skip AI) --
         if (reportMode === 'voteban_only') {
-            logger.info(`[smart-report] VoteBan only mode - showing confirmation`);
+            logger.info(\`[smart-report] VoteBan only mode - showing confirmation\`);
             const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
             setupConfirmationTimeout(ctx, target, confirmMsg, reason);
             return;
         }
 
         // -- AI ANALYSIS (ai_only or ai_voteban) --
-        logger.info(`[smart-report] Analyzing report with AI...`);
+        logger.info(\`[smart-report] Analyzing report with AI...\`);
         const analysisResult = await smartReport.analyzeTarget(ctx, config);
 
         if (analysisResult.isViolation) {
             // AI found a violation - execute action based on category
-            logger.info(`[smart-report] Violation: ${analysisResult.category}`);
+            logger.info(\`[smart-report] Violation: \${analysisResult.category}\`);
 
             const action = analysisResult.action || 'report_only';
             const t = (key, params) => i18n.t(lang, key, params);
@@ -111,7 +122,7 @@ function registerCommands(bot, db) {
                 await safeDelete({ message: targetMsg, api: ctx.api, chat: ctx.chat }, 'smart-report');
 
                 // Warning message (auto-delete 1 min)
-                const userName = target.username ? `@${target.username}` : target.first_name;
+                const userName = target.username ? \`@\${target.username}\` : target.first_name;
                 const notifyMsg = await ctx.reply(
                     t('smart_report.action_delete', { category: analysisResult.category, user: userName }),
                     { parse_mode: 'Markdown' }
@@ -134,13 +145,13 @@ function registerCommands(bot, db) {
                         user: target,
                         guildName: ctx.chat.title,
                         guildId: ctx.chat.id,
-                        reason: `[${analysisResult.category}] ${analysisResult.reason}`,
+                        reason: \`[\${analysisResult.category}] \${analysisResult.reason}\`,
                         evidence: targetMsg.text || targetMsg.caption || '[Media]'
                     });
                 }
 
                 // Warning message
-                const userName = target.username ? `@${target.username}` : target.first_name;
+                const userName = target.username ? \`@\${target.username}\` : target.first_name;
                 const notifyMsg = await ctx.reply(
                     t('smart_report.action_ban', { category: analysisResult.category, user: userName }),
                     { parse_mode: 'Markdown' }
@@ -158,7 +169,7 @@ function registerCommands(bot, db) {
                     guildId: ctx.chat.id,
                     source: 'Smart-Report',
                     user: target,
-                    reason: `[AI: ${analysisResult.category}] ${analysisResult.reason}`,
+                    reason: \`[AI: \${analysisResult.category}] \${analysisResult.reason}\`,
                     messageId: targetMsg.message_id,
                     content: targetMsg.text || targetMsg.caption || '[Media]'
                 });
@@ -173,7 +184,7 @@ function registerCommands(bot, db) {
         }
 
         // AI says SAFE
-        logger.info(`[smart-report] AI says safe.`);
+        logger.info(\`[smart-report] AI says safe.\`);
 
         // -- MODE: ai_only (no voteban fallback) --
         if (reportMode === 'ai_only') {
@@ -182,7 +193,7 @@ function registerCommands(bot, db) {
                 guildId: ctx.chat.id,
                 source: 'Smart-Report',
                 user: target,
-                reason: `[Manual Review] ${reason}`,
+                reason: \`[Manual Review] \${reason}\`,
                 messageId: targetMsg.message_id,
                 content: targetMsg.text || targetMsg.caption || '[Media]'
             });
@@ -196,9 +207,11 @@ function registerCommands(bot, db) {
         }
 
         // -- MODE: ai_voteban (fallback to VoteBan) --
-        logger.info(`[smart-report] AI says safe - showing VoteBan confirmation`);
+        logger.info(\`[smart-report] AI says safe - showing VoteBan confirmation\`);
         const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
         setupConfirmationTimeout(ctx, target, confirmMsg, reason);
+        // ========== END AI ANALYSIS (DISABLED) ==========
+        */
     });
 
     // Callback handlers
@@ -216,7 +229,7 @@ function registerCommands(bot, db) {
             // Only initiator can confirm
             if (ctx.from.id !== initiatorId) {
                 const lang = await i18n.getLanguage(ctx.chat.id);
-                return ctx.answerCallbackQuery(i18n.t(lang, 'voteban.errors.not_initiator'));
+                return ctx.answerCallbackQuery(i18n.t(lang, 'report.errors.not_initiator'));
             }
 
             const key = `${ctx.chat.id}:${targetId}`;
@@ -304,18 +317,12 @@ function registerCommands(bot, db) {
                 const idx = durations.indexOf(val);
                 const nextVal = durations[(idx + 1) % durations.length];
                 await db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: nextVal });
-            } else if (data.startsWith('vb_cat_')) {
-                const cat = data.replace('vb_cat_', '');
-                const key = `report_action_${cat}`;
-                const current = config[key] || 'report_only';
-                const actions = ['report_only', 'delete', 'ban'];
-                const idx = actions.indexOf(current);
-                const nextVal = actions[(idx + 1) % actions.length];
-                await db.updateGuildConfig(ctx.chat.id, { [key]: nextVal });
             } else if (data === 'vb_mode') {
-                const val = config.report_mode || 'ai_voteban';
-                const modes = ['ai_only', 'voteban_only', 'ai_voteban'];
-                const idx = modes.indexOf(val);
+                // Simple toggle between vote and report
+                const val = config.report_mode || 'vote';
+                const modes = ['vote', 'report'];
+                let idx = modes.indexOf(val);
+                if (idx === -1) idx = 0; // Handle legacy AI mode values
                 const nextVal = modes[(idx + 1) % modes.length];
                 await db.updateGuildConfig(ctx.chat.id, { report_mode: nextVal });
             } else if (data === 'vb_log_ban' || data === 'vb_log_delete') {
@@ -330,25 +337,12 @@ function registerCommands(bot, db) {
                 }
                 logEvents[logType] = !logEvents[logType];
                 await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
-            } else if (data === 'vb_categories') {
-                await ui.sendCategoryActionsUI(ctx, db, true);
-                return;
-            } else if (data === 'vb_back_main') {
-                await ui.sendConfigUI(ctx, db, true);
-                return;
             }
-
-            // Update config UI for category changes
-            if (data.startsWith('vb_cat_')) {
-                await ui.sendCategoryActionsUI(ctx, db, true);
-                return;
-            }
+            // Category handlers removed (AI related)
 
             await ui.sendConfigUI(ctx, db, true);
             return;
         }
-
-        // Vote handlers
         if (data.startsWith('vote_')) {
             const parts = data.split('_');
             const voteType = parts[1]; // 'yes' or 'no'
@@ -382,7 +376,13 @@ function registerCommands(bot, db) {
             if (yesVotes >= vote.required_votes) {
                 await logic.updateVote(db, voteId, { status: 'completed' });
 
-                const actionType = vote.action_type || 'ban';
+                // Extract action type from reason (saved as [DELETE] or [BAN] prefix)
+                let actionType = 'ban'; // default
+                if (vote.reason && vote.reason.startsWith('[DELETE]')) {
+                    actionType = 'delete';
+                } else if (vote.reason && vote.reason.startsWith('[BAN]')) {
+                    actionType = 'ban';
+                }
                 const targetId = vote.target_user_id;
 
                 if (actionType === 'ban') {
@@ -399,6 +399,16 @@ function registerCommands(bot, db) {
                             votes: `${yesVotes}/${vote.required_votes}`
                         });
                     }
+                } else if (actionType === 'delete') {
+                    // Delete the message the vote is replying to
+                    const voteMsg = ctx.callbackQuery.message;
+                    if (voteMsg && voteMsg.reply_to_message) {
+                        try {
+                            await ctx.api.deleteMessage(ctx.chat.id, voteMsg.reply_to_message.message_id);
+                        } catch (e) {
+                            logger.debug(`[vote-ban] Could not delete target message: ${e.message}`);
+                        }
+                    }
                 }
 
                 // Log
@@ -407,8 +417,8 @@ function registerCommands(bot, db) {
                 const lang = await i18n.getLanguage(ctx.chat.id);
                 const t = (key, params) => i18n.t(lang, key, params);
                 const resultText = actionType === 'ban'
-                    ? t('voteban.result.banned', { user: vote.target_username, yes: yesVotes, no: noVotes })
-                    : t('voteban.result.deleted', { user: vote.target_username, yes: yesVotes, no: noVotes });
+                    ? t('report.result.banned', { user: vote.target_username, yes: yesVotes, no: noVotes })
+                    : t('report.result.deleted', { user: vote.target_username, yes: yesVotes, no: noVotes });
 
                 await ctx.editMessageText(resultText, { parse_mode: 'Markdown' });
             } else if (noVotes > vote.required_votes / 2) {
@@ -416,14 +426,20 @@ function registerCommands(bot, db) {
                 await logic.updateVote(db, voteId, { status: 'rejected' });
 
                 const lang = await i18n.getLanguage(ctx.chat.id);
-                await ctx.editMessageText(i18n.t(lang, 'voteban.result.saved', { user: vote.target_username }), { parse_mode: 'Markdown' });
+                await ctx.editMessageText(i18n.t(lang, 'report.result.saved', { user: vote.target_username }), { parse_mode: 'Markdown' });
             } else {
-                // Update vote message
+                // Extract actionType from reason
+                let updateActionType = 'ban';
+                if (vote.reason && vote.reason.startsWith('[DELETE]')) {
+                    updateActionType = 'delete';
+                } else if (vote.reason && vote.reason.startsWith('[BAN]')) {
+                    updateActionType = 'ban';
+                }
                 const { text, keyboard } = await ui.getVoteMessage(
                     ctx.chat.id,
                     { id: vote.target_user_id, username: vote.target_username },
                     null,
-                    vote.action_type || 'ban',
+                    updateActionType,
                     yesVotes, noVotes, vote.required_votes,
                     vote.expires_at,
                     voteId

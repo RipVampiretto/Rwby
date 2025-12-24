@@ -47,12 +47,12 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const dur = config.voteban_duration_minutes || 30;
     const durDisplay = dur === 0 ? '♾️' : `${dur} min`;
 
-    const reportMode = config.report_mode || 'ai_voteban';
+    // Simple modes: vote or report
+    const reportMode = config.report_mode || 'vote';
     const modeDisplay = {
-        'ai_only': t('report.modes.ai_only'),
-        'voteban_only': t('report.modes.voteban_only'),
-        'ai_voteban': t('report.modes.ai_voteban')
-    }[reportMode] || t('report.modes.ai_voteban');
+        'vote': t('report.modes.vote'),
+        'report': t('report.modes.report')
+    }[reportMode] || t('report.modes.vote');
 
     let text =
         `${t('report.title')}\n\n` +
@@ -60,16 +60,15 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         `ℹ️ **${t('report.how_to_use')}:**\n` +
         `${t('report.usage_info')}\n\n` +
         `📊 **${t('report.modes_title')}:**\n` +
-        `• **${t('report.modes.ai_only')}** - ${t('report.modes.ai_only_desc')}\n` +
-        `• **${t('report.modes.voteban_only')}** - ${t('report.modes.voteban_only_desc')}\n` +
-        `• **${t('report.modes.ai_voteban')}** - ${t('report.modes.ai_voteban_desc')}\n\n` +
+        `• **${t('report.modes.vote')}** - ${t('report.modes.vote_desc')}\n` +
+        `• **${t('report.modes.report')}** - ${t('report.modes.report_desc')}\n\n` +
         `**${t('report.settings_section')}**\n` +
         `${t('report.status')}: ${enabled}\n` +
         `${t('report.report_mode')}: ${modeDisplay}\n` +
         `${t('report.votes_required')}: ${thr}\n` +
         `${t('report.timer')}: ${durDisplay}`;
 
-    if (!config.staff_group_id) {
+    if (reportMode === 'report' && !config.staff_group_id) {
         text += `\n\n${t('common.warnings.no_staff_group')}`;
     }
 
@@ -91,7 +90,6 @@ async function sendConfigUI(ctx, db, isEdit = false) {
             [{ text: `${t('report.buttons.report_mode')}: ${modeDisplay}`, callback_data: 'vb_mode' }],
             [{ text: `${t('report.buttons.threshold')}: ${thr}`, callback_data: 'vb_thr' }],
             [{ text: `${t('report.buttons.duration')}: ${durDisplay}`, callback_data: 'vb_dur' }],
-            [{ text: `⚙️ ${t('report.buttons.category_actions')}`, callback_data: 'vb_categories' }],
             [
                 { text: `Log 🗑️${logDel}`, callback_data: 'vb_log_delete' },
                 { text: `Log 🚷${logBan}`, callback_data: 'vb_log_ban' }
@@ -107,9 +105,8 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     }
 }
 
-/**
- * Category Actions Submenu
- */
+/*
+// ========== CATEGORY ACTIONS (DISABLED - AI RELATED) ==========
 async function sendCategoryActionsUI(ctx, db, isEdit = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
@@ -143,6 +140,8 @@ async function sendCategoryActionsUI(ctx, db, isEdit = false) {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
     }
 }
+// ========== END CATEGORY ACTIONS ==========
+*/
 
 /**
  * Confirmation prompt (2-minute timeout)
@@ -175,7 +174,7 @@ async function sendConfirmationPrompt(ctx, targetUser, targetMsgId) {
 module.exports = {
     getVoteMessage,
     sendConfigUI,
-    sendCategoryActionsUI,
+    // sendCategoryActionsUI, // DISABLED - AI RELATED
     sendConfirmationPrompt,
     getActionDisplay
 };

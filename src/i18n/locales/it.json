@@ -86,12 +86,10 @@
         "report_mode": "Modalità",
         "modes_title": "Modalità disponibili",
         "modes": {
-            "voteban_only": "Solo Voto",
-            "voteban_only_desc": "La community vota direttamente senza analisi AI",
-            "ai_only": "Solo AI",
-            "ai_only_desc": "L'AI analizza, se non trova nulla invia allo staff",
-            "ai_voteban": "AI + Voto",
-            "ai_voteban_desc": "L'AI analizza, se non trova nulla la community vota"
+            "vote": "⚖️ Voto",
+            "vote_desc": "La community vota per decidere se eliminare o bannare",
+            "report": "📩 Segnala",
+            "report_desc": "Invia la segnalazione allo staff per revisione manuale"
         },
         "vote_message": {
             "title": "⚖️ **VOTAZIONE IN CORSO**",
