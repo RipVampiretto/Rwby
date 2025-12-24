@@ -76,6 +76,11 @@
             "subtitle": "Choose one of the settings you want to change.",
             "close": "❌ Close"
         },
+        "headers": {
+            "management": "━━━ MANAGEMENT ━━━",
+            "filters": "━━━ FILTERS ━━━",
+            "global": "━━━ GLOBAL ━━━"
+        },
         "buttons": {
             "welcome": "🚪 Welcome & Captcha",
             "casban": "🚫 Global Blacklist",

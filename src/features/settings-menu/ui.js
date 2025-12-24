@@ -14,38 +14,40 @@ async function sendMainMenu(ctx, isEdit = false) {
     const text = `${t('settings.main.title')}\n\n${t('settings.main.subtitle')}`;
 
     // Layout: Organized by category for better UX
+    // Layout: Organized by category for better UX
     const keyboard = {
         inline_keyboard: [
-            // ━━━ PROTEZIONE GLOBALE (intel condiviso) ━━━
+            // ━━━ GESTIONE ━━━
+            [{ text: `${t('settings.headers.management')}`, callback_data: 'settings_main' }],
+            [
+                { text: `${t('settings.buttons.welcome')}`, callback_data: 'set_goto:welcome' },
+                { text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' }
+            ],
+            [{ text: `${t('settings.buttons.voteban')}`, callback_data: 'set_goto:voteban' }],
+
+            // ━━━ FILTRI ━━━
+            [{ text: `${t('settings.headers.filters')}`, callback_data: 'settings_main' }],
+            [
+                { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' },
+                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' }
+            ],
+            [{ text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' }],
+
+            // ━━━ GLOBALE ━━━
+            [{ text: `${t('settings.headers.global')}`, callback_data: 'settings_main' }],
             [
                 { text: `${t('settings.buttons.casban')}`, callback_data: 'set_goto:casban' },
                 { text: `${t('settings.buttons.links')}`, callback_data: 'set_goto:links' }
             ],
-            [{ text: `${t('settings.buttons.badwords')}`, callback_data: 'set_goto:badwords' }],
-
-            // ━━━ PROTEZIONE AI ━━━
             [
-                { text: `${t('settings.buttons.nsfw')}`, callback_data: 'set_goto:nsfw' },
+                { text: `${t('settings.buttons.badwords')}`, callback_data: 'set_goto:badwords' },
                 { text: `${t('settings.buttons.modals')}`, callback_data: 'set_goto:modals' }
             ],
 
-            // ━━━ FILTRI LOCALI ━━━
-            [
-                { text: `${t('settings.buttons.lang')}`, callback_data: 'set_goto:lang' },
-                { text: `${t('settings.buttons.antiedit')}`, callback_data: 'set_goto:antiedit' }
-            ],
+            // Bot Language
+            [{ text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }],
 
-            // ━━━ INGRESSO & MODERAZIONE ━━━
-            [
-                { text: `${t('settings.buttons.welcome')}`, callback_data: 'set_goto:welcome' },
-                { text: `${t('settings.buttons.voteban')}`, callback_data: 'set_goto:voteban' }
-            ],
-
-            // ━━━ ADMIN ━━━
-            [
-                { text: `${t('settings.buttons.staff')}`, callback_data: 'set_goto:staff' },
-                { text: `${t('settings.buttons.ui_language')}`, callback_data: 'set_goto:ui_lang' }
-            ],
+            // Close
             [{ text: `${t('settings.main.close')}`, callback_data: 'settings_close' }]
         ]
     };
@@ -53,7 +55,7 @@ async function sendMainMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
@@ -87,7 +89,7 @@ async function sendLanguageUI(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 module.exports = {

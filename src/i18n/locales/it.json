@@ -76,6 +76,11 @@
             "subtitle": "Scegli una delle impostazioni che vuoi modificare.",
             "close": "❌ Chiudi"
         },
+        "headers": {
+            "management": "━━━ GESTIONE ━━━",
+            "filters": "━━━ FILTRI ━━━",
+            "global": "━━━ GLOBALE ━━━"
+        },
         "buttons": {
             "welcome": "🚪 Benvenuto & Captcha",
             "casban": "🚫 Blacklist Globale",
