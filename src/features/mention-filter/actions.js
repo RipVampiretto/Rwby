@@ -86,7 +86,7 @@ async function executeAction(ctx, config, verdict) {
                     inline_keyboard: [
                         [
                             { text: t('mention.staff_alert.btn_delete'), callback_data: `mnt_staff_del:${ctx.chat.id}:${ctx.message.message_id}` },
-                            { text: t('mention.staff_alert.btn_ignore'), callback_data: 'mnt_staff_ignore' }
+                            { text: t('mention.staff_alert.btn_ignore'), callback_data: `mnt_staff_ignore:${ctx.chat.id}` }
                         ]
                     ]
                 }
@@ -99,9 +99,11 @@ async function executeAction(ctx, config, verdict) {
 
     // Log to group's log channel if enabled
     if (config.mention_filter_notify && actionLog.getLogEvent()) {
+        const eventType = action === 'delete' ? 'mention_delete' : 'mention_scam';
+
         actionLog.getLogEvent()({
             guildId: ctx.chat.id,
-            eventType: 'mention_scam',
+            eventType: eventType,
             targetUser: user,
             reason: reasonText,
             extra: {

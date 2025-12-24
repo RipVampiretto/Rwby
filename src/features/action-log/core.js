@@ -14,6 +14,7 @@ async function logEvent(params) {
     if (!db || !_botInstance) return;
 
     const { guildId, guildName, eventType, targetUser, executorModule, reason, messageLink } = params;
+    logger.info(`[action-log] Processing event ${eventType} for guild ${guildId}`);
 
     const config = await db.getGuildConfig(guildId);
     if (!config) return;
@@ -30,6 +31,7 @@ async function logEvent(params) {
                 parsed.forEach(t => {
                     logEvents[`${t}_delete`] = true;
                     logEvents[`${t}_ban`] = true;
+                    logEvents[`${t}_scam`] = true;
                 });
             } else {
                 logEvents = parsed;
@@ -37,7 +39,10 @@ async function logEvent(params) {
         } catch (e) { }
     }
 
-    if (!logEvents[eventType]) return;
+    if (!logEvents[eventType]) {
+        logger.info(`[action-log] Event ${eventType} blocked by config. Config keys: ${Object.keys(logEvents).join(', ')}`);
+        return;
+    }
 
     const moduleName = executorModule || MODULE_MAP[eventType] || 'System';
     const emoji = EMOJI_MAP[eventType] || 'ℹ️';

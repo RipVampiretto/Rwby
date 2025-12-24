@@ -89,6 +89,12 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
                 { text: has('staff_delete'), callback_data: 'log_t:staff_delete' },
                 { text: has('staff_ban'), callback_data: 'log_t:staff_ban' }
             ],
+            // Mentions
+            [
+                { text: '👤 Mentions', callback_data: 'log_noop' },
+                { text: has('mention_delete'), callback_data: 'log_t:mention_delete' },
+                { text: has('mention_scam'), callback_data: 'log_t:mention_scam' }
+            ],
             [closeBtn]
         ]
     };
