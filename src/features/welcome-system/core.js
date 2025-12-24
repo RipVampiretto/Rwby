@@ -554,18 +554,23 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
 
     let sentMessageId;
 
+    logger.debug(`[Welcome] sendWelcome called. messageToEditId: ${messageToEditId}`);
+
     try {
         if (messageToEditId) {
             try {
                 // Try to edit existing message
+                logger.debug(`[Welcome] Attempting to edit message ${messageToEditId}`);
                 const edited = await ctx.api.editMessageText(ctx.chat.id, messageToEditId, finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
                     link_preview_options: { is_disabled: true }
                 });
                 sentMessageId = edited.message_id;
+                logger.debug(`[Welcome] Message edited successfully`);
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
+                logger.debug(`[Welcome] Edit failed: ${e.message}. Deleting and sending new.`);
                 await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
@@ -576,6 +581,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
             }
         } else {
             // Send new message
+            logger.debug(`[Welcome] No messageToEditId, sending new message`);
             const sent = await ctx.reply(finalText, {
                 parse_mode: 'HTML',
                 reply_markup: markup,
