@@ -143,7 +143,7 @@ async function executeAlbumAction(violations, config) {
 
     const firstCtx = violations[0].ctx;
     const user = firstCtx.from;
-    const action = config.nsfw_action || 'delete';
+    const action = config.media_action || 'delete';
 
     // Parse log events from config
     const db = require('../../database');

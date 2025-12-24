@@ -32,7 +32,7 @@ async function handleCasBan(ctx) {
             const config = await db.getGuildConfig(ctx.chat.id);
 
             // Queue notification if enabled
-            if (config.casban_notify && config.log_channel_id) {
+            if (config.blacklist_notify && config.log_channel_id) {
                 queueBanNotification(config.log_channel_id, user, ctx.chat, 'CAS Ban');
             }
 
@@ -158,7 +158,7 @@ async function processNewCasBans(newUsers) {
     logger.info(`[global-blacklist] Processing ${newUsers.length} new CAS bans...`);
 
     // Get all guilds for global ban (async PostgreSQL)
-    const guilds = await db.queryAll('SELECT guild_id FROM guild_config WHERE casban_enabled = true');
+    const guilds = await db.queryAll('SELECT guild_id FROM guild_config WHERE blacklist_enabled = true');
     let globalBanCount = 0;
     let failedBans = 0;
 
@@ -177,7 +177,7 @@ async function processNewCasBans(newUsers) {
                 globalBanCount++;
 
                 // Queue notification if enabled
-                if (config.casban_notify && config.log_channel_id) {
+                if (config.blacklist_notify && config.log_channel_id) {
                     // Create fake user object for notification
                     const fakeUser = { id: user.user_id, first_name: `User ${user.user_id}` };
                     queueBanNotification(

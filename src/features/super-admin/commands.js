@@ -40,7 +40,6 @@ function registerCommands(bot, db) {
                 '✅ **Parliament Group Configurato**\n\n' +
                 'Creati i topic per:\n' +
                 '- Bans (Ban globali)\n' +
-                '- Bills (Proposte)\n' +
                 '- Logs (Sistema)\n' +
                 '- Join Logs (Ingressi)\n' +
                 '- Add Group (Nuovi gruppi)\n' +
@@ -228,14 +227,14 @@ function registerCommands(bot, db) {
         const category = args[2];
 
         if (!action || action === 'list') {
-            const modals = await modalPatterns.listModals(lang || null);
+            const modals = await spamPatterns.listModals(lang || null);
             if (modals.length === 0) return ctx.reply('📋 Nessun modal.');
             return ctx.reply(`📋 Trovati ${modals.length} modals (vedi logs o usa dettagli)`);
         }
 
         if (action === 'add') {
             const modalAction = args[3] || 'report_only';
-            await modalPatterns.upsertModal(
+            await spamPatterns.upsertModal(
                 lang.toLowerCase(),
                 category.toLowerCase(),
                 [],
@@ -248,7 +247,7 @@ function registerCommands(bot, db) {
 
         if (action === 'addpattern') {
             const pattern = args.slice(3).join(' ');
-            await modalPatterns.addPatternsToModal(lang.toLowerCase(), category.toLowerCase(), [pattern]);
+            await spamPatterns.addPatternsToModal(lang.toLowerCase(), category.toLowerCase(), [pattern]);
             return ctx.reply('✅ Pattern aggiunto.');
         }
     });

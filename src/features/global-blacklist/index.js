@@ -36,7 +36,7 @@ function register(bot) {
 
         // Check if enabled for this guild
         const config = await db.getGuildConfig(ctx.chat.id);
-        if (!config.casban_enabled) return next();
+        if (!config.blacklist_enabled) return next();
 
         // Check if user is CAS banned
         const isBanned = await detection.isCasBanned(ctx.from.id);
@@ -76,8 +76,8 @@ function register(bot) {
         }
 
         if (data === 'cas_toggle') {
-            const newState = !config.casban_enabled;
-            await db.updateGuildConfig(ctx.chat.id, { casban_enabled: newState ? 1 : 0 });
+            const newState = !config.blacklist_enabled;
+            await db.updateGuildConfig(ctx.chat.id, { blacklist_enabled: newState ? 1 : 0 });
 
             // Update UI immediately
             await ui.sendConfigUI(ctx, db, true, fromSettings);
@@ -131,8 +131,8 @@ function register(bot) {
         }
 
         if (data === 'cas_notify') {
-            const newState = !config.casban_notify;
-            await db.updateGuildConfig(ctx.chat.id, { casban_notify: newState ? 1 : 0 });
+            const newState = !config.blacklist_notify;
+            await db.updateGuildConfig(ctx.chat.id, { blacklist_notify: newState ? 1 : 0 });
             await ui.sendConfigUI(ctx, db, true, fromSettings);
             return;
         }

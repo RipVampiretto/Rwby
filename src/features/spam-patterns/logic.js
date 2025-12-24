@@ -15,7 +15,7 @@ async function refreshCache() {
     modalCacheTime = 0;
     if (db) {
         try {
-            modalCache = await db.queryAll('SELECT * FROM spam_modals WHERE enabled = TRUE');
+            modalCache = await db.queryAll('SELECT * FROM spam_patterns WHERE enabled = TRUE');
             modalCacheTime = Date.now();
         } catch (e) {
             logger.error(`[spam-patterns] Failed to load modals: ${e.message}`);
@@ -55,7 +55,7 @@ async function isModalEnabledForGuild(guildId, modalId) {
     if (!db) return true;
     try {
         const override = await db.queryOne(
-            'SELECT enabled FROM guild_modal_overrides WHERE guild_id = $1 AND modal_id = $2',
+            'SELECT enabled FROM guild_pattern_overrides WHERE guild_id = $1 AND modal_id = $2',
             [guildId, modalId]
         );
         if (!override) return true;
@@ -107,7 +107,7 @@ async function checkMessageAgainstModals(ctx, config) {
                 return {
                     modal: modal,
                     category: modal.category,
-                    action: config.modal_action || modal.action || 'report_only',
+                    action: config.spam_patterns_action || modal.action || 'report_only',
                     pattern: pattern,
                     similarity: similarity
                 };

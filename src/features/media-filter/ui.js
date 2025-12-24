@@ -14,21 +14,21 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     try {
         const config = await db.fetchGuildConfig(guildId);
-        const enabled = config.nsfw_enabled ? t('common.on') : t('common.off');
+        const enabled = config.media_enabled ? t('common.on') : t('common.off');
 
         // Only DELETE or REPORT - no BAN
-        const action = config.nsfw_action === 'report_only' ? t('common.actions.report') : t('common.actions.delete');
-        const thr = (config.nsfw_threshold || 0.7) * 100;
-        const tierBypass = config.nsfw_tier_bypass ?? 2;
+        const action = config.media_action === 'report_only' ? t('common.actions.report') : t('common.actions.delete');
+        const thr = (config.media_threshold || 0.7) * 100;
+        const tierBypass = config.media_tier_bypass ?? 2;
 
         // Toggles
-        const p = config.nsfw_check_photos ? '✅' : '❌';
-        const v = config.nsfw_check_videos ? '✅' : '❌';
-        const g = config.nsfw_check_gifs ? '✅' : '❌';
-        const s = config.nsfw_check_stickers ? '✅' : '❌';
+        const p = config.media_check_photos ? '✅' : '❌';
+        const v = config.media_check_videos ? '✅' : '❌';
+        const g = config.media_check_gifs ? '✅' : '❌';
+        const s = config.media_check_stickers ? '✅' : '❌';
 
         // Count blocked categories
-        let blockedCategories = config.nsfw_blocked_categories;
+        let blockedCategories = config.media_blocked_categories;
         if (!blockedCategories || !Array.isArray(blockedCategories)) {
             try {
                 blockedCategories =
@@ -57,13 +57,13 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         let text = `${t('media.title')}\n\n` + `${t('media.description')}\n\n` + `${t('media.status')}: ${enabled}`;
 
         // Show details only when enabled
-        if (config.nsfw_enabled) {
+        if (config.media_enabled) {
             text += `\n${t('media.action')}: ${action}`;
             text += `\n${t('media.check_types')}: 📷${p} 📹${v} 🎬${g} 🪙${s}`;
             text += `\n🚫 ${t('media.blocked_categories')}: ${blockedCount}`;
 
             // Add warning if action is report_only and no staff group
-            if (config.nsfw_action === 'report_only' && !config.staff_group_id) {
+            if (config.media_action === 'report_only' && !config.staff_group_id) {
                 text += `\n${t('common.warnings.no_staff_group')}`;
             }
         }
@@ -77,7 +77,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         rows.push([{ text: `${t('media.buttons.monitor')}: ${enabled}`, callback_data: 'nsf_toggle' }]);
 
         // Show options only when enabled
-        if (config.nsfw_enabled) {
+        if (config.media_enabled) {
             rows.push([{ text: `${t('media.buttons.action')}: ${action}`, callback_data: 'nsf_act' }]);
             rows.push([
                 { text: `📷 ${p}`, callback_data: 'nsf_tog_photo' },
@@ -119,7 +119,7 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
     const config = await db.fetchGuildConfig(guildId);
 
     // Get blocked categories
-    let blockedCategories = config.nsfw_blocked_categories;
+    let blockedCategories = config.media_blocked_categories;
     if (!blockedCategories || !Array.isArray(blockedCategories)) {
         try {
             blockedCategories =

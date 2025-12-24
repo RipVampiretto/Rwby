@@ -123,7 +123,7 @@ async function handleCallback(ctx) {
         let idx = steps.indexOf(current);
         if (idx === -1) idx = 2; // Default 5
         const next = steps[(idx + 1) % steps.length];
-        await updateGuildConfig(ctx.chat.id, { kick_timeout: next });
+        await updateGuildConfig(ctx.chat.id, { captcha_timeout: next });
         await ui.sendWelcomeMenu(ctx, true);
         return;
     }

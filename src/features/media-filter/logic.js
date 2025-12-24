@@ -370,7 +370,7 @@ async function processMedia(ctx, config) {
             logger.warn(
                 `[media-filter] 🚨 NSFW DETECTED - Chat: ${chatId}, User: ${userId}, Reason: ${reasons[0]}, TotalTime: ${totalTime}ms`
             );
-            await actions.executeAction(ctx, config.nsfw_action || 'delete', reasons[0], type);
+            await actions.executeAction(ctx, config.media_action || 'delete', reasons[0], type);
         } else {
             logger.info(
                 `[media-filter] ✅ Content is SAFE - Chat: ${chatId}, User: ${userId}, TotalTime: ${totalTime}ms`
@@ -425,7 +425,7 @@ async function checkImage(imagePath, config, reasons, caption = null, chatId = n
     );
 
     // Get blocked categories for this guild
-    let blockedCategories = config.nsfw_blocked_categories;
+    let blockedCategories = config.media_blocked_categories;
     if (!blockedCategories || !Array.isArray(blockedCategories)) {
         try {
             blockedCategories =
@@ -440,7 +440,7 @@ async function checkImage(imagePath, config, reasons, caption = null, chatId = n
         blockedCategories.push('minors');
     }
 
-    const threshold = config.nsfw_threshold || 0.7;
+    const threshold = config.media_threshold || 0.7;
     const scores = res.scores || {};
 
     // Check minors FIRST with absolute priority (lower threshold)

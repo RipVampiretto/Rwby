@@ -42,9 +42,9 @@ async function sendConfigUI(ctx, db, isEdit = false) {
 
     const config = await db.fetchGuildConfig(guildId);
 
-    const enabled = config.voteban_enabled ? t('common.on') : t('common.off');
-    const thr = config.voteban_threshold || 5;
-    const dur = config.voteban_duration_minutes || 30;
+    const enabled = config.report_enabled ? t('common.on') : t('common.off');
+    const thr = config.report_threshold || 5;
+    const dur = config.report_duration || 30;
     const durDisplay = dur === 0 ? '♾️' : `${dur} min`;
 
     // Simple modes: vote or report

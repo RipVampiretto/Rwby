@@ -15,7 +15,7 @@ function registerCommands(bot, db) {
 
         // Config check
         const config = await db.getGuildConfig(ctx.chat.id);
-        if (!config.modal_enabled) return next();
+        if (!config.spam_patterns_enabled) return next();
 
         // Check against modals
         const match = await logic.checkMessageAgainstModals(ctx, config);
@@ -34,15 +34,15 @@ function registerCommands(bot, db) {
         const config = await db.getGuildConfig(ctx.chat.id);
 
         if (data === 'mdl_toggle') {
-            await db.updateGuildConfig(ctx.chat.id, { modal_enabled: config.modal_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { spam_patterns_enabled: config.spam_patterns_enabled ? 0 : 1 });
             await ui.sendConfigUI(ctx, db, true);
         } else if (data === 'mdl_act') {
             // Only two actions: report_only and delete
             const acts = ['report_only', 'delete'];
-            let cur = config.modal_action || 'report_only';
+            let cur = config.spam_patterns_action || 'report_only';
             if (!acts.includes(cur)) cur = 'report_only';
             const nextAct = acts[(acts.indexOf(cur) + 1) % 2];
-            await db.updateGuildConfig(ctx.chat.id, { modal_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { spam_patterns_action: nextAct });
             await ui.sendConfigUI(ctx, db, true);
         } else if (data === 'mdl_list') {
             await ui.sendModalListUI(ctx, db, true);

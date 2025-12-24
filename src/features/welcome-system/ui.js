@@ -15,7 +15,7 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     const msgEnabled = config.welcome_msg_enabled === true || config.welcome_msg_enabled === 1;
     const modes = (config.captcha_mode || 'button').split(',');
     const modeDisplay = modes.length > 1 ? t('welcome.modes_active', { count: modes.length }) : modes[0];
-    const timeout = config.kick_timeout || 5;
+    const timeout = config.captcha_timeout || 5;
     const autoDelete = config.welcome_autodelete_timer || 0;
     const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
 

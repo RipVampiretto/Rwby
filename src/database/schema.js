@@ -15,7 +15,6 @@ async function createTables() {
             username TEXT,
             first_name TEXT,
             last_name TEXT,
-            is_bot BOOLEAN DEFAULT FALSE,
             language_code TEXT,
             first_seen TIMESTAMPTZ DEFAULT NOW(),
             last_seen TIMESTAMPTZ DEFAULT NOW(),
@@ -35,58 +34,60 @@ async function createTables() {
             staff_group_id BIGINT,
             staff_topics JSONB DEFAULT '{}',
             
-            -- Admin Logger
+            -- Action Log
             log_channel_id BIGINT,
-            log_events JSONB DEFAULT '{"ban":true,"delete":true}',
+            log_events JSONB DEFAULT '{}',
             
-            -- Anti-Edit Abuse
+            -- Edit Monitor
             edit_monitor_enabled BOOLEAN DEFAULT FALSE,
             edit_action TEXT DEFAULT 'delete',
             edit_grace_period INTEGER DEFAULT 0,
             
-            -- Keyword Monitor
+            -- Word Filter
             keyword_enabled BOOLEAN DEFAULT FALSE,
             keyword_sync_global BOOLEAN DEFAULT FALSE,
             
-            -- Language Monitor
+            -- Language Filter
             lang_enabled BOOLEAN DEFAULT FALSE,
             allowed_languages JSONB DEFAULT '["en"]',
             lang_action TEXT DEFAULT 'delete',
             
-            -- Link Monitor
+            -- Link Filter
             link_enabled BOOLEAN DEFAULT FALSE,
-            link_action_unknown TEXT DEFAULT 'report_only',
             link_sync_global BOOLEAN DEFAULT FALSE,
-            link_tier_bypass INTEGER DEFAULT 2,
             
-            -- NSFW Monitor (Media Analysis)
-            nsfw_enabled BOOLEAN DEFAULT FALSE,
-            nsfw_action TEXT DEFAULT 'delete',
-            nsfw_threshold REAL DEFAULT 0.7,
-            nsfw_check_photos BOOLEAN DEFAULT TRUE,
-            nsfw_check_videos BOOLEAN DEFAULT TRUE,
-            nsfw_check_gifs BOOLEAN DEFAULT TRUE,
-            nsfw_check_stickers BOOLEAN DEFAULT FALSE,
-            nsfw_frame_interval_percent INTEGER DEFAULT 5,
-            nsfw_tier_bypass INTEGER DEFAULT 2,
-            nsfw_blocked_categories JSONB DEFAULT '["real_nudity","real_sex","hentai","real_gore","drawn_gore","minors","scam_visual"]'::jsonb,
+            -- Media Filter (ex NSFW)
+            media_enabled BOOLEAN DEFAULT FALSE,
+            media_action TEXT DEFAULT 'delete',
+            media_threshold REAL DEFAULT 0.7,
+            media_check_photos BOOLEAN DEFAULT TRUE,
+            media_check_videos BOOLEAN DEFAULT TRUE,
+            media_check_gifs BOOLEAN DEFAULT TRUE,
+            media_check_stickers BOOLEAN DEFAULT FALSE,
+            media_frame_interval INTEGER DEFAULT 5,
+            media_tier_bypass INTEGER DEFAULT 2,
+            media_blocked_categories JSONB DEFAULT '["real_nudity","real_sex","hentai","real_gore","drawn_gore","minors","scam_visual"]'::jsonb,
             
-            -- Vote Ban / Report System
-            voteban_enabled BOOLEAN DEFAULT FALSE,
-            voteban_threshold INTEGER DEFAULT 5,
-            voteban_duration_minutes INTEGER DEFAULT 30,
-            voteban_initiator_tier INTEGER DEFAULT 1,
-            voteban_voter_tier INTEGER DEFAULT 0,
+            -- Report System (ex VoteBan)
+            report_enabled BOOLEAN DEFAULT FALSE,
+            report_threshold INTEGER DEFAULT 5,
+            report_duration INTEGER DEFAULT 30,
+            report_initiator_tier INTEGER DEFAULT 1,
+            report_voter_tier INTEGER DEFAULT 0,
+            report_mode TEXT DEFAULT 'vote',
+            report_action_scam TEXT DEFAULT 'report_only',
+            report_action_nsfw TEXT DEFAULT 'report_only',
+            report_action_hate TEXT DEFAULT 'report_only',
             
-            -- Modal Pattern System
-            modal_enabled BOOLEAN DEFAULT FALSE,
-            modal_action TEXT DEFAULT 'report_only',
-            modal_sync_global BOOLEAN DEFAULT FALSE,
-            modal_tier_bypass INTEGER DEFAULT 2,
+            -- Spam Patterns (ex Modal)
+            spam_patterns_enabled BOOLEAN DEFAULT FALSE,
+            spam_patterns_action TEXT DEFAULT 'report_only',
+            spam_patterns_sync_global BOOLEAN DEFAULT FALSE,
+            spam_patterns_tier_bypass INTEGER DEFAULT 2,
             
-            -- CAS Ban / Global Blacklist
-            casban_enabled BOOLEAN DEFAULT FALSE,
-            casban_notify BOOLEAN DEFAULT FALSE,
+            -- Global Blacklist (ex CAS Ban)
+            blacklist_enabled BOOLEAN DEFAULT FALSE,
+            blacklist_notify BOOLEAN DEFAULT FALSE,
             
             -- Welcome & Captcha System
             welcome_enabled BOOLEAN DEFAULT FALSE,
@@ -95,7 +96,7 @@ async function createTables() {
             welcome_buttons JSONB,
             captcha_enabled BOOLEAN DEFAULT FALSE,
             captcha_mode TEXT DEFAULT 'button',
-            kick_timeout INTEGER DEFAULT 5,
+            captcha_timeout INTEGER DEFAULT 5,
             welcome_autodelete_timer INTEGER,
             rules_enabled BOOLEAN DEFAULT FALSE,
             rules_link TEXT,
@@ -154,12 +155,11 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // WORD FILTERS - Keyword blacklist
+    // WORD FILTERS - Keyword blacklist (global only)
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS word_filters (
             id SERIAL PRIMARY KEY,
-            guild_id BIGINT DEFAULT 0,
             word TEXT NOT NULL,
             is_regex BOOLEAN DEFAULT FALSE,
             action TEXT DEFAULT 'delete',
@@ -172,12 +172,11 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // LINK RULES - Whitelist/Blacklist
+    // LINK RULES - Whitelist/Blacklist (global only)
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS link_rules (
             id SERIAL PRIMARY KEY,
-            guild_id BIGINT DEFAULT 0,
             pattern TEXT NOT NULL,
             type TEXT NOT NULL,
             action TEXT DEFAULT 'delete',
@@ -232,8 +231,7 @@ async function createTables() {
             id INTEGER PRIMARY KEY DEFAULT 1,
             parliament_group_id BIGINT,
             global_topics JSONB DEFAULT '{}',
-            global_log_channel BIGINT,
-            network_mode TEXT DEFAULT 'normal'
+            global_log_channel BIGINT
         )
     `);
 
@@ -251,27 +249,10 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // BILLS - Global proposals (SuperAdmin)
+    // SPAM PATTERNS - Pattern-based spam detection
     // ========================================================================
     await query(`
-        CREATE TABLE IF NOT EXISTS bills (
-            id SERIAL PRIMARY KEY,
-            type TEXT,
-            target TEXT,
-            source_guild BIGINT,
-            metadata JSONB DEFAULT '{}',
-            status TEXT DEFAULT 'pending',
-            voted_by JSONB DEFAULT '[]',
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            resolved_at TIMESTAMPTZ
-        )
-    `);
-
-    // ========================================================================
-    // SPAM MODALS - Pattern-based spam detection
-    // ========================================================================
-    await query(`
-        CREATE TABLE IF NOT EXISTS spam_modals (
+        CREATE TABLE IF NOT EXISTS spam_patterns (
             id SERIAL PRIMARY KEY,
             language TEXT NOT NULL,
             category TEXT NOT NULL,
@@ -287,14 +268,14 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // GUILD MODAL OVERRIDES - Per-group modal enable/disable
+    // GUILD PATTERN OVERRIDES - Per-group pattern enable/disable
     // ========================================================================
     await query(`
-        CREATE TABLE IF NOT EXISTS guild_modal_overrides (
+        CREATE TABLE IF NOT EXISTS guild_pattern_overrides (
             guild_id BIGINT NOT NULL,
-            modal_id INTEGER NOT NULL,
+            pattern_id INTEGER NOT NULL,
             enabled BOOLEAN DEFAULT TRUE,
-            PRIMARY KEY (guild_id, modal_id)
+            PRIMARY KEY (guild_id, pattern_id)
         )
     `);
 
@@ -315,8 +296,8 @@ async function createTables() {
     // ========================================================================
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_user ON user_trust_flux(user_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_guild ON user_trust_flux(guild_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_word_filters_guild ON word_filters(guild_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_link_rules_guild ON link_rules(guild_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_word_filters_word ON word_filters(word)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_link_rules_pattern ON link_rules(pattern)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_active_votes_chat ON active_votes(chat_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_message_snapshots_chat ON message_snapshots(chat_id)`);
 

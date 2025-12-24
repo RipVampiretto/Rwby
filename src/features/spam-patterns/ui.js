@@ -9,8 +9,8 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const t = (key, params) => i18n.t(lang, key, params);
 
     const config = await db.fetchGuildConfig(guildId);
-    const enabled = config.modal_enabled ? t('common.on') : t('common.off');
-    const action = i18n.formatAction(guildId, config.modal_action || 'report_only');
+    const enabled = config.spam_patterns_enabled ? t('common.on') : t('common.off');
+    const action = i18n.formatAction(guildId, config.spam_patterns_action || 'report_only');
 
     // Count active modals for this group's languages
     let allowedLangs = ['it', 'en'];
@@ -37,10 +37,10 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         `${t('modals.status')}: ${enabled}`;
 
     // Show details only when enabled
-    if (config.modal_enabled) {
+    if (config.spam_patterns_enabled) {
         text += `\n${t('modals.action')}: ${action}`;
 
-        if (!config.staff_group_id && (config.modal_action || 'report_only') === 'report_only') {
+        if (!config.staff_group_id && (config.spam_patterns_action || 'report_only') === 'report_only') {
             text += `\n${t('common.warnings.no_staff_group')}`;
         }
     }
@@ -50,7 +50,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     rows.push([{ text: `${t('modals.buttons.system')}: ${enabled}`, callback_data: 'mdl_toggle' }]);
 
     // Show options only when enabled
-    if (config.modal_enabled) {
+    if (config.spam_patterns_enabled) {
         rows.push([{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }]);
         rows.push([{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: 'mdl_list' }]);
     }

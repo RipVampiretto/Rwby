@@ -19,7 +19,7 @@ async function toggleGuildModal(guildId, modalId) {
 
         await db.query(
             `
-            INSERT INTO guild_modal_overrides (guild_id, modal_id, enabled)
+            INSERT INTO guild_pattern_overrides (guild_id, modal_id, enabled)
             VALUES ($1, $2, $3)
             ON CONFLICT(guild_id, modal_id) DO UPDATE SET enabled = $3
         `,
@@ -40,14 +40,14 @@ async function toggleGuildModal(guildId, modalId) {
 async function listModals(language = null) {
     if (!db) return [];
     if (language) {
-        return await db.queryAll('SELECT * FROM spam_modals WHERE language = $1 ORDER BY category', [language]);
+        return await db.queryAll('SELECT * FROM spam_patterns WHERE language = $1 ORDER BY category', [language]);
     }
-    return await db.queryAll('SELECT * FROM spam_modals ORDER BY language, category');
+    return await db.queryAll('SELECT * FROM spam_patterns ORDER BY language, category');
 }
 
 async function getModal(language, category) {
     if (!db) return null;
-    return await db.queryOne('SELECT * FROM spam_modals WHERE language = $1 AND category = $2', [language, category]);
+    return await db.queryOne('SELECT * FROM spam_patterns WHERE language = $1 AND category = $2', [language, category]);
 }
 
 async function upsertModal(language, category, patterns, action = 'report_only', threshold = 0.6, createdBy = null) {
@@ -56,7 +56,7 @@ async function upsertModal(language, category, patterns, action = 'report_only',
 
     await db.query(
         `
-        INSERT INTO spam_modals (language, category, patterns, action, similarity_threshold, created_by)
+        INSERT INTO spam_patterns (language, category, patterns, action, similarity_threshold, created_by)
         VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT(language, category) DO UPDATE SET
             patterns = $3,
@@ -77,7 +77,7 @@ async function addPatternsToModal(language, category, newPatterns) {
     const existing = logic.safeJsonParse(modal.patterns, []);
     const combined = [...new Set([...existing, ...newPatterns])];
 
-    await db.query('UPDATE spam_modals SET patterns = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
+    await db.query('UPDATE spam_patterns SET patterns = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
         JSON.stringify(combined),
         language,
         category
@@ -94,7 +94,7 @@ async function removePatternsFromModal(language, category, patternsToRemove) {
     const existing = logic.safeJsonParse(modal.patterns, []);
     const filtered = existing.filter(p => !patternsToRemove.includes(p));
 
-    await db.query('UPDATE spam_modals SET patterns = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
+    await db.query('UPDATE spam_patterns SET patterns = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
         JSON.stringify(filtered),
         language,
         category
@@ -106,7 +106,7 @@ async function removePatternsFromModal(language, category, patternsToRemove) {
 
 async function deleteModal(language, category) {
     if (!db) return false;
-    const result = await db.query('DELETE FROM spam_modals WHERE language = $1 AND category = $2', [
+    const result = await db.query('DELETE FROM spam_patterns WHERE language = $1 AND category = $2', [
         language,
         category
     ]);
@@ -121,7 +121,7 @@ async function toggleModal(language, category) {
     if (!modal) return null;
 
     const newState = !modal.enabled;
-    await db.query('UPDATE spam_modals SET enabled = $1 WHERE language = $2 AND category = $3', [
+    await db.query('UPDATE spam_patterns SET enabled = $1 WHERE language = $2 AND category = $3', [
         newState,
         language,
         category
@@ -133,7 +133,7 @@ async function toggleModal(language, category) {
 
 async function updateModalAction(language, category, action) {
     if (!db) return;
-    await db.query('UPDATE spam_modals SET action = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
+    await db.query('UPDATE spam_patterns SET action = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
         action,
         language,
         category

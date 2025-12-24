@@ -9,61 +9,52 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'guild_name',
     'staff_group_id',
     'staff_topics',
-    // Admin Logger
+    // Action Log
     'log_channel_id',
     'log_events',
-    // Anti-Edit Abuse
+    // Edit Monitor
     'edit_monitor_enabled',
     'edit_action',
     'edit_grace_period',
-    // Keyword Monitor
+    // Word Filter
     'keyword_enabled',
     'keyword_sync_global',
-    // Language Monitor
+    // Language Filter
     'lang_enabled',
     'allowed_languages',
     'lang_action',
-    // Link Monitor
+    // Link Filter
     'link_enabled',
-    'link_action_unknown',
     'link_sync_global',
-    'link_tier_bypass',
-    // NSFW Monitor
-    'nsfw_enabled',
-    'nsfw_action',
-    'nsfw_threshold',
-    'nsfw_check_photos',
-    'nsfw_check_videos',
-    'nsfw_check_gifs',
-    'nsfw_check_stickers',
-    'nsfw_frame_interval_percent',
-    'nsfw_tier_bypass',
-    'nsfw_blocked_categories',
-    // Visual Immune System
-    'visual_enabled',
-    'visual_action',
-    'visual_sync_global',
-    'visual_hamming_threshold',
-    // Vote Ban / Smart Report System
-    'voteban_enabled',
-    'voteban_threshold',
-    'voteban_duration_minutes',
-    'voteban_initiator_tier',
-    'voteban_voter_tier',
+    // Media Filter
+    'media_enabled',
+    'media_action',
+    'media_threshold',
+    'media_check_photos',
+    'media_check_videos',
+    'media_check_gifs',
+    'media_check_stickers',
+    'media_frame_interval',
+    'media_tier_bypass',
+    'media_blocked_categories',
+    // Report System
+    'report_enabled',
+    'report_threshold',
+    'report_duration',
+    'report_initiator_tier',
+    'report_voter_tier',
     'report_mode',
-    'report_ai_fallback',
-    'report_context_messages',
     'report_action_scam',
     'report_action_nsfw',
     'report_action_hate',
-    // Modal Pattern System
-    'modal_enabled',
-    'modal_action',
-    'modal_sync_global',
-    'modal_tier_bypass',
-    // CAS Ban / Global Blacklist
-    'casban_enabled',
-    'casban_notify',
+    // Spam Patterns
+    'spam_patterns_enabled',
+    'spam_patterns_action',
+    'spam_patterns_sync_global',
+    'spam_patterns_tier_bypass',
+    // Global Blacklist
+    'blacklist_enabled',
+    'blacklist_notify',
     // Welcome & Captcha System
     'welcome_enabled',
     'welcome_msg_enabled',
@@ -71,7 +62,7 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'welcome_buttons',
     'captcha_enabled',
     'captcha_mode',
-    'kick_timeout',
+    'captcha_timeout',
     'welcome_autodelete_timer',
     'rules_enabled',
     'rules_link',
@@ -81,24 +72,21 @@ const GUILD_CONFIG_COLUMNS = new Set([
 ]);
 
 /**
- * Default config values for new guilds
+ * Default config values for new guilds (all disabled)
  */
 const DEFAULT_CONFIG = {
-    spam_enabled: 0,
-    ai_enabled: 0,
-    edit_monitor_enabled: 0,
-    profiler_enabled: 0,
-    lang_enabled: 0,
-    link_enabled: 0,
-    nsfw_enabled: 0,
-    visual_enabled: 0,
-    voteban_enabled: 0,
-    modal_enabled: 0,
-    casban_enabled: 0,
-    welcome_enabled: 0,
-    captcha_enabled: 0,
-    rules_enabled: 0,
-    welcome_msg_enabled: 0
+    edit_monitor_enabled: false,
+    keyword_enabled: false,
+    lang_enabled: false,
+    link_enabled: false,
+    media_enabled: false,
+    report_enabled: false,
+    spam_patterns_enabled: false,
+    blacklist_enabled: false,
+    welcome_enabled: false,
+    captcha_enabled: false,
+    rules_enabled: false,
+    welcome_msg_enabled: false
 };
 
 /**
@@ -146,34 +134,27 @@ async function updateGuildConfig(guildId, updates) {
 
     // Boolean column names (need 0/1 -> true/false conversion)
     const BOOLEAN_COLUMNS = new Set([
-        'spam_enabled',
-        'ai_enabled',
         'edit_monitor_enabled',
-        'profiler_enabled',
         'keyword_enabled',
+        'keyword_sync_global',
         'lang_enabled',
         'link_enabled',
-        'nsfw_enabled',
-        'visual_enabled',
-        'voteban_enabled',
-        'modal_enabled',
-        'casban_enabled',
-        'casban_notify',
+        'link_sync_global',
+        'media_enabled',
+        'media_check_photos',
+        'media_check_videos',
+        'media_check_gifs',
+        'media_check_stickers',
+        'report_enabled',
+        'spam_patterns_enabled',
+        'spam_patterns_sync_global',
+        'blacklist_enabled',
+        'blacklist_notify',
         'welcome_enabled',
+        'welcome_msg_enabled',
         'captcha_enabled',
         'rules_enabled',
-        'welcome_msg_enabled',
-        'captcha_logs_enabled',
-        'ai_context_aware',
-        'edit_lock_tier0',
-        'keyword_sync_global',
-        'link_sync_global',
-        'visual_sync_global',
-        'modal_sync_global',
-        'nsfw_check_photos',
-        'nsfw_check_videos',
-        'nsfw_check_gifs',
-        'nsfw_check_stickers'
+        'captcha_logs_enabled'
     ]);
 
     // Build parameterized query

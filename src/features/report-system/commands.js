@@ -46,7 +46,7 @@ function registerCommands(bot, db) {
         if (ctx.chat.type === 'private') return next();
 
         const config = await db.getGuildConfig(ctx.chat.id);
-        const votebanEnabled = config.voteban_enabled;
+        const votebanEnabled = config.report_enabled;
 
         if (!votebanEnabled) return next();
 
@@ -220,8 +220,8 @@ function registerCommands(bot, db) {
 
             // Start VoteBan with chosen action type
             const config = await db.getGuildConfig(ctx.chat.id);
-            const duration = config.voteban_duration_minutes || 30;
-            const required = config.voteban_threshold || 5;
+            const duration = config.report_duration || 30;
+            const required = config.report_threshold || 5;
             const expires =
                 duration === 0
                     ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
@@ -297,19 +297,19 @@ function registerCommands(bot, db) {
             const config = await db.getGuildConfig(ctx.chat.id);
 
             if (data === 'vb_toggle') {
-                await db.updateGuildConfig(ctx.chat.id, { voteban_enabled: config.voteban_enabled ? 0 : 1 });
+                await db.updateGuildConfig(ctx.chat.id, { report_enabled: config.report_enabled ? 0 : 1 });
             } else if (data === 'vb_thr') {
-                const val = config.voteban_threshold || 5;
+                const val = config.report_threshold || 5;
                 const thresholds = [3, 5, 7, 10];
                 const idx = thresholds.indexOf(val);
                 const nextVal = thresholds[(idx + 1) % thresholds.length];
-                await db.updateGuildConfig(ctx.chat.id, { voteban_threshold: nextVal });
+                await db.updateGuildConfig(ctx.chat.id, { report_threshold: nextVal });
             } else if (data === 'vb_dur') {
-                const val = config.voteban_duration_minutes;
+                const val = config.report_duration;
                 const durations = [15, 30, 60, 0];
                 const idx = durations.indexOf(val);
                 const nextVal = durations[(idx + 1) % durations.length];
-                await db.updateGuildConfig(ctx.chat.id, { voteban_duration_minutes: nextVal });
+                await db.updateGuildConfig(ctx.chat.id, { report_duration: nextVal });
             } else if (data === 'vb_mode') {
                 // Simple toggle between vote and report
                 const val = config.report_mode || 'vote';

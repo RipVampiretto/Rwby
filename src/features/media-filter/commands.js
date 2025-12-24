@@ -28,13 +28,13 @@ function registerCommands(bot, db) {
 
             // Config check
             const config = await db.getGuildConfig(ctx.chat.id);
-            if (!config.nsfw_enabled) {
+            if (!config.media_enabled) {
                 logger.debug(`[media-filter] ⏭️ Skipping: NSFW monitor disabled for chat ${chatId}`);
                 return next();
             }
 
             // Tier bypass (-1 = OFF, no bypass)
-            const tierBypass = config.nsfw_tier_bypass ?? 2;
+            const tierBypass = config.media_tier_bypass ?? 2;
             if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) {
                 logger.debug(
                     `[media-filter] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${tierBypass})`
@@ -59,20 +59,20 @@ function registerCommands(bot, db) {
                 return next();
             }
 
-            if (isVideo && !config.nsfw_check_videos) {
+            if (isVideo && !config.media_check_videos) {
                 logger.debug(`[media-filter] ⏭️ Skipping: video check disabled`);
                 return next();
             }
-            if (isGif && !config.nsfw_check_gifs) {
+            if (isGif && !config.media_check_gifs) {
                 logger.debug(`[media-filter] ⏭️ Skipping: GIF check disabled`);
                 return next();
             }
-            if (isPhoto && !config.nsfw_check_photos) {
+            if (isPhoto && !config.media_check_photos) {
                 logger.debug(`[media-filter] ⏭️ Skipping: photo check disabled`);
                 return next();
             }
             // Stickers have their own check
-            if (isSticker && !config.nsfw_check_stickers) {
+            if (isSticker && !config.media_check_stickers) {
                 logger.debug(`[media-filter] ⏭️ Skipping: sticker check disabled`);
                 return next();
             }
@@ -130,7 +130,7 @@ function registerCommands(bot, db) {
             const categoryId = data.replace('nsf_cat_', '');
 
             // Get current blocked categories
-            let blockedCategories = config.nsfw_blocked_categories;
+            let blockedCategories = config.media_blocked_categories;
             if (!blockedCategories || !Array.isArray(blockedCategories)) {
                 try {
                     blockedCategories =
@@ -151,7 +151,7 @@ function registerCommands(bot, db) {
             }
 
             // Save
-            await db.updateGuildConfig(ctx.chat.id, { nsfw_blocked_categories: blockedCategories });
+            await db.updateGuildConfig(ctx.chat.id, { media_blocked_categories: blockedCategories });
 
             // Refresh categories UI
             await ui.sendCategoriesUI(ctx, db, fromSettings);
@@ -159,21 +159,21 @@ function registerCommands(bot, db) {
         }
 
         if (data === 'nsf_toggle') {
-            await db.updateGuildConfig(ctx.chat.id, { nsfw_enabled: config.nsfw_enabled ? 0 : 1 });
+            await db.updateGuildConfig(ctx.chat.id, { media_enabled: config.media_enabled ? 0 : 1 });
         } else if (data === 'nsf_test') {
             await logic.testConnection(ctx);
             return;
         } else if (data === 'nsf_act') {
             // Only delete or report - no ban
             const acts = ['delete', 'report_only'];
-            let cur = config.nsfw_action || 'delete';
+            let cur = config.media_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % acts.length];
-            await db.updateGuildConfig(ctx.chat.id, { nsfw_action: nextAct });
+            await db.updateGuildConfig(ctx.chat.id, { media_action: nextAct });
         } else if (data === 'nsf_thr') {
-            let thr = config.nsfw_threshold || 0.7;
+            let thr = config.media_threshold || 0.7;
             thr = thr >= 0.9 ? 0.5 : thr + 0.1;
-            await db.updateGuildConfig(ctx.chat.id, { nsfw_threshold: parseFloat(thr.toFixed(1)) });
+            await db.updateGuildConfig(ctx.chat.id, { media_threshold: parseFloat(thr.toFixed(1)) });
         } else if (data.startsWith('nsf_tog_')) {
             const type = data.split('_')[2]; // photo, video, gif, sticker
             const key = `nsfw_check_${type}s`;
@@ -200,11 +200,11 @@ function registerCommands(bot, db) {
             logEvents[logKey] = !logEvents[logKey];
             await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         } else if (data === 'nsf_tier') {
-            const current = config.nsfw_tier_bypass ?? 2;
+            const current = config.media_tier_bypass ?? 2;
             const tiers = [0, 1, 2, 3, -1];
             const idx = tiers.indexOf(current);
             const next = tiers[(idx + 1) % tiers.length];
-            await db.updateGuildConfig(ctx.chat.id, { nsfw_tier_bypass: next });
+            await db.updateGuildConfig(ctx.chat.id, { media_tier_bypass: next });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);

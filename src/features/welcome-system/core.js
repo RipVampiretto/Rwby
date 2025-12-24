@@ -275,7 +275,7 @@ async function processUserJoin(ctx, user, config) {
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
     const mode = config.captcha_mode || 'button';
-    const timeoutMins = config.kick_timeout || 5;
+    const timeoutMins = config.captcha_timeout || 5;
     let text = '';
     const keyboard = new InlineKeyboard();
 
