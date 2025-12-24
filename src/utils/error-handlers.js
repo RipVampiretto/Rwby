@@ -80,6 +80,12 @@ async function safeEdit(ctx, text, options = {}, module = 'unknown') {
         await ctx.editMessageText(text, options);
         return true;
     } catch (e) {
+        if (e.error_code === 429) {
+            try {
+                await ctx.answerCallbackQuery('⚠️ Slow down!');
+            } catch (ignore) { }
+            return false;
+        }
         handleTelegramError(module, 'editMessageText', e, ctx);
         return false;
     }
