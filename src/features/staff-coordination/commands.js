@@ -1,45 +1,11 @@
 const logic = require('./logic');
 const ui = require('./ui');
-const { isAdmin } = require('../../utils/error-handlers');
 
 // Simple wizard session storage for channel/group configuration
 const LOG_CHANNEL_WIZARDS = new Map();
 const STAFF_GROUP_WIZARDS = new Map();
 
 function registerCommands(bot, db) {
-    // Command: /setstaff <id>
-    bot.command('setstaff', async ctx => {
-        if (ctx.chat.type === 'private') {
-            return ctx.reply('⚠️ Questo comando deve essere usato in un gruppo.');
-        }
-
-        if (!(await isAdmin(ctx, 'staff-coordination'))) {
-            return ctx.reply('⚠️ Non hai i permessi necessari.');
-        }
-
-        const args = ctx.message.text.split(' ').slice(1);
-
-        if (!args[0]) {
-            return ctx.reply("❌ Specifica l'ID del gruppo staff.\nUso: `/setstaff -100123456789`", {
-                parse_mode: 'HTML'
-            });
-        }
-
-        const staffId = parseInt(args[0]);
-        if (isNaN(staffId)) {
-            return ctx.reply('❌ ID non valido. Usa: /setstaff -100123456789');
-        }
-
-        try {
-            await logic.setStaffGroup(db, ctx, bot, staffId);
-            await ctx.reply(`✅ Staff Group impostato: \`${staffId}\``, { parse_mode: 'HTML' });
-        } catch (e) {
-            await ctx.reply(
-                `❌ Impossibile inviare messaggi nel gruppo \`${staffId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`,
-                { parse_mode: 'HTML' }
-            );
-        }
-    });
 
     // Command: /notes
     bot.command('notes', async ctx => {

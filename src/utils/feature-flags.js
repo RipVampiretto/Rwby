@@ -1,7 +1,6 @@
 /**
  * FEATURE FLAGS SYSTEM
  * Control which modules are loaded at startup.
- * Useful for debugging or disabling problematic modules without code changes.
  */
 
 const logger = require('../middlewares/logger');
@@ -9,26 +8,21 @@ const logger = require('../middlewares/logger');
 const flags = {
     // Core Modules
     userReputation: true,
-    casBan: true,
-    adminLogger: true,
+    globalBlacklist: true,
+    actionLog: true,
     staffCoordination: true,
     superAdmin: true,
-    intelNetwork: false, // DISABLED BY DEFAULT
 
     // Detection Modules
-    antiSpam: false, // DISABLED BY DEFAULT
-    keywordMonitor: true,
-    languageMonitor: true,
-    modalPatterns: true,
-    linkMonitor: true,
-    aiModeration: false, // DISABLED TEMPORARILY
-    antiEditAbuse: true,
-    intelligentProfiler: false, // DISABLED BY DEFAULT
-    nsfwMonitor: true,
-    visualImmuneSystem: false, // DISABLED BY DEFAULT
+    wordFilter: true,
+    languageFilter: true,
+    spamPatterns: true,
+    linkFilter: true,
+    editMonitor: true,
+    mediaFilter: true,
 
     // Community / Interactive
-    voteBan: true,
+    reportSystem: true,
     welcomeSystem: true,
     settingsMenu: true
 };
@@ -40,8 +34,9 @@ const flags = {
  */
 function isEnabled(featureName) {
     const enabled = flags[featureName];
-    if (!enabled) {
-        logger.debug(`[feature-flags] Skipping disabled module: ${featureName}`);
+    if (enabled === undefined) {
+        logger.warn(`[feature-flags] Unknown module: ${featureName}`);
+        return false;
     }
     return enabled;
 }

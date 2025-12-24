@@ -1,6 +1,5 @@
 const connection = require('./connection');
 const schema = require('./schema');
-const migrations = require('./migrations');
 const userRepo = require('./repos/user');
 const guildRepo = require('./repos/guild');
 
@@ -13,9 +12,6 @@ async function init() {
 
     // Create tables
     await schema.createTables();
-
-    // Run migrations
-    await migrations.runMigrations();
 
     return connection.getPool();
 }

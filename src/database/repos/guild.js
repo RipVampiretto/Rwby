@@ -12,33 +12,10 @@ const GUILD_CONFIG_COLUMNS = new Set([
     // Admin Logger
     'log_channel_id',
     'log_events',
-    'log_format',
-    // Anti-Spam
-    'spam_enabled',
-    'spam_sensitivity',
-    'spam_action_volume',
-    'spam_action_repetition',
-    'spam_volume_limit_60s',
-    'spam_volume_limit_10s',
-    'spam_duplicate_limit',
-    // AI Moderation
-    'ai_enabled',
-    'ai_action_scam',
-    'ai_action_nsfw',
-    'ai_action_spam',
-    'ai_confidence_threshold',
-    'ai_context_aware',
-    'ai_context_messages',
-    'ai_tier_bypass',
     // Anti-Edit Abuse
     'edit_monitor_enabled',
     'edit_action',
     'edit_grace_period',
-    // Intelligent Profiler
-    'profiler_enabled',
-    'profiler_action_link',
-    'profiler_action_forward',
-    'profiler_action_pattern',
     // Keyword Monitor
     'keyword_enabled',
     'keyword_sync_global',
@@ -46,9 +23,6 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'lang_enabled',
     'allowed_languages',
     'lang_action',
-    'lang_min_chars',
-    'lang_confidence_threshold',
-    'lang_tier_bypass',
     // Link Monitor
     'link_enabled',
     'link_action_unknown',

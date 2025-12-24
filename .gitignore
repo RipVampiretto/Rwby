@@ -10,3 +10,4 @@ package-lock.json
 telegram-bot-api-data
 temp/
 coverage/
+backups/

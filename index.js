@@ -20,26 +20,23 @@ const bot = new Bot(process.env.BOT_TOKEN, botConfig);
 // ============================================================================
 // FEATURE MODULES - Import
 // ============================================================================
-// Core modules (ordine importante: prima i moduli base, poi quelli che dipendono)
+// Core modules
 const userReputation = require("./src/features/user-reputation");
-const casBan = require("./src/features/cas-ban");
-const adminLogger = require("./src/features/admin-logger");
+const globalBlacklist = require("./src/features/global-blacklist");
+const actionLog = require("./src/features/action-log");
 const staffCoordination = require("./src/features/staff-coordination");
 const superAdmin = require("./src/features/super-admin");
-const intelNetwork = require("./src/features/intel-network");
 
 // Detection modules
-const antiSpam = require("./src/features/anti-spam");
-const aiModeration = require("./src/features/ai-moderation");
-const antiEditAbuse = require("./src/features/anti-edit-abuse");
-const intelligentProfiler = require("./src/features/intelligent-profiler");
-const keywordMonitor = require("./src/features/keyword-monitor");
-const languageMonitor = require("./src/features/language-monitor");
-const modalPatterns = require("./src/features/modal-patterns");
-const linkMonitor = require("./src/features/link-monitor");
-const nsfwMonitor = require("./src/features/nsfw-monitor");
-const visualImmuneSystem = require("./src/features/visual-immune-system");
-const voteBan = require("./src/features/vote-ban");
+const editMonitor = require("./src/features/edit-monitor");
+const wordFilter = require("./src/features/word-filter");
+const languageFilter = require("./src/features/language-filter");
+const spamPatterns = require("./src/features/spam-patterns");
+const linkFilter = require("./src/features/link-filter");
+const mediaFilter = require("./src/features/media-filter");
+
+// Community/Interactive modules
+const reportSystem = require("./src/features/report-system");
 const welcomeSystem = require("./src/features/welcome-system");
 const settingsMenu = require("./src/features/settings-menu");
 
@@ -100,29 +97,23 @@ bot.use(adminOnlyCallbacks());
 // ============================================================================
 // FEATURE MODULES - Register
 // ============================================================================
-// Ordine di registrazione middleware (importante!):
-// 1. userReputation - Calcola tier prima di tutto
-// 2. Detection modules - Controllano contenuti
-// 3. Action handlers - Gestiscono risposte
 
-// Core: Reputation (deve essere primo per calcolare tier)
-// Core: Reputation (deve essere primo per calcolare tier)
-// Core: Reputation (deve essere primo per calcolare tier)
+// Core: Reputation (calculates tier first)
 if (features.isEnabled('userReputation')) {
     userReputation.init(db);
     userReputation.register(bot);
 }
 
-// Core: CAS Ban (early intercept for banned users)
-if (features.isEnabled('casBan')) {
-    casBan.init(db);
-    casBan.register(bot);
+// Core: Global Blacklist (early intercept for banned users)
+if (features.isEnabled('globalBlacklist')) {
+    globalBlacklist.init(db);
+    globalBlacklist.register(bot);
 }
 
 // Core: Staff & Admin
-if (features.isEnabled('adminLogger')) {
-    adminLogger.init(db);
-    adminLogger.register(bot);
+if (features.isEnabled('actionLog')) {
+    actionLog.init(db);
+    actionLog.register(bot);
 }
 if (features.isEnabled('staffCoordination')) {
     staffCoordination.init(db);
@@ -132,63 +123,41 @@ if (features.isEnabled('superAdmin')) {
     superAdmin.init(db);
     superAdmin.register(bot);
 }
-if (features.isEnabled('intelNetwork')) {
-    intelNetwork.init(db);
-    intelNetwork.register(bot);
-}
 
 // Detection: Text-based
-if (features.isEnabled('antiSpam')) {
-    antiSpam.init(db);
-    antiSpam.register(bot);
+if (features.isEnabled('wordFilter')) {
+    wordFilter.init(db);
+    wordFilter.register(bot);
 }
-if (features.isEnabled('keywordMonitor')) {
-    keywordMonitor.init(db);
-    keywordMonitor.register(bot);
+if (features.isEnabled('languageFilter')) {
+    languageFilter.init(db);
+    languageFilter.register(bot);
 }
-if (features.isEnabled('languageMonitor')) {
-    languageMonitor.init(db);
-    languageMonitor.register(bot);
+if (features.isEnabled('spamPatterns')) {
+    spamPatterns.init(db);
+    spamPatterns.register(bot);
 }
-if (features.isEnabled('modalPatterns')) {
-    modalPatterns.init(db);
-    modalPatterns.register(bot);
-}
-if (features.isEnabled('linkMonitor')) {
-    linkMonitor.init(db);
-    linkMonitor.register(bot);
-}
-if (features.isEnabled('aiModeration')) {
-    aiModeration.init(db);
-    aiModeration.register(bot);
+if (features.isEnabled('linkFilter')) {
+    linkFilter.init(db);
+    linkFilter.register(bot);
 }
 
 // Detection: Edit monitoring
-if (features.isEnabled('antiEditAbuse')) {
-    antiEditAbuse.init(db);
-    antiEditAbuse.register(bot);
-}
-
-// Detection: New user profiling
-if (features.isEnabled('intelligentProfiler')) {
-    intelligentProfiler.init(db);
-    intelligentProfiler.register(bot);
+if (features.isEnabled('editMonitor')) {
+    editMonitor.init(db);
+    editMonitor.register(bot);
 }
 
 // Detection: Media
-if (features.isEnabled('nsfwMonitor')) {
-    nsfwMonitor.init(db);
-    nsfwMonitor.register(bot);
-}
-if (features.isEnabled('visualImmuneSystem')) {
-    visualImmuneSystem.init(db);
-    visualImmuneSystem.register(bot);
+if (features.isEnabled('mediaFilter')) {
+    mediaFilter.init(db);
+    mediaFilter.register(bot);
 }
 
 // Community moderation
-if (features.isEnabled('voteBan')) {
-    voteBan.init(db);
-    voteBan.register(bot);
+if (features.isEnabled('reportSystem')) {
+    reportSystem.init(db);
+    reportSystem.register(bot);
 }
 if (features.isEnabled('welcomeSystem')) {
     welcomeSystem.init(db);
@@ -198,6 +167,7 @@ if (features.isEnabled('settingsMenu')) {
     settingsMenu.init(db);
     settingsMenu.register(bot);
 }
+
 
 // COMMANDS - Basic
 // ============================================================================

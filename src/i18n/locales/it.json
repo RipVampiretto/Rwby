@@ -98,13 +98,6 @@
             "current": "Attuale: {lang}",
             "changed": "✅ Lingua cambiata in {lang}",
             "back": "⬅️ Indietro"
-        },
-        "disabled_modules": {
-            "antispam": "⚠️ Il modulo Anti-Spam è temporaneamente disabilitato.",
-            "profiler": "⚠️ Il modulo Profiler è temporaneamente disabilitato.",
-            "visual": "⚠️ Il Visual Immune System è temporaneamente disabilitato.",
-            "intel": "⚠️ Il modulo Intel Network è temporaneamente disabilitato.",
-            "casban_hint": "CAS Ban attivo. Usa /cassync per la sincronizzazione manuale."
         }
     },
     "report": {
@@ -506,6 +499,7 @@
         "notifications": {
             "title": "📢 <b>NOTIFICHE WELCOME</b>",
             "description": "Scegli quali eventi loggare nel canale admin.",
+            "no_log_channel": "Canale log non impostato. Vai su Staff Coordination per configurarlo.",
             "join": "👤 Ingresso nuovo membro",
             "captcha_pass": "✅ Captcha risolto",
             "captcha_timeout": "⏰ Captcha timeout (kick)"
@@ -522,7 +516,7 @@
                 "logic": "<b>6. Logic</b> - Sequenze logiche",
                 "reverse": "<b>7. Reverse</b> - Parole al contrario"
             },
-            "active": "Attive: `{modes}`"
+            "active": "Attive: <code>{modes}</code>"
         },
         "captcha_messages": {
             "welcome": "👋 Benvenuto {name}!",
@@ -543,9 +537,9 @@
         },
         "rules_prompt": {
             "title": "📜 <b>Imposta Link Regolamento</b>",
-            "instruction": "Invia ora il link al regolamento (es. `https://t.me/...` o `http://...`).",
+            "instruction": "Invia ora il link al regolamento (es. <code>https://t.me/...</code> o <code>http://....",
             "usage": "Questo link verrà usato nel bottone 'Leggi Regolamento'.",
-            "cancel": "🔴 *Scrivi 'cancel' per annullare.*",
+            "cancel": "🔴 <b>Scrivi 'cancel' per annullare.</b>",
             "button_cancel": "❌ Annulla"
         },
         "rules_message": {
@@ -560,21 +554,21 @@
             "special_functions": "<b>Funzioni Speciali</b>",
             "custom_buttons": "<b>Per i bottoni personalizzati:</b>",
             "placeholders": {
-                "mention": "`{mention}` - Link cliccabile al nome",
-                "user": "`{user}` - Nome visualizzato",
-                "username": "`{username}` - @Username (o \"-\")",
-                "first_name": "`{first_name}` - Nome proprio",
-                "last_name": "`{last_name}` - Cognome",
-                "id": "`{id}` - ID Utente",
-                "mention_group": "`{mention_group}` - Nome gruppo cliccabile",
-                "chat_title": "`{chat_title}` - Nome gruppo",
-                "chat_username": "`{chat_username}` - @Tag gruppo (o \"-\")",
-                "chat_id": "`{chat_id}` - ID Gruppo",
-                "custom_link": "`{Testo|URL}` - Link personalizzato (es. `{Regole|https://google.com}`)"
+                "mention": "<code>{mention}</code> - Link cliccabile al nome",
+                "user": "<code>{user}</code> - Nome visualizzato",
+                "username": "<code>{username}</code> - @Username (o \"-\")",
+                "first_name": "<code>{first_name}</code> - Nome proprio",
+                "last_name": "<code>{last_name}</code> - Cognome",
+                "id": "<code>{id}</code> - ID Utente",
+                "mention_group": "<code>{mention_group}</code> - Nome gruppo cliccabile",
+                "chat_title": "<code>{chat_title}</code> - Nome gruppo",
+                "chat_username": "<code>{chat_username}</code> - @Tag gruppo (o \"-\")",
+                "chat_id": "<code>{chat_id}</code> - ID Gruppo",
+                "custom_link": "<code>{Testo|URL}</code> - Link personalizzato (es. <code>{Regole|https://google.com}</code>)"
             },
-            "buttons_format": "Aggiungi `||` alla fine del testo seguito dalla configurazione.",
-            "buttons_example": "Es: `Messaggio... || Label,URL | Label2,URL`",
-            "cancel": "🔴 *Scrivi 'cancel' per annullare.*",
+            "buttons_format": "Aggiungi <code>||</code> alla fine del testo seguito dalla configurazione.",
+            "buttons_example": "Es: <code>Messaggio... || Label,URL | Label2,URL</code>",
+            "cancel": "🔴 <b>Scrivi 'cancel' per annullare.</b>",
             "text_required": "⚠️ Per favore invia un messaggio di testo.",
             "text_empty": "⚠️ Il testo non può essere vuoto.",
             "saved": "✅ Messaggio di benvenuto salvato!",

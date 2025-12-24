@@ -98,13 +98,6 @@
             "current": "Current: {lang}",
             "changed": "✅ Language changed to {lang}",
             "back": "⬅️ Back"
-        },
-        "disabled_modules": {
-            "antispam": "⚠️ Anti-Spam module is temporarily disabled.",
-            "profiler": "⚠️ Profiler module is temporarily disabled.",
-            "visual": "⚠️ Visual Immune System is temporarily disabled.",
-            "intel": "⚠️ Intel Network module is temporarily disabled.",
-            "casban_hint": "CAS Ban active. Use /cassync for manual sync."
         }
     },
     "report": {
@@ -504,8 +497,9 @@
         },
         "notifications": {
             "title": "📢 <b>WELCOME NOTIFICATIONS</b>",
-            "description": "Choose which events to log to admin channel.",
-            "join": "👤 New member join",
+            "description": "Choose which events to log in the admin channel.",
+            "no_log_channel": "Log channel not set. Go to Staff Coordination to configure it.",
+            "join": "👤 New member joined",
             "captcha_pass": "✅ Captcha solved",
             "captcha_timeout": "⏰ Captcha timeout (kick)"
         },
@@ -521,7 +515,7 @@
                 "logic": "<b>6. Logic</b> - Logical sequences",
                 "reverse": "<b>7. Reverse</b> - Words backwards"
             },
-            "active": "Active: `{modes}`"
+            "active": "Active: <code>{modes}</code>"
         },
         "captcha_messages": {
             "welcome": "👋 Welcome {name}!",
@@ -542,9 +536,9 @@
         },
         "rules_prompt": {
             "title": "📜 <b>Set Rules Link</b>",
-            "instruction": "Send now the link to the rules (e.g. `https://t.me/...` or `http://...`).",
+            "instruction": "Send now the link to the rules (e.g. <code>https://t.me/...</code> or <code>http://...)</code>.",
             "usage": "This link will be used in the 'Read Rules' button.",
-            "cancel": "🔴 *Write 'cancel' to abort.*",
+            "cancel": "🔴 <b>Write 'cancel' to abort.</b>",
             "button_cancel": "❌ Cancel"
         },
         "rules_message": {
@@ -559,21 +553,21 @@
             "special_functions": "<b>Special Functions</b>",
             "custom_buttons": "<b>For custom buttons:</b>",
             "placeholders": {
-                "mention": "`{mention}` - Clickable link to name",
-                "user": "`{user}` - Display name",
-                "username": "`{username}` - @Username (or \"-\")",
-                "first_name": "`{first_name}` - First name",
-                "last_name": "`{last_name}` - Last name",
-                "id": "`{id}` - User ID",
-                "mention_group": "`{mention_group}` - Clickable group name",
-                "chat_title": "`{chat_title}` - Group name",
-                "chat_username": "`{chat_username}` - @Group tag (or \"-\")",
-                "chat_id": "`{chat_id}` - Group ID",
-                "custom_link": "`{Text|URL}` - Custom link (e.g. `{Rules|https://google.com}`)"
+                "mention": "<code>{mention}</code> - Clickable link to name",
+                "user": "<code>{user}</code> - Display name",
+                "username": "<code>{username}</code> - @Username (or \"-\")",
+                "first_name": "<code>{first_name}</code> - First name",
+                "last_name": "<code>{last_name}</code> - Last name",
+                "id": "<code>{id}</code> - User ID",
+                "mention_group": "<code>{mention_group}</code> - Clickable group name",
+                "chat_title": "<code>{chat_title}</code> - Group name",
+                "chat_username": "<code>{chat_username}</code> - @Group tag (or \"-\")",
+                "chat_id": "<code>{chat_id}</code> - Group ID",
+                "custom_link": "<code>{Text|URL}</code> - Custom link (e.g. <code>{Rules|https://google.com})</code>"
             },
-            "buttons_format": "Add `||` at the end of the text followed by configuration.",
-            "buttons_example": "E.g.: `Message... || Label,URL | Label2,URL`",
-            "cancel": "🔴 *Write 'cancel' to abort.*",
+            "buttons_format": "Add <code>||</code> at the end of the text followed by configuration.",
+            "buttons_example": "E.g.: <code>Message... || Label,URL | Label2,URL</code>",
+            "cancel": "🔴 <b>Write 'cancel' to abort.</b>",
             "text_required": "⚠️ Please send a text message.",
             "text_empty": "⚠️ Text cannot be empty.",
             "saved": "✅ Welcome message saved!",

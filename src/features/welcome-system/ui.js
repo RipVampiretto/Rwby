@@ -106,7 +106,7 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
@@ -164,7 +164,7 @@ async function sendCaptchaModeMenu(ctx) {
     }
     try {
         await ctx.answerCallbackQuery();
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -215,9 +215,7 @@ async function sendRulesWizardPrompt(ctx) {
         '\n\n' +
         t('welcome.rules_prompt.instruction') +
         '\n' +
-        t('welcome.rules_prompt.usage') +
-        '\n\n' +
-        t('welcome.rules_prompt.cancel');
+        t('welcome.rules_prompt.usage');
 
     const keyboard = {
         inline_keyboard: [[{ text: t('welcome.rules_prompt.button_cancel'), callback_data: 'wc_cancel_wizard' }]]
@@ -225,7 +223,7 @@ async function sendRulesWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -272,9 +270,7 @@ async function sendWizardPrompt(ctx) {
         '\n' +
         t('welcome.wizard.buttons_format') +
         '\n' +
-        t('welcome.wizard.buttons_example') +
-        '\\n\\n' +
-        t('welcome.wizard.cancel');
+        t('welcome.wizard.buttons_example');
 
     const keyboard = {
         inline_keyboard: [[{ text: t('welcome.rules_prompt.button_cancel'), callback_data: 'wc_cancel_wizard' }]]
@@ -282,7 +278,7 @@ async function sendWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
@@ -294,23 +290,31 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
     const t = (key, params) => i18n.t(lang, key, params);
     const config = (await getGuildConfig(guildId)) || {};
 
-    // Parse log_events JSON
+    // Parse log_events (always Object)
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
     }
 
     const isOn = key => (logEvents[key] ? '✅' : '❌');
+    const hasLogChannel = !!config.log_channel_id;
 
-    const text =
+    let text =
         `${t('welcome.notifications.title')}\n\n` +
-        `${t('welcome.notifications.description')}\n\n` +
+        `${t('welcome.notifications.description')}\n\n`;
+
+    // Add warning if no log channel
+    if (!hasLogChannel) {
+        text += `⚠️ <i>${t('welcome.notifications.no_log_channel')}</i>\n\n`;
+    }
+
+    text +=
         `${t('welcome.notifications.join')} ${isOn('welcome_join')}\n` +
         `${t('welcome.notifications.captcha_pass')} ${isOn('welcome_captcha_pass')}\n` +
         `${t('welcome.notifications.captcha_timeout')} ${isOn('welcome_captcha_timeout')}`;
@@ -329,7 +333,7 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }

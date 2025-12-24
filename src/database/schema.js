@@ -3,10 +3,11 @@ const logger = require('../middlewares/logger');
 
 /**
  * Create all required tables (PostgreSQL)
+ * Database will be rebuilt from scratch - no migration support
  */
 async function createTables() {
     // ========================================================================
-    // USERS CACHE - User info cache
+    // USERS - User info cache
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -36,41 +37,12 @@ async function createTables() {
             
             -- Admin Logger
             log_channel_id BIGINT,
-            log_events JSONB DEFAULT '["ban","delete","ai_action"]',
-            log_format TEXT DEFAULT 'standard',
-            
-            -- Anti-Spam
-            spam_enabled BOOLEAN DEFAULT FALSE,
-            spam_sensitivity TEXT DEFAULT 'medium',
-            spam_action_volume TEXT DEFAULT 'delete',
-            spam_action_repetition TEXT DEFAULT 'delete',
-            spam_volume_limit_60s INTEGER DEFAULT 10,
-            spam_volume_limit_10s INTEGER DEFAULT 5,
-            spam_duplicate_limit INTEGER DEFAULT 3,
-            
-            -- AI Moderation
-            ai_enabled BOOLEAN DEFAULT FALSE,
-            ai_action_scam TEXT DEFAULT 'ban',
-            ai_action_hate TEXT DEFAULT 'report_only',
-            ai_action_nsfw TEXT DEFAULT 'delete',
-            ai_action_threat TEXT DEFAULT 'report_only',
-            ai_action_spam TEXT DEFAULT 'delete',
-            ai_confidence_threshold REAL DEFAULT 0.75,
-            ai_context_aware BOOLEAN DEFAULT TRUE,
-            ai_sensitivity TEXT DEFAULT 'medium',
-            ai_context_messages INTEGER DEFAULT 3,
-            ai_tier_bypass INTEGER DEFAULT 2,
+            log_events JSONB DEFAULT '{"ban":true,"delete":true}',
             
             -- Anti-Edit Abuse
             edit_monitor_enabled BOOLEAN DEFAULT FALSE,
             edit_action TEXT DEFAULT 'delete',
             edit_grace_period INTEGER DEFAULT 0,
-            
-            -- Intelligent Profiler
-            profiler_enabled BOOLEAN DEFAULT FALSE,
-            profiler_action_link TEXT DEFAULT 'delete',
-            profiler_action_forward TEXT DEFAULT 'delete',
-            profiler_action_pattern TEXT DEFAULT 'report_only',
             
             -- Keyword Monitor
             keyword_enabled BOOLEAN DEFAULT FALSE,
@@ -80,9 +52,6 @@ async function createTables() {
             lang_enabled BOOLEAN DEFAULT FALSE,
             allowed_languages JSONB DEFAULT '["en"]',
             lang_action TEXT DEFAULT 'delete',
-            lang_min_chars INTEGER DEFAULT 20,
-            lang_confidence_threshold REAL DEFAULT 0.8,
-            lang_tier_bypass INTEGER DEFAULT 2,
             
             -- Link Monitor
             link_enabled BOOLEAN DEFAULT FALSE,
@@ -90,7 +59,7 @@ async function createTables() {
             link_sync_global BOOLEAN DEFAULT FALSE,
             link_tier_bypass INTEGER DEFAULT 2,
             
-            -- NSFW Monitor
+            -- NSFW Monitor (Media Analysis)
             nsfw_enabled BOOLEAN DEFAULT FALSE,
             nsfw_action TEXT DEFAULT 'delete',
             nsfw_threshold REAL DEFAULT 0.7,
@@ -99,32 +68,15 @@ async function createTables() {
             nsfw_check_gifs BOOLEAN DEFAULT TRUE,
             nsfw_check_stickers BOOLEAN DEFAULT FALSE,
             nsfw_frame_interval_percent INTEGER DEFAULT 5,
-            nsfw_frame_interval_percent INTEGER DEFAULT 5,
             nsfw_tier_bypass INTEGER DEFAULT 2,
-            nsfw_blocked_categories JSONB DEFAULT '["real_nudity","real_sex","hentai","gore","minors"]'::jsonb,
+            nsfw_blocked_categories JSONB DEFAULT '["real_nudity","real_sex","hentai","real_gore","drawn_gore","minors","scam_visual"]'::jsonb,
             
-            -- Visual Immune System
-            visual_enabled BOOLEAN DEFAULT FALSE,
-            visual_action TEXT DEFAULT 'delete',
-            visual_sync_global BOOLEAN DEFAULT FALSE,
-            visual_hamming_threshold INTEGER DEFAULT 5,
-            
-            -- Vote Ban / Smart Report System
+            -- Vote Ban / Report System
             voteban_enabled BOOLEAN DEFAULT FALSE,
             voteban_threshold INTEGER DEFAULT 5,
             voteban_duration_minutes INTEGER DEFAULT 30,
             voteban_initiator_tier INTEGER DEFAULT 1,
             voteban_voter_tier INTEGER DEFAULT 0,
-            
-            -- Smart Report System
-            report_mode TEXT DEFAULT 'ai_voteban',  -- 'ai_only', 'voteban_only', 'ai_voteban'
-            report_ai_fallback TEXT DEFAULT 'voteban',  -- 'voteban', 'report_only' (when AI says safe)
-            report_mode TEXT DEFAULT 'ai_voteban',  -- 'ai_only', 'voteban_only', 'ai_voteban'
-            report_ai_fallback TEXT DEFAULT 'voteban',  -- 'voteban', 'report_only' (when AI says safe)
-            report_context_messages INTEGER DEFAULT 10,
-            report_action_scam TEXT DEFAULT 'report_only',
-            report_action_nsfw TEXT DEFAULT 'report_only',
-            report_action_hate TEXT DEFAULT 'report_only',
             
             -- Modal Pattern System
             modal_enabled BOOLEAN DEFAULT FALSE,
@@ -186,24 +138,6 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // USER ACTIVE STATS - Real-time spam tracking
-    // ========================================================================
-    await query(`
-        CREATE TABLE IF NOT EXISTS user_active_stats (
-            user_id BIGINT,
-            guild_id BIGINT,
-            msg_count_60s INTEGER DEFAULT 0,
-            msg_count_10s INTEGER DEFAULT 0,
-            last_msg_content TEXT,
-            last_msg_ts TIMESTAMPTZ,
-            duplicate_count INTEGER DEFAULT 0,
-            violation_count_24h INTEGER DEFAULT 0,
-            last_violation_ts TIMESTAMPTZ,
-            PRIMARY KEY (user_id, guild_id)
-        )
-    `);
-
-    // ========================================================================
     // MESSAGE SNAPSHOTS - For edit abuse detection
     // ========================================================================
     await query(`
@@ -254,22 +188,6 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // VISUAL HASHES - Image fingerprints
-    // ========================================================================
-    await query(`
-        CREATE TABLE IF NOT EXISTS visual_hashes (
-            id SERIAL PRIMARY KEY,
-            phash TEXT NOT NULL,
-            type TEXT DEFAULT 'ban',
-            category TEXT,
-            guild_id BIGINT DEFAULT 0,
-            added_by BIGINT,
-            match_count INTEGER DEFAULT 0,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        )
-    `);
-
-    // ========================================================================
     // ACTIVE VOTES - Community vote ban
     // ========================================================================
     await query(`
@@ -292,7 +210,7 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // STAFF NOTES - Notes on users (staff-group scoped)
+    // STAFF NOTES - Notes on users
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS staff_notes (
@@ -303,41 +221,6 @@ async function createTables() {
             severity TEXT DEFAULT 'info',
             created_by BIGINT,
             created_at TIMESTAMPTZ DEFAULT NOW()
-        )
-    `);
-
-    // ========================================================================
-    // INTEL DATA - Federated intelligence
-    // ========================================================================
-    await query(`
-        CREATE TABLE IF NOT EXISTS intel_data (
-            id SERIAL PRIMARY KEY,
-            type TEXT NOT NULL,
-            value TEXT NOT NULL,
-            metadata JSONB DEFAULT '{}',
-            added_by_guild BIGINT,
-            added_by_user BIGINT,
-            trust_weight INTEGER DEFAULT 50,
-            confirmations INTEGER DEFAULT 0,
-            reports INTEGER DEFAULT 0,
-            status TEXT DEFAULT 'active',
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        )
-    `);
-
-    // ========================================================================
-    // GUILD TRUST - Network trust scores
-    // ========================================================================
-    await query(`
-        CREATE TABLE IF NOT EXISTS guild_trust (
-            guild_id BIGINT PRIMARY KEY,
-            guild_name TEXT,
-            tier INTEGER DEFAULT 0,
-            trust_score INTEGER DEFAULT 50,
-            contributions_valid INTEGER DEFAULT 0,
-            contributions_invalid INTEGER DEFAULT 0,
-            joined_at TIMESTAMPTZ DEFAULT NOW(),
-            last_sync TIMESTAMPTZ DEFAULT NOW()
         )
     `);
 
@@ -355,7 +238,7 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // PENDING DELETIONS - Auto-delete after 24h
+    // PENDING DELETIONS - Auto-delete messages
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS pending_deletions (
@@ -368,7 +251,7 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // BILLS - Global proposals
+    // BILLS - Global proposals (SuperAdmin)
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS bills (
@@ -385,7 +268,7 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // SPAM MODALS - Language/Category based spam patterns
+    // SPAM MODALS - Pattern-based spam detection
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS spam_modals (
@@ -416,7 +299,7 @@ async function createTables() {
     `);
 
     // ========================================================================
-    // CAS BANS - Combot Anti-Spam banned users
+    // CAS BANS - Combot Anti-Spam cached bans
     // ========================================================================
     await query(`
         CREATE TABLE IF NOT EXISTS cas_bans (
@@ -427,12 +310,13 @@ async function createTables() {
         )
     `);
 
-    // Create indexes for performance
+    // ========================================================================
+    // INDEXES
+    // ========================================================================
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_user ON user_trust_flux(user_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_guild ON user_trust_flux(guild_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_word_filters_guild ON word_filters(guild_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_link_rules_guild ON link_rules(guild_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_visual_hashes_phash ON visual_hashes(phash)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_active_votes_chat ON active_votes(chat_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_message_snapshots_chat ON message_snapshots(chat_id)`);
 

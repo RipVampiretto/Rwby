@@ -1,5 +1,5 @@
 const logger = require('../../middlewares/logger');
-const adminLogger = require('../admin-logger');
+const actionLog = require('../action-log');
 const { safeDelete } = require('../../utils/error-handlers');
 const i18n = require('../../i18n');
 

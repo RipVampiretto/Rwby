@@ -1,5 +1,5 @@
 const logger = require('../../middlewares/logger');
-const adminLogger = require('../admin-logger');
+const actionLog = require('../action-log');
 const i18n = require('../../i18n');
 const ui = require('./ui');
 const wizard = require('./wizard');
@@ -154,8 +154,8 @@ async function handleStaffAction(ctx, bot, action, data) {
             });
         }
 
-        if (adminLogger.getLogEvent()) {
-            adminLogger.getLogEvent()({
+        if (actionLog.getLogEvent()) {
+            actionLog.getLogEvent()({
                 guildId: originalGuildId,
                 eventType: 'staff_ban',
                 targetUser: { id: targetUserId, first_name: 'User' },
@@ -168,8 +168,8 @@ async function handleStaffAction(ctx, bot, action, data) {
         await ctx.answerCallbackQuery('✅ Ignorato');
         await ctx.deleteMessage();
 
-        if (adminLogger.getLogEvent()) {
-            adminLogger.getLogEvent()({
+        if (actionLog.getLogEvent()) {
+            actionLog.getLogEvent()({
                 guildId: ctx.chat.id,
                 eventType: 'staff_dismiss',
                 targetUser: { id: 0, first_name: 'Unknown' },
@@ -191,8 +191,8 @@ async function handleStaffAction(ctx, bot, action, data) {
                     caption: ctx.callbackQuery.message.caption + '\n\n✅ **DELETED by Staff**'
                 });
 
-                if (adminLogger.getLogEvent()) {
-                    adminLogger.getLogEvent()({
+                if (actionLog.getLogEvent()) {
+                    actionLog.getLogEvent()({
                         guildId: origChatId,
                         eventType: 'staff_delete',
                         targetUser: { id: 0, first_name: 'Unknown' },
