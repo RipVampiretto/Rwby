@@ -238,14 +238,15 @@ async function handleNewMember(ctx) {
 async function processUserJoin(ctx, user, config) {
     logWelcomeEvent(ctx, 'JOIN', null, config, user);
 
-    // Forward join to Parliament
-    if (superAdmin.forwardToParliament) {
-        await superAdmin.forwardToParliament({
-            type: 'user_join',
-            user: user,
-            guildName: ctx.chat.title,
+    // Log join to global log (Parliament will receive it in join_logs topic)
+    if (superAdmin.sendGlobalLog) {
+        await superAdmin.sendGlobalLog({
+            eventType: 'user_join',
             guildId: ctx.chat.id,
-            reason: 'New member joined'
+            executor: 'System',
+            target: `${user.first_name} [${user.id}]`,
+            reason: 'New member joined',
+            details: ctx.chat.title
         });
     }
 
