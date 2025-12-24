@@ -106,7 +106,7 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) { }
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
@@ -164,7 +164,7 @@ async function sendCaptchaModeMenu(ctx) {
     }
     try {
         await ctx.answerCallbackQuery();
-    } catch (e) { }
+    } catch (e) {}
 }
 
 /**
@@ -223,7 +223,7 @@ async function sendRulesWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 /**
@@ -278,7 +278,7 @@ async function sendWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 /**
@@ -296,7 +296,7 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -305,9 +305,7 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
     const isOn = key => (logEvents[key] ? '✅' : '❌');
     const hasLogChannel = !!config.log_channel_id;
 
-    let text =
-        `${t('welcome.notifications.title')}\n\n` +
-        `${t('welcome.notifications.description')}\n\n`;
+    let text = `${t('welcome.notifications.title')}\n\n` + `${t('welcome.notifications.description')}\n\n`;
 
     // Add warning if no log channel
     if (!hasLogChannel) {
@@ -333,7 +331,7 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) { }
+        } catch (e) {}
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }

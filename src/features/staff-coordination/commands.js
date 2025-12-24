@@ -6,7 +6,6 @@ const LOG_CHANNEL_WIZARDS = new Map();
 const STAFF_GROUP_WIZARDS = new Map();
 
 function registerCommands(bot, db) {
-
     // Command: /notes
     bot.command('notes', async ctx => {
         if (ctx.chat.type === 'private') return;

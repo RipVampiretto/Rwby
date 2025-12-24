@@ -19,7 +19,6 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         // Only DELETE or REPORT - no BAN
         const action = config.media_action === 'report_only' ? t('common.actions.report') : t('common.actions.delete');
 
-
         // Toggles
         const p = config.media_check_photos ? '✅' : '❌';
         const v = config.media_check_videos ? '✅' : '❌';
@@ -46,7 +45,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             if (typeof config.log_events === 'string') {
                 try {
                     logEvents = JSON.parse(config.log_events);
-                } catch (e) { }
+                } catch (e) {}
             } else if (typeof config.log_events === 'object') {
                 logEvents = config.log_events;
             }
@@ -103,7 +102,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         logger.error(`[media-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
-        } catch (e2) { }
+        } catch (e2) {}
     }
 }
 

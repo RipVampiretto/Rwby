@@ -20,7 +20,7 @@ function setupConfirmationTimeout(ctx, target, confirmMsg, reason) {
         PENDING_CONFIRMATIONS.delete(key);
         try {
             await ctx.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
-        } catch (e) { }
+        } catch (e) {}
         logger.info(`[report-system] Confirmation timeout for ${target.id}`);
     }, 120000); // 2 minutes
 
@@ -57,7 +57,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
             return;
         }
@@ -74,7 +74,7 @@ function registerCommands(bot, db) {
             if (['creator', 'administrator'].includes(member.status)) {
                 return;
             }
-        } catch (e) { }
+        } catch (e) {}
 
         // Check for existing vote
         const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
@@ -103,7 +103,7 @@ function registerCommands(bot, db) {
                 setTimeout(async () => {
                     try {
                         await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                    } catch (e) { }
+                    } catch (e) {}
                 }, 60000);
                 return;
             }
@@ -143,7 +143,7 @@ function registerCommands(bot, db) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) { }
+                    } catch (e) {}
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
@@ -163,7 +163,7 @@ function registerCommands(bot, db) {
                 // Forward message to log channel first
                 try {
                     await ctx.api.forwardMessage(config.log_channel_id, ctx.chat.id, targetMsg.message_id);
-                } catch (e) { }
+                } catch (e) {}
 
                 await ctx.api.sendMessage(config.log_channel_id, logText, { parse_mode: 'HTML' });
             }
@@ -173,7 +173,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 300000); // 5 minutes
 
             return;
@@ -330,7 +330,7 @@ function registerCommands(bot, db) {
                     if (typeof config.log_events === 'string') {
                         try {
                             logEvents = JSON.parse(config.log_events);
-                        } catch (e) { }
+                        } catch (e) {}
                     } else if (typeof config.log_events === 'object') {
                         logEvents = config.log_events;
                     }
@@ -471,7 +471,7 @@ function logVoteResult(config, guildId, actionType, targetId, targetName, yesVot
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -492,4 +492,3 @@ function logVoteResult(config, guildId, actionType, targetId, targetName, yesVot
 module.exports = {
     registerCommands
 };
-

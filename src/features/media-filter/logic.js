@@ -87,7 +87,7 @@ function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image
             if (parsed.primary_category) {
                 conversationName = `NSFW: ${parsed.primary_category}`;
             }
-        } catch (e) { }
+        } catch (e) {}
 
         const conversation = {
             name: conversationName,
@@ -381,7 +381,7 @@ async function processMedia(ctx, config) {
         logger.debug(`[media-filter] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) { }
+        } catch (e) {}
     }
 }
 
@@ -402,7 +402,7 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[media-filter] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => { });
+                fs.unlink(dest, () => {});
                 reject(err);
             });
     });
@@ -463,12 +463,8 @@ async function checkImage(imagePath, config, reasons, caption = null, chatId = n
     // Actually, user requested strict reliance on primary_category matching blocked list.
     // So if primary_category is safe/suggestive (and suggestive isn't blocked), we allow it.
 
-    logger.debug(
-        `[media-filter] ✅ Image passed check - primary: ${res.primary_category} not in blocked list`
-    );
+    logger.debug(`[media-filter] ✅ Image passed check - primary: ${res.primary_category} not in blocked list`);
     return false;
-
-
 }
 
 async function checkVideo(videoPath, config, reasons, caption = null, chatId = null) {
@@ -578,7 +574,7 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) { }
+            } catch (e) {}
         }
     }
 }
@@ -1079,7 +1075,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) { }
+        } catch (e) {}
     }
 }
 

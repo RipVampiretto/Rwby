@@ -38,13 +38,13 @@ function registerCommands(bot, db) {
             await logic.setupParliament(db, ctx, bot);
             await ctx.reply(
                 '✅ **Parliament Group Configurato**\n\n' +
-                'Creati i topic per:\n' +
-                '- Bans (Ban globali)\n' +
-                '- Logs (Sistema)\n' +
-                '- Join Logs (Ingressi)\n' +
-                '- Add Group (Nuovi gruppi)\n' +
-                '- Image Spam (Analisi AI)\n' +
-                '- Link Checks (Link checks)'
+                    'Creati i topic per:\n' +
+                    '- Bans (Ban globali)\n' +
+                    '- Logs (Sistema)\n' +
+                    '- Join Logs (Ingressi)\n' +
+                    '- Add Group (Nuovi gruppi)\n' +
+                    '- Image Spam (Analisi AI)\n' +
+                    '- Link Checks (Link checks)'
             );
         } catch (e) {
             logger.error(`[super-admin] Setup error: ${e.message}`);
@@ -379,7 +379,7 @@ function registerCommands(bot, db) {
                 if (session.origGuildId && session.origMsgId) {
                     try {
                         await bot.api.deleteMessage(session.origGuildId, session.origMsgId);
-                    } catch (e) { }
+                    } catch (e) {}
                 }
             } else if (type === 'word') {
                 await db.query(

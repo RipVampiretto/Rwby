@@ -33,8 +33,6 @@ function registerCommands(bot, db) {
                 return next();
             }
 
-
-
             // Check types enabled
             const isVideo =
                 ctx.message.video || (ctx.message.document && ctx.message.document.mime_type?.startsWith('video'));
@@ -179,7 +177,7 @@ function registerCommands(bot, db) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) { }
+                    } catch (e) {}
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
