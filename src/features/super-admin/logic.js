@@ -306,9 +306,23 @@ async function executeGlobalBan(ctx, db, bot, userId) {
         await db.query('UPDATE users SET is_banned_global = TRUE WHERE user_id = $1', [userId]);
 
         await ctx.answerCallbackQuery('✅ Global Ban Recorded');
-        await ctx.editMessageCaption({
-            caption: ctx.callbackQuery.message.caption + '\n\n🌍 **GLOBALLY BANNED by ' + ctx.from.first_name + '**'
-        });
+
+        // Check if message has caption (media) or text (normal message)
+        const message = ctx.callbackQuery.message;
+        const banSuffix = `\n\n🌍 <b>GLOBALLY BANNED by ${ctx.from.first_name}</b>`;
+
+        if (message.caption) {
+            // Media message with caption
+            await ctx.editMessageCaption({
+                caption: message.caption + banSuffix,
+                parse_mode: 'HTML'
+            });
+        } else if (message.text) {
+            // Text message
+            await ctx.editMessageText(message.text + banSuffix, {
+                parse_mode: 'HTML'
+            });
+        }
 
         const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
         let count = 0;
