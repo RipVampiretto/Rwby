@@ -26,7 +26,8 @@ const MODULE_MAP = {
     staff_ban: 'Staff Coordination',
     staff_delete: 'Staff Coordination',
     staff_dismiss: 'Staff Coordination',
-    vote_ban: 'Vote Ban'
+    vote_ban: 'Vote Ban',
+    gban_ban: 'Global Ban'
 };
 
 // Emoji map
@@ -43,7 +44,8 @@ const EMOJI_MAP = {
     staff_ban: '👮',
     staff_delete: '👮',
     staff_dismiss: '👮',
-    vote_ban: '⚖️'
+    vote_ban: '⚖️',
+    gban_ban: '🌍'
 };
 
 module.exports = {

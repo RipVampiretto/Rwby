@@ -324,12 +324,36 @@ async function executeGlobalBan(ctx, db, bot, userId) {
             });
         }
 
-        const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
+        // Try to get user info for logging
+        let targetUser = { id: userId, first_name: 'Unknown' };
+        try {
+            const userInfo = await bot.api.getChat(userId);
+            targetUser = {
+                id: userId,
+                first_name: userInfo.first_name || 'Unknown',
+                username: userInfo.username
+            };
+        } catch (e) {
+            // User info not available, use default
+        }
+
+        const guilds = await db.queryAll('SELECT guild_id, guild_name FROM guild_config');
         let count = 0;
         for (const g of guilds) {
             try {
                 await bot.api.banChatMember(g.guild_id, userId);
                 count++;
+
+                // Send notification to guild's log channel
+                actionLog.logEvent({
+                    guildId: g.guild_id,
+                    guildName: g.guild_name,
+                    eventType: 'gban_ban',
+                    targetUser: targetUser,
+                    executorModule: 'Global Ban',
+                    reason: `Global Ban by ${ctx.from.first_name}`,
+                    isGlobal: true
+                });
             } catch (e) { }
         }
 
