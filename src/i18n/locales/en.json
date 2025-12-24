@@ -20,6 +20,31 @@
         "warnings": {
             "no_staff_group": "⚠️ WARNING: 'Report Only' action requires a Staff Group to be configured (/setstaff). Without it, no action will be taken."
         },
+        "logs": {
+            "user": "👤 User",
+            "group": "🏛️ Group",
+            "group_id": "Group ID",
+            "reason": "📝 Reason",
+            "evidence": "💬 Evidence",
+            "link": "🔗 Link",
+            "text": "💬 Text",
+            "flux": "📊 Flux",
+            "global_ban_user": "🌍 Global Ban User",
+            "global_ban": "🌍 Global Ban",
+            "local_only": "✅ Local Only",
+            "whitelist": "✅ Whitelist",
+            "blacklist": "🚫 Blacklist",
+            "unknown_link_title": "🔗 <b>UNKNOWN LINK</b>",
+            "blacklisted_link_title": "🚫 <b>BLACKLISTED LINK</b>",
+            "keyword_title": "🔤 <b>BANNED KEYWORD</b>",
+            "ban_executed_title": "🔨 <b>BAN EXECUTED</b>",
+            "add_to_list_question": "❓ Add to whitelist or blacklist?",
+            "global_ban_question": "⚠️ Globally ban this user?",
+            "message_deleted": "🗑️ Message deleted",
+            "message_removed": "✅ Message removed",
+            "welcome_saved": "✅ Welcome message saved!",
+            "tier_group": "🏷️ Group Tier"
+        },
         "start": {
             "greeting": "👋 Hello! I'm the moderation bot for Telegram groups.",
             "instructions": "Use /help to see available commands or /settings for the complete control panel.",
@@ -30,23 +55,23 @@
             }
         },
         "help": {
-            "title": "📚 **AVAILABLE COMMANDS**",
-            "user_section": "👤 **User Commands:**",
+            "title": "📚 <b>AVAILABLE COMMANDS</b>",
+            "user_section": "👤 <b>User Commands:</b>",
             "myflux_cmd": "/myflux - View your trust level (Flux) and privileges",
             "tier_cmd": "/tier - Information about the trust system",
-            "admin_section": "⚙️ **Admin Commands:**",
-            "settings_cmd": "/settings - 🎛️ **CONTROL PANEL**",
+            "admin_section": "⚙️ <b>Admin Commands:</b>",
+            "settings_cmd": "/settings - 🎛️ <b>CONTROL PANEL</b>",
             "settings_desc": "The centralized panel to manage all group moderation modules. Configure filters, automatic actions, rules and much more in a single intuitive interface.",
-            "other_commands": "🛠️ **Other Commands:**",
+            "other_commands": "🛠️ <b>Other Commands:</b>",
             "setstaff_cmd": "/setstaff \u003cid\u003e - Set the staff group for reports",
             "notes_cmd": "/notes \u003cid\u003e - View/add notes about a user",
-            "moderation_section": "👮 **Collective Moderation:**",
+            "moderation_section": "👮 <b>Collective Moderation:</b>",
             "voteban_trigger": "Reply to a message with @admin, !admin, .admin or /admin to start a ban vote"
         }
     },
     "settings": {
         "main": {
-            "title": "⚙️ **Settings**",
+            "title": "⚙️ <b>Settings</b>",
             "subtitle": "Choose one of the settings you want to change.",
             "close": "❌ Close"
         },
@@ -66,7 +91,7 @@
             "ui_language": "🌍 Bot Language"
         },
         "language": {
-            "title": "🌍 **INTERFACE LANGUAGE**",
+            "title": "🌍 <b>INTERFACE LANGUAGE</b>",
             "subtitle": "Choose the bot language for this group:",
             "current": "Current: {lang}",
             "changed": "✅ Language changed to {lang}",
@@ -74,7 +99,7 @@
         }
     },
     "report": {
-        "title": "📋 **REPORTS**",
+        "title": "📋 <b>REPORTS</b>",
         "description": "System for reporting problematic users.",
         "how_to_use": "How to use",
         "usage_info": "Reply to the troublemaker's message with @admin, !admin, .admin or /admin",
@@ -91,10 +116,10 @@
             "report_desc": "Sends the report to staff for manual review"
         },
         "vote_message": {
-            "title": "⚖️ **VOTING IN PROGRESS**",
+            "title": "⚖️ <b>VOTING IN PROGRESS</b>",
             "action": "Action",
-            "votes": "📊 **Votes:** {current}/{required}",
-            "expires": "⏱️ **Time left:** {time}",
+            "votes": "📊 <b>Votes:</b> {current}/{required}",
+            "expires": "⏱️ <b>Time left:</b> {time}",
             "description": "The community is deciding. Vote now!",
             "btn_yes": "✅ Yes ({count})",
             "btn_no": "❌ No ({count})"
@@ -112,7 +137,7 @@
             "report_sent_to_staff": "📋 Report sent to staff for review."
         },
         "confirm": {
-            "title": "⚖️ **CONFIRM REPORT**",
+            "title": "⚖️ <b>CONFIRM REPORT</b>",
             "target": "Reported user",
             "instruction": "Choose what to do if the vote succeeds:",
             "timeout": "You have 2 minutes to decide, otherwise the report will be cancelled."
@@ -123,19 +148,20 @@
             "not_initiator": "⚠️ Only the person who started the report can choose."
         },
         "result": {
-            "banned": "🚷 **{user}** has been BANNED by the community.\n📊 Votes: {yes} for - {no} against",
-            "deleted": "🗑️ **{user}**'s message has been deleted.\n📊 Votes: {yes} for - {no} against",
-            "saved": "🛡️ **{user}** is SAFE! The community decided not to act."
+            "banned": "🚷 <b>{user}</b> has been BANNED by the community.\n📊 Votes: {yes} for - {no} against",
+            "deleted": "🗑️ <b>{user}</b>'s message has been deleted.\n📊 Votes: {yes} for - {no} against",
+            "saved": "🛡️ <b>{user}</b> is SAFE! The community decided not to act."
         },
         "staff_alert": {
-            "message": "⚠️ <b>ATTENTION!</b>\n{reporter} <code>{reporterId}</code> requested admin intervention in the group \"{group}\"\n\n<b>Reported user:</b> {target} <code>{targetId}</code>\n\n👉🏻 <a href=\"{link}\">Go to message</a>",
+            "message": "⚠️ <b>ATTENTION!</b>\n{reporter} [<code>{reporterId}</code>] requested admin intervention in the group \"{group}\"\n\n<b>Reported user:</b> {target} [<code>{targetId}</code>]\n\n👉🏻 <a href=\"{link}\">Go to message</a>",
             "btn_resolved": "✅ Resolved",
             "resolved_toast": "✅ Marked as resolved"
         },
+        "log_message": "🆘 #REPORT\n• From: {reporter} [<code>{reporterId}</code>]\n• To: {target} [<code>{targetId}</code>]\n• Group: {group} [<code>{groupId}</code>]\n• 👀 <a href=\"{link}\">Go to message</a>\n#id{reporterId} #id{targetId}",
         "no_reason": "No reason specified"
     },
     "logger": {
-        "title": "📋 **ACTION LOG**",
+        "title": "📋 <b>ACTION LOG</b>",
         "description": "Keeps track of everything the bot does automatically. Useful for understanding what's happening.",
         "channel": "Channel",
         "channel_set": "✅ Set",
@@ -154,7 +180,7 @@
         }
     },
     "antiedit": {
-        "title": "✏️ **EDIT MONITORING**",
+        "title": "✏️ <b>EDIT MONITORING</b>",
         "description": "Detects suspicious message edits, like link injection or radical content changes.",
         "info_title": "How it works",
         "info_1": "Blocks link insertion in messages that didn't have links before",
@@ -173,7 +199,7 @@
         }
     },
     "modals": {
-        "title": "📋 **PATTERNS**",
+        "title": "📋 <b>PATTERNS</b>",
         "description": "Automatically recognizes suspicious messages using predefined patterns. Think of it as a smart filter that learns from past attempts.",
         "info_title": "How it works",
         "info_1": "Patterns loaded for your languages: {count}",
@@ -193,7 +219,7 @@
         }
     },
     "link": {
-        "title": "🔗 **Links**",
+        "title": "🔗 <b>Links</b>",
         "description": "Automatically deletes links to globally banned sites (phishing, scams, spam).",
         "status": "Status",
         "notify": "Log",
@@ -204,7 +230,7 @@
         }
     },
     "language": {
-        "title": "🌐 **Language**",
+        "title": "🌐 <b>Language</b>",
         "description": "Takes action on messages written in non-allowed languages.",
         "status": "Status",
         "tier_bypass": "Tier Bypass",
@@ -220,7 +246,7 @@
         }
     },
     "keyword": {
-        "title": "🔤 **Banned Words**",
+        "title": "🔤 <b>Banned Words</b>",
         "description": "Automatically deletes messages containing globally banned words.",
         "status": "Status",
         "notify": "Log",
@@ -231,7 +257,7 @@
         }
     },
     "media": {
-        "title": "🖼️ **Media Analysis**",
+        "title": "🖼️ <b>Media Analysis</b>",
         "description": "Analyzes photos, videos and other media to find non-compliant content: NSFW, scams, visual spam and more.",
         "status": "Status",
         "tier_bypass": "Tier Bypass",
@@ -297,7 +323,7 @@
         }
     },
     "ai": {
-        "title": "🤖 **SMART MODERATION**",
+        "title": "🤖 <b>SMART MODERATION</b>",
         "description": "An assistant that reads and understands the meaning of messages. Can block scams and toxic content even when they use normal words.",
         "info_title": "How it works",
         "info_1": "Works as a last line of defense after other filters",
@@ -314,12 +340,12 @@
             "threshold": "📊 Threshold"
         },
         "categories": {
-            "title": "⚙️ **ACTIONS BY CATEGORY**",
+            "title": "⚙️ <b>ACTIONS BY CATEGORY</b>",
             "subtitle": "Choose what to do for each type of violation (Delete/Ban/Report)"
         }
     },
     "blacklist": {
-        "title": "🚫 **Blacklist**",
+        "title": "🚫 <b>Blacklist</b>",
         "description": "Automatically ban globally banned users when they write or join the group.",
         "status": "Status",
         "notify": "Log",
@@ -329,7 +355,7 @@
         }
     },
     "staff": {
-        "title": "👮 **STAFF COORDINATION**",
+        "title": "👮 <b>STAFF COORDINATION</b>",
         "description": "Tools to coordinate the group's staff.",
         "staff_group": "Staff Group",
         "commands_title": "Available commands",
@@ -343,8 +369,8 @@
     },
     "tier_system": {
         "menu": {
-            "title": "🏛️ **TRUST SYSTEM**",
-            "your_rank": "{emoji} **{name}**",
+            "title": "🏛️ <b>TRUST SYSTEM</b>",
+            "your_rank": "{emoji} <b>{name}</b>",
             "select_tier": "Choose a level to see details:",
             "buttons": {
                 "view_details": "📖 View Details",
@@ -368,11 +394,11 @@
             }
         },
         "details": {
-            "flux_required": "Points required: **{range}**",
-            "restrictions_title": "🚫 **RESTRICTIONS:**",
-            "bypasses_title": "✅ **PRIVILEGES:**",
+            "flux_required": "Points required: <b>{range}</b>",
+            "restrictions_title": "🚫 <b>RESTRICTIONS:</b>",
+            "bypasses_title": "✅ <b>PRIVILEGES:</b>",
             "bypasses_none": "None",
-            "how_to_advance": "💡 **TIP:** Participate actively in discussions to earn points!",
+            "how_to_advance": "💡 <b>TIP:</b> Participate actively in discussions to earn points!",
             "items": {
                 "all_security": "All security checks active",
                 "links_deleted": "Links are deleted",
@@ -404,30 +430,30 @@
             }
         },
         "flux_calc": {
-            "title": "📊 **HOW TRUST POINTS (FLUX) WORK**",
+            "title": "📊 <b>HOW TRUST POINTS (FLUX) WORK</b>",
             "intro": "Flux is a score that reflects how active and reliable you are in the group. The more points you earn, the more privileges you get (configurable by admins).",
-            "earning_title": "**💚 Earning Points:**",
+            "earning_title": "<b>💚 Earning Points:</b>",
             "earning_items": "• +1 for each message (max 1 every 6 minutes)\n• +1 per day as passive bonus",
-            "losing_title": "**💔 Losing Points:**",
+            "losing_title": "<b>💔 Losing Points:</b>",
             "losing_items": "• -50 for spam behavior\n• -50 for dangerous links\n• -100 for forbidden content",
-            "thresholds_title": "**🎯 Trust Levels:**",
-            "thresholds_items": "• **Tier 0:** 0 - 99 points\n• **Tier 1:** 100 - 299 points\n• **Tier 2:** 300 - 499 points\n• **Tier 3:** 500+ points",
-            "cap": "ℹ️ **Note:** Points are capped between -1000 and +1000. Restrictions and privileges are configurable by group admins."
+            "thresholds_title": "<b>🎯 Trust Levels:</b>",
+            "thresholds_items": "• <b>Tier 0:</b> 0 - 99 points\n• <b>Tier 1:</b> 100 - 299 points\n• <b>Tier 2:</b> 300 - 499 points\n• <b>Tier 3:</b> 500+ points",
+            "cap": "ℹ️ <b>Note:</b> Points are capped between -1000 and +1000. Restrictions and privileges are configurable by group admins."
         },
         "my_flux": {
-            "title": "📊 **YOUR POINTS**",
+            "title": "📊 <b>YOUR POINTS</b>",
             "local_global": "🏠 In this group: {local} | 🌍 Total: {global}"
         }
     },
     "welcome": {
-        "title": "👋 **Welcome System & Captcha**",
-        "captcha": "🛡️ **Captcha:**",
-        "welcome_msg": "📨 **Welcome:**",
-        "mode": "🎮 **Mode:**",
-        "timeout": "⏳ **Kick Timeout:**",
-        "autodelete": "⏱ **Auto-delete:**",
-        "rules": "📜 **Rules:**",
-        "logs_label": "🚨 **Admin Logs:**",
+        "title": "👋 <b>Welcome System & Captcha</b>",
+        "captcha": "🛡️ <b>Captcha:</b>",
+        "welcome_msg": "📨 <b>Welcome:</b>",
+        "mode": "🎮 <b>Mode:</b>",
+        "timeout": "⏳ <b>Kick Timeout:</b>",
+        "autodelete": "⏱ <b>Auto-delete:</b>",
+        "rules": "📜 <b>Rules:</b>",
+        "logs_label": "🚨 <b>Admin Logs:</b>",
         "on_no_msg": "✅ ON (No Msg)",
         "minutes": "{count} min",
         "seconds": "{count} sec",
@@ -447,16 +473,16 @@
             "back_to_menu": "🔙 Back to menu"
         },
         "modes": {
-            "title": "🎮 **Select Captcha Mode**",
+            "title": "🎮 <b>Select Captcha Mode</b>",
             "subtitle": "You can enable multiple modes at once. The bot will choose one randomly for each new user.",
             "descriptions": {
-                "button": "**1. Button** - Click 'I'm not a robot'",
-                "math": "**2. Math** - Operations (+, -, x)",
-                "char": "**3. Char** - Count characters",
-                "emoji": "**4. Emoji** - Find the correct emoji",
-                "color": "**5. Color** - Find the correct color",
-                "logic": "**6. Logic** - Logical sequences",
-                "reverse": "**7. Reverse** - Words backwards"
+                "button": "<b>1. Button</b> - Click 'I'm not a robot'",
+                "math": "<b>2. Math</b> - Operations (+, -, x)",
+                "char": "<b>3. Char</b> - Count characters",
+                "emoji": "<b>4. Emoji</b> - Find the correct emoji",
+                "color": "<b>5. Color</b> - Find the correct color",
+                "logic": "<b>6. Logic</b> - Logical sequences",
+                "reverse": "<b>7. Reverse</b> - Words backwards"
             },
             "active": "Active: `{modes}`"
         },
@@ -470,31 +496,31 @@
             "complete_sequence": "Join the group by completing the logical sequence:",
             "confirm_human": "Click the button below to confirm you are human.",
             "timeout": "You have {minutes} minutes.",
-            "math_question": "** How much is {a} {op} {b}? **",
-            "char_question": "** How many {char} in the word: {word}? **",
-            "emoji_question": "** Click on: {emoji} **",
-            "color_question": "** Click on the {color} circle **",
-            "reverse_question": "** What is the opposite of: {word}? **",
-            "logic_question": "** {sequence} **"
+            "math_question": "<b> How much is {a} {op} {b}? </b>",
+            "char_question": "<b> How many {char} in the word: {word}? </b>",
+            "emoji_question": "<b> Click on: {emoji} </b>",
+            "color_question": "<b> Click on the {color} circle </b>",
+            "reverse_question": "<b> What is the opposite of: {word}? </b>",
+            "logic_question": "<b> {sequence} </b>"
         },
         "rules_prompt": {
-            "title": "📜 **Set Rules Link**",
+            "title": "📜 <b>Set Rules Link</b>",
             "instruction": "Send now the link to the rules (e.g. `https://t.me/...` or `http://...`).",
             "usage": "This link will be used in the 'Read Rules' button.",
             "cancel": "🔴 *Write 'cancel' to abort.*",
             "button_cancel": "❌ Cancel"
         },
         "rules_message": {
-            "title": "📜 **Read the Rules**",
+            "title": "📜 <b>Read the Rules</b>",
             "instruction": "Before joining, confirm you have read the group rules."
         },
         "wizard": {
-            "title": "✏️ **Set Welcome Message**",
+            "title": "✏️ <b>Set Welcome Message</b>",
             "instruction": "Send now the message you want to set.",
-            "user_data": "**User Data**",
-            "group_data": "**Group Data**",
-            "special_functions": "**Special Functions**",
-            "custom_buttons": "**For custom buttons:**",
+            "user_data": "<b>User Data</b>",
+            "group_data": "<b>Group Data</b>",
+            "special_functions": "<b>Special Functions</b>",
+            "custom_buttons": "<b>For custom buttons:</b>",
             "placeholders": {
                 "mention": "`{mention}` - Clickable link to name",
                 "user": "`{user}` - Display name",
@@ -510,7 +536,13 @@
             },
             "buttons_format": "Add `||` at the end of the text followed by configuration.",
             "buttons_example": "E.g.: `Message... || Label,URL | Label2,URL`",
-            "cancel": "🔴 *Write 'cancel' to abort.*"
+            "cancel": "🔴 *Write 'cancel' to abort.*",
+            "text_required": "⚠️ Please send a text message.",
+            "text_empty": "⚠️ Text cannot be empty.",
+            "saved": "✅ Welcome message saved!",
+            "link_invalid": "⚠️ Send a valid link (starts with http:// or tg://).",
+            "rules_saved": "✅ Rules link saved!",
+            "message_removed": "✅ Message removed."
         },
         "preview": {
             "no_message": "⚠️ No message to display."
@@ -523,9 +555,9 @@
         }
     },
     "antispam": {
-        "title": "🛡️ **ANTI-SPAM**",
+        "title": "🛡️ <b>ANTI-SPAM</b>",
         "description": "Blocks users who send too many quick messages or repetitive copy-paste. Protects the group from flood and bots.",
-        "info_title": "ℹ️ **Info:**",
+        "info_title": "ℹ️ <b>Info:</b>",
         "info_items": {
             "sensitivity": "• Sensitivity: Adjusts how strict the filter is",
             "detects": "• Detects: Message bursts and repetitions",
@@ -546,9 +578,9 @@
         }
     },
     "profiler": {
-        "title": "🔍 **NEW USER PROFILER**",
+        "title": "🔍 <b>NEW USER PROFILER</b>",
         "description": "Analyzes newcomers to block instant bots and spammers. Stops checking users once they become trusted.",
-        "info_title": "ℹ️ **Info:**",
+        "info_title": "ℹ️ <b>Info:</b>",
         "info_items": {
             "checks": "• Checks if they immediately send Links or Forwards",
             "detects": "• Detects typical bot phrases (\"earn now\", etc)",
@@ -566,9 +598,9 @@
         }
     },
     "visual": {
-        "title": "🧬 **VISUAL IMMUNITY**",
+        "title": "🧬 <b>VISUAL IMMUNITY</b>",
         "description": "Recognizes and blocks images that have been flagged before. Even if slightly modified, the bot still recognizes them.",
-        "info_title": "ℹ️ **Info:**",
+        "info_title": "ℹ️ <b>Info:</b>",
         "info_items": {
             "blocks": "• Blocks spam memes or recurring raid images",
             "shares": "• Shares \"fingerprints\" of bad images with other groups",
@@ -586,36 +618,36 @@
         }
     },
     "superadmin": {
-        "title": "🌍 **GLOBAL GOVERNANCE PANEL**",
+        "title": "🌍 <b>GLOBAL GOVERNANCE PANEL</b>",
         "description": "Control panel for global network oversight.",
-        "groups_monitored": "👥 **Groups monitored:** {count}",
-        "total_users": "🌍 **Total users:** {count}",
-        "active_bills": "📋 **Active bills:** {count}",
+        "groups_monitored": "👥 <b>Groups monitored:</b> {count}",
+        "total_users": "🌍 <b>Total users:</b> {count}",
+        "active_bills": "📋 <b>Active bills:</b> {count}",
         "buttons": {
             "stats": "📊 Statistics",
             "bills": "📜 Bills",
             "actions": "⚖️ Actions"
         },
         "stats": {
-            "title": "📊 **NETWORK STATISTICS**",
+            "title": "📊 <b>NETWORK STATISTICS</b>",
             "total_groups": "👥 Groups: {count}",
             "total_users": "🧑 Unique users: {count}",
             "active_modules": "⚙️ Active modules: {list}",
             "recent_actions": "🚨 Recent actions (24h): {count}"
         },
         "ban_executed": {
-            "title": "🔨 **BAN EXECUTED**",
+            "title": "🔨 <b>BAN EXECUTED</b>",
             "user": "👤 User: {user}",
             "reason": "📝 Reason: {reason}",
             "groups": "🌐 Ban applied to {count} groups"
         },
         "global_log": {
-            "title": "📋 **GLOBAL LOG: {type}**",
+            "title": "📋 <b>GLOBAL LOG: {type}</b>",
             "details": "Global event details"
         }
     },
     "intel": {
-        "title": "🌐 **INTEL NETWORK STATUS**",
+        "title": "🌐 <b>INTEL NETWORK STATUS</b>",
         "description": "Shared intelligence system among network groups.",
         "sharing_enabled": "🔄 Sharing: {status}",
         "reports_sent": "📤 Reports sent: {count}",
@@ -625,20 +657,20 @@
             "stats": "📊 Statistics"
         },
         "bill": {
-            "title": "📜 **NEW BILL #{id}**",
+            "title": "📜 <b>NEW BILL #{id}</b>",
             "submitted": "Proposal sent to Parliament for review."
         },
         "report": {
-            "title": "📥 **REVIEW REQUEST**",
+            "title": "📥 <b>REVIEW REQUEST</b>",
             "from_group": "from {group}",
             "requires_review": "Requires staff review."
         }
     },
     "smart_report": {
-        "category_title": "⚙️ **CATEGORY ACTIONS**",
+        "category_title": "⚙️ <b>CATEGORY ACTIONS</b>",
         "category_subtitle": "Choose the action to perform for each type of AI-detected violation.",
-        "action_delete": "🤖 **Content Removed**\n\n⚠️ Violation detected: _{category}_\n\n_The message was automatically deleted._",
-        "action_ban": "🚨 **User Banned**\n\n👤 {user} has been removed from the group.\n⚠️ Reason: _{category}_\n\n_Thanks for the report! (+2 Flux)_",
-        "action_report": "📋 **Report Submitted**\n\n⚠️ Possible violation: _{category}_\n\n_Staff will review the report._"
+        "action_delete": "🤖 <b>Content Removed</b>\n\n⚠️ Violation detected: _{category}_\n\n_The message was automatically deleted._",
+        "action_ban": "🚨 <b>User Banned</b>\n\n👤 {user} has been removed from the group.\n⚠️ Reason: _{category}_\n\n_Thanks for the report! (+2 Flux)_",
+        "action_report": "📋 <b>Report Submitted</b>\n\n⚠️ Possible violation: _{category}_\n\n_Staff will review the report._"
     }
 }

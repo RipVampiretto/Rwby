@@ -52,7 +52,7 @@ async function addToDb(ctx, db, msg, type, category) {
             [hash, type, category, ctx.chat.id]
         );
         await ctx.reply(`✅ Immagine salvata come **${type}** (${category}). Hash: \`${hash}\``, {
-            parse_mode: 'Markdown'
+            parse_mode: 'HTML'
         });
     } catch (e) {
         await ctx.reply('❌ Errore: ' + e.message);

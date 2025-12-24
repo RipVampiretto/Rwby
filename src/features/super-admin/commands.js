@@ -88,7 +88,7 @@ function registerCommands(bot, db) {
                 msg += `${i + 1}. \`${item.value}\`\n`;
             });
             msg += '\n_Usa /gwhitelist add <dominio> o /gwhitelist remove <dominio>_';
-            return ctx.reply(msg, { parse_mode: 'Markdown' });
+            return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         if (action === 'add' && domain) {
@@ -99,7 +99,7 @@ function registerCommands(bot, db) {
 
             if (existing) {
                 if (existing.status === 'active') {
-                    return ctx.reply(`⚠️ \`${domain}\` è già in whitelist.`, { parse_mode: 'Markdown' });
+                    return ctx.reply(`⚠️ \`${domain}\` è già in whitelist.`, { parse_mode: 'HTML' });
                 }
                 await db.query("UPDATE intel_data SET status = 'active' WHERE id = $1", [existing.id]);
             } else {
@@ -108,7 +108,7 @@ function registerCommands(bot, db) {
                     [domain, ctx.from.id]
                 );
             }
-            return ctx.reply(`✅ \`${domain}\` aggiunto alla whitelist globale.`, { parse_mode: 'Markdown' });
+            return ctx.reply(`✅ \`${domain}\` aggiunto alla whitelist globale.`, { parse_mode: 'HTML' });
         }
 
         if (action === 'remove' && domain) {
@@ -118,8 +118,8 @@ function registerCommands(bot, db) {
             );
 
             if (result.rowCount > 0)
-                return ctx.reply(`🗑️ \`${domain}\` rimosso dalla whitelist globale.`, { parse_mode: 'Markdown' });
-            return ctx.reply(`⚠️ \`${domain}\` non trovato in whitelist.`, { parse_mode: 'Markdown' });
+                return ctx.reply(`🗑️ \`${domain}\` rimosso dalla whitelist globale.`, { parse_mode: 'HTML' });
+            return ctx.reply(`⚠️ \`${domain}\` non trovato in whitelist.`, { parse_mode: 'HTML' });
         }
 
         return ctx.reply('❓ Uso: /gwhitelist [list|add|remove] [dominio]');
@@ -160,7 +160,7 @@ function registerCommands(bot, db) {
             msg += '`/gblacklist w add parola` - Aggiungi parola\n';
             msg += '`/gblacklist d remove example.com` - Rimuovi dominio\n';
             msg += '`/gblacklist w remove parola` - Rimuovi parola';
-            return ctx.reply(msg, { parse_mode: 'Markdown' });
+            return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         // Determine type
@@ -173,7 +173,7 @@ function registerCommands(bot, db) {
             dbType = 'blacklist_domain';
             typeName = 'dominio';
         } else {
-            return ctx.reply('❌ Tipo non valido. Usa `w` (word) o `d` (domain).', { parse_mode: 'Markdown' });
+            return ctx.reply('❌ Tipo non valido. Usa `w` (word) o `d` (domain).', { parse_mode: 'HTML' });
         }
 
         // List specific type
@@ -183,7 +183,7 @@ function registerCommands(bot, db) {
 
             let msg = `🚫 **BLACKLIST ${typeName.toUpperCase()}**\n\n`;
             items.forEach((item, i) => (msg += `${i + 1}. \`${item.value}\`\n`));
-            return ctx.reply(msg, { parse_mode: 'Markdown' });
+            return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         // Add
@@ -194,7 +194,7 @@ function registerCommands(bot, db) {
             ]);
             if (existing) {
                 if (existing.status === 'active')
-                    return ctx.reply(`⚠️ \`${value}\` già in blacklist.`, { parse_mode: 'Markdown' });
+                    return ctx.reply(`⚠️ \`${value}\` già in blacklist.`, { parse_mode: 'HTML' });
                 await db.query("UPDATE intel_data SET status='active' WHERE id=$1", [existing.id]);
             } else {
                 await db.query('INSERT INTO intel_data (type, value, added_by_user) VALUES ($1, $2, $3)', [
@@ -203,7 +203,7 @@ function registerCommands(bot, db) {
                     ctx.from.id
                 ]);
             }
-            return ctx.reply(`✅ ${typeName} \`${value}\` aggiunto alla blacklist.`, { parse_mode: 'Markdown' });
+            return ctx.reply(`✅ ${typeName} \`${value}\` aggiunto alla blacklist.`, { parse_mode: 'HTML' });
         }
 
         // Remove
@@ -213,11 +213,11 @@ function registerCommands(bot, db) {
                 value
             ]);
             if (result.rowCount > 0)
-                return ctx.reply(`🗑️ ${typeName} \`${value}\` rimosso.`, { parse_mode: 'Markdown' });
-            return ctx.reply(`⚠️ \`${value}\` non trovato.`, { parse_mode: 'Markdown' });
+                return ctx.reply(`🗑️ ${typeName} \`${value}\` rimosso.`, { parse_mode: 'HTML' });
+            return ctx.reply(`⚠️ \`${value}\` non trovato.`, { parse_mode: 'HTML' });
         }
 
-        return ctx.reply('❓ Uso: `/gblacklist <w|d> <add|remove|list> [valore]`', { parse_mode: 'Markdown' });
+        return ctx.reply('❓ Uso: `/gblacklist <w|d> <add|remove|list> [valore]`', { parse_mode: 'HTML' });
     });
 
     // Command: /gmodal
@@ -307,7 +307,7 @@ function registerCommands(bot, db) {
             );
             await ctx.answerCallbackQuery('✅ Whitelisted');
             await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ **${domain} aggiunto alla Whitelist**`, {
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         }
 
@@ -321,7 +321,7 @@ function registerCommands(bot, db) {
             );
             await ctx.answerCallbackQuery('🚫 Blacklisted');
             await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n🚫 **${domain} aggiunto alla Blacklist**`, {
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         }
 
@@ -355,7 +355,7 @@ function registerCommands(bot, db) {
             );
             await ctx.answerCallbackQuery('✅ Whitelisted');
             await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n✅ **Aggiunto alla Whitelist**`, {
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         } else return next();
     });

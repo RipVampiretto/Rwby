@@ -373,7 +373,7 @@ async function processUserJoin(ctx, user, config) {
 
         const msg = await ctx.reply(text, {
             reply_markup: keyboard,
-            parse_mode: 'Markdown'
+            parse_mode: 'HTML'
         });
 
         // SET TIMEOUT
@@ -474,7 +474,7 @@ async function handleCaptchaCallback(ctx) {
             const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
             try {
                 await ctx.editMessageText(text, {
-                    parse_mode: 'Markdown',
+                    parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
@@ -486,7 +486,7 @@ async function handleCaptchaCallback(ctx) {
                 // If edit fails, try sending new
                 await ctx.deleteMessage().catch(() => { });
                 await ctx.reply(text, {
-                    parse_mode: 'Markdown',
+                    parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🔗 Leggi Regolamento', url: rulesLink }],

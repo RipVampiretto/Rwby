@@ -77,10 +77,10 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
     if (isEdit) {
         try {
-            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
         } catch (e) { }
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
@@ -101,7 +101,7 @@ async function sendCategoryConfigUI(ctx, db, fromSettings = false) {
 
     const text = `${t('ai.categories.title')}\n${t('ai.categories.subtitle')}`;
     try {
-        await ctx.editMessageText(text, { reply_markup: { inline_keyboard: rows }, parse_mode: 'Markdown' });
+        await ctx.editMessageText(text, { reply_markup: { inline_keyboard: rows }, parse_mode: 'HTML' });
     } catch (e) { }
 }
 

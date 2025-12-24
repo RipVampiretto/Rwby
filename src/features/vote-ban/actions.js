@@ -36,7 +36,7 @@ async function finalizeVote(ctx, db, vote, status, admin) {
             const outcome = status === 'forced_ban' ? t('voteban.log.forced_by_admin') : t('voteban.log.vote_concluded');
             await ctx.editMessageText(
                 `⚖️ **${t('voteban.log.tribunal_closed')}**\n\n${t('voteban.log.user_banned', { user: vote.target_username })}\n${t('voteban.log.outcome')}: ${outcome}`,
-                { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
+                { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
             );
 
             // Delete after 1 minute
@@ -66,7 +66,7 @@ async function finalizeVote(ctx, db, vote, status, admin) {
         const outcome = status === 'pardon' ? t('voteban.log.pardoned_by_admin') : t('voteban.log.vote_failed');
         await ctx.editMessageText(
             `⚖️ **${t('voteban.log.tribunal_closed')}**\n\n${t('voteban.log.user_saved', { user: vote.target_username })}\n${t('voteban.log.outcome')}: ${outcome}`,
-            { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
+            { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
         );
 
         // Delete after 1 minute
@@ -170,7 +170,7 @@ async function processExpiredVotes(bot, db) {
                     vote.chat_id,
                     vote.poll_message_id,
                     `⚖️ **${t('voteban.log.tribunal_closed')}**\n\n${t('voteban.log.user_saved_expired', { user: vote.target_username })}\n${t('voteban.log.outcome')}: ${t('voteban.log.expired')}`,
-                    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [] } }
+                    { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
                 );
                 // Delete after 1 minute
                 setTimeout(() => {
@@ -198,7 +198,7 @@ async function processExpiredVotes(bot, db) {
             );
             await bot.api.editMessageText(vote.chat_id, vote.poll_message_id, text, {
                 reply_markup: keyboard,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         } catch (e) {
             // "message is not modified"

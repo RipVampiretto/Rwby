@@ -92,9 +92,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         };
 
         if (isEdit) {
-            await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'media-monitor');
+            await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'media-monitor');
         } else {
-            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
         }
     } catch (e) {
         logger.error(`[media-monitor] sendConfigUI error: ${e.message}`);

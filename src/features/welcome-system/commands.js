@@ -2,6 +2,7 @@ const { getGuildConfig, updateGuildConfig } = require('../../database/repos/guil
 const logger = require('../../middlewares/logger');
 const ui = require('./ui');
 const wizard = require('./wizard');
+const i18n = require('../../i18n');
 
 async function handleCallback(ctx) {
     const data = ctx.callbackQuery.data;
@@ -133,7 +134,8 @@ async function handleCallback(ctx) {
             welcome_buttons: null,
             welcome_msg_enabled: 0
         });
-        await ctx.answerCallbackQuery('✅ Messaggio rimosso.');
+        const lang = await i18n.getLanguage(ctx.chat.id);
+        await ctx.answerCallbackQuery(i18n.t(lang, 'welcome.wizard.message_removed'));
         await ui.sendWelcomeMenu(ctx, true);
         return;
     }

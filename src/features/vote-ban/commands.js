@@ -98,7 +98,7 @@ function registerCommands(bot, db) {
 
             const staffGroupId = config.staff_group_id;
             if (!staffGroupId) {
-                const notifyMsg = await ctx.reply(i18n.t(lang, 'common.warnings.no_staff_group'), { parse_mode: 'Markdown' });
+                const notifyMsg = await ctx.reply(i18n.t(lang, 'common.warnings.no_staff_group'), { parse_mode: 'HTML' });
                 setTimeout(async () => {
                     try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
                 }, 60000);
@@ -145,24 +145,26 @@ function registerCommands(bot, db) {
             }
 
             if (logEvents['report_log'] && config.log_channel_id) {
-                const logText =
-                    `🆘 #SEGNALAZIONE\n` +
-                    `• Di: ${reporterName} [${ctx.from.id}]\n` +
-                    `• A: ${targetName} [${target.id}]\n` +
-                    `• Gruppo: ${ctx.chat.title} [${ctx.chat.id}]\n` +
-                    `• 👀 [Vai al messaggio](${messageLink})\n` +
-                    `#id${ctx.from.id} #id${target.id}`;
+                const logText = t('report.log_message', {
+                    reporter: reporterName,
+                    reporterId: ctx.from.id,
+                    target: targetName,
+                    targetId: target.id,
+                    group: ctx.chat.title,
+                    groupId: ctx.chat.id,
+                    link: messageLink
+                });
 
                 // Forward message to log channel first
                 try {
                     await ctx.api.forwardMessage(config.log_channel_id, ctx.chat.id, targetMsg.message_id);
                 } catch (e) { }
 
-                await ctx.api.sendMessage(config.log_channel_id, logText, { parse_mode: 'Markdown' });
+                await ctx.api.sendMessage(config.log_channel_id, logText, { parse_mode: 'HTML' });
             }
 
             // Show confirmation message (auto-delete 5 min)
-            const notifyMsg = await ctx.reply(t('report.log.report_sent_to_staff'), { parse_mode: 'Markdown' });
+            const notifyMsg = await ctx.reply(t('report.log.report_sent_to_staff'), { parse_mode: 'HTML' });
             setTimeout(async () => {
                 try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
             }, 300000); // 5 minutes
@@ -206,7 +208,7 @@ function registerCommands(bot, db) {
                 const userName = target.username ? \`@\${target.username}\` : target.first_name;
                 const notifyMsg = await ctx.reply(
                     t('smart_report.action_delete', { category: analysisResult.category, user: userName }),
-                    { parse_mode: 'Markdown' }
+                    { parse_mode: 'HTML' }
                 );
                 setTimeout(async () => {
                     try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
@@ -235,7 +237,7 @@ function registerCommands(bot, db) {
                 const userName = target.username ? \`@\${target.username}\` : target.first_name;
                 const notifyMsg = await ctx.reply(
                     t('smart_report.action_ban', { category: analysisResult.category, user: userName }),
-                    { parse_mode: 'Markdown' }
+                    { parse_mode: 'HTML' }
                 );
                 setTimeout(async () => {
                     try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
@@ -255,7 +257,7 @@ function registerCommands(bot, db) {
                     content: targetMsg.text || targetMsg.caption || '[Media]'
                 });
 
-                const notifyMsg = await ctx.reply(t('smart_report.action_report', { category: analysisResult.category }), { parse_mode: 'Markdown' });
+                const notifyMsg = await ctx.reply(t('smart_report.action_report', { category: analysisResult.category }), { parse_mode: 'HTML' });
                 setTimeout(async () => {
                     try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
                 }, 60000);
@@ -280,7 +282,7 @@ function registerCommands(bot, db) {
             });
 
             const t = (key, params) => i18n.t(lang, key, params);
-            const notifyMsg = await ctx.reply(t('voteban.log.report_sent_to_staff'), { parse_mode: 'Markdown' });
+            const notifyMsg = await ctx.reply(t('voteban.log.report_sent_to_staff'), { parse_mode: 'HTML' });
             setTimeout(async () => {
                 try { await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id); } catch (e) { }
             }, 60000);
@@ -372,7 +374,7 @@ function registerCommands(bot, db) {
             await ctx.deleteMessage();
             const voteMsg = await ctx.api.sendMessage(ctx.chat.id, msgText, {
                 reply_markup: keyboard,
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_to_message_id: pending.targetMsgId
             });
             await logic.setPollMessageId(db, voteId, voteMsg.message_id);
@@ -386,13 +388,16 @@ function registerCommands(bot, db) {
             const adminName = ctx.from.first_name;
             const adminId = ctx.from.id;
 
+            // Get language from staff group
+            const lang = await i18n.getLanguage(ctx.chat.id);
+
             // Get current text and append resolved info with HTML code tag
             const currentText = msg.text || '';
-            const newText = currentText + `\n\n~ ✅ ${adminName} <code>${adminId}</code>`;
+            const newText = currentText + `\n\n~ ✅ ${adminName} [<code>${adminId}</code>]`;
 
             // Edit message: remove keyboard, append admin info
             await ctx.editMessageText(newText, { parse_mode: 'HTML' });
-            await ctx.answerCallbackQuery('✅ Segnato come risolto');
+            await ctx.answerCallbackQuery(i18n.t(lang, 'report.staff_alert.resolved_toast'));
             return;
         }
 
@@ -522,13 +527,13 @@ function registerCommands(bot, db) {
                     ? t('report.result.banned', { user: vote.target_username, yes: yesVotes, no: noVotes })
                     : t('report.result.deleted', { user: vote.target_username, yes: yesVotes, no: noVotes });
 
-                await ctx.editMessageText(resultText, { parse_mode: 'Markdown' });
+                await ctx.editMessageText(resultText, { parse_mode: 'HTML' });
             } else if (noVotes > vote.required_votes / 2) {
                 // Majority voted no
                 await logic.updateVote(db, voteId, { status: 'rejected' });
 
                 const lang = await i18n.getLanguage(ctx.chat.id);
-                await ctx.editMessageText(i18n.t(lang, 'report.result.saved', { user: vote.target_username }), { parse_mode: 'Markdown' });
+                await ctx.editMessageText(i18n.t(lang, 'report.result.saved', { user: vote.target_username }), { parse_mode: 'HTML' });
             } else {
                 // Extract actionType from reason
                 let updateActionType = 'ban';
@@ -546,7 +551,7 @@ function registerCommands(bot, db) {
                     vote.expires_at,
                     voteId
                 );
-                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+                await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
             }
 
             await ctx.answerCallbackQuery();

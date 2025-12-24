@@ -52,10 +52,10 @@ async function sendMainMenu(ctx, isEdit = false) {
 
     if (isEdit) {
         try {
-            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
         } catch (e) { }
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
@@ -86,7 +86,7 @@ async function sendLanguageUI(ctx) {
     const keyboard = { inline_keyboard: rows };
 
     try {
-        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     } catch (e) { }
 }
 

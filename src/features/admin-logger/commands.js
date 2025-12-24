@@ -49,7 +49,7 @@ function registerCommands(bot, db) {
 
         if (!args[0]) {
             return ctx.reply("❌ Specifica l'ID del canale.\nUso: `/setlogchannel -100123456789`", {
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         }
 
@@ -64,11 +64,11 @@ function registerCommands(bot, db) {
             await bot.api.deleteMessage(targetId, testMsg.message_id);
 
             await db.updateGuildConfig(ctx.chat.id, { log_channel_id: targetId });
-            await ctx.reply(`✅ Canale log impostato: \`${targetId}\``, { parse_mode: 'Markdown' });
+            await ctx.reply(`✅ Canale log impostato: \`${targetId}\``, { parse_mode: 'HTML' });
         } catch (e) {
             await ctx.reply(
                 `❌ Impossibile inviare messaggi nel canale \`${targetId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'HTML' }
             );
         }
     });

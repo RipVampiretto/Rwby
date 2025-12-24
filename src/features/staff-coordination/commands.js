@@ -20,7 +20,7 @@ function registerCommands(bot, db) {
 
         if (!args[0]) {
             return ctx.reply("❌ Specifica l'ID del gruppo staff.\nUso: `/setstaff -100123456789`", {
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         }
 
@@ -31,11 +31,11 @@ function registerCommands(bot, db) {
 
         try {
             await logic.setStaffGroup(db, ctx, bot, staffId);
-            await ctx.reply(`✅ Staff Group impostato: \`${staffId}\``, { parse_mode: 'Markdown' });
+            await ctx.reply(`✅ Staff Group impostato: \`${staffId}\``, { parse_mode: 'HTML' });
         } catch (e) {
             await ctx.reply(
                 `❌ Impossibile inviare messaggi nel gruppo \`${staffId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'HTML' }
             );
         }
     });
@@ -51,7 +51,7 @@ function registerCommands(bot, db) {
         // /notes add <id> <text>
         if (args[0] === 'add') {
             if (args.length < 3) {
-                return ctx.reply('❌ Uso: `/notes add <user_id> <testo>`', { parse_mode: 'Markdown' });
+                return ctx.reply('❌ Uso: `/notes add <user_id> <testo>`', { parse_mode: 'HTML' });
             }
 
             const targetId = parseInt(args[1]);
@@ -61,7 +61,7 @@ function registerCommands(bot, db) {
 
             const noteText = args.slice(2).join(' ');
             await logic.addNote(db, ctx, targetId, noteText, staffGroupId);
-            await ctx.reply(`✅ Nota aggiunta per utente \`${targetId}\``, { parse_mode: 'Markdown' });
+            await ctx.reply(`✅ Nota aggiunta per utente \`${targetId}\``, { parse_mode: 'HTML' });
             return;
         }
 
@@ -76,7 +76,7 @@ function registerCommands(bot, db) {
         if (!targetId) {
             return ctx.reply(
                 '❌ Uso:\n`/notes <user_id>` - Visualizza note\n`/notes add <user_id> <severity> <testo>` - Aggiungi nota',
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'HTML' }
             );
         }
 
@@ -106,7 +106,7 @@ function registerCommands(bot, db) {
         }
 
         if (!channelId || isNaN(channelId)) {
-            await ctx.reply('❌ ID non valido. Usa un ID numerico (es. `-100123456789`). Scrivi "cancel" per annullare.', { parse_mode: 'Markdown' });
+            await ctx.reply('❌ ID non valido. Usa un ID numerico (es. `-100123456789`). Scrivi "cancel" per annullare.', { parse_mode: 'HTML' });
             return;
         }
 
@@ -114,11 +114,11 @@ function registerCommands(bot, db) {
         try {
             await ctx.api.sendMessage(channelId, '✅ Canale Log configurato correttamente!');
             await db.updateGuildConfig(ctx.chat.id, { log_channel_id: channelId });
-            await ctx.reply(`✅ Canale Log impostato: \`${channelId}\``, { parse_mode: 'Markdown' });
+            await ctx.reply(`✅ Canale Log impostato: \`${channelId}\``, { parse_mode: 'HTML' });
         } catch (e) {
             await ctx.reply(
                 `❌ Impossibile inviare messaggi nel canale \`${channelId}\`.\nAssicurati che il bot sia admin con permessi di scrittura.`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'HTML' }
             );
         }
 
@@ -144,7 +144,7 @@ function registerCommands(bot, db) {
 
             await ctx.reply(
                 '📢 **Imposta Canale Log**\n\nInvia l\'ID del canale dove inviare i log (es. `-100123456789`).\n\nScrivi "cancel" per annullare.',
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'HTML' }
             );
             await ctx.answerCallbackQuery();
             return;

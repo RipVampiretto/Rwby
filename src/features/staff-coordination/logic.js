@@ -1,5 +1,6 @@
 const logger = require('../../middlewares/logger');
 const adminLogger = require('../admin-logger');
+const i18n = require('../../i18n');
 
 async function reviewQueue(bot, db, params) {
     if (!db) {
@@ -19,7 +20,7 @@ async function reviewQueue(bot, db, params) {
             const topics =
                 typeof config.staff_topics === 'string' ? JSON.parse(config.staff_topics) : config.staff_topics;
             threadId = topics.reports;
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const { source, user, reason, messageId, content } = params;
@@ -47,7 +48,7 @@ async function reviewQueue(bot, db, params) {
     if (bot) {
         await bot.api.sendMessage(config.staff_group_id, text, {
             message_thread_id: threadId,
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: keyboard
         });
         return true;
@@ -137,7 +138,8 @@ async function handleStaffAction(ctx, bot, action, data) {
             const msgId = parts[2];
             try {
                 await ctx.api.deleteMessage(origChatId, msgId);
-                await ctx.answerCallbackQuery('🗑️ Messaggio eliminato');
+                const lang = await i18n.getLanguage(ctx.chat.id);
+                await ctx.answerCallbackQuery(i18n.t(lang, 'common.logs.message_deleted'));
                 await ctx.editMessageCaption({
                     caption: ctx.callbackQuery.message.caption + '\n\n✅ **DELETED by Staff**'
                 });

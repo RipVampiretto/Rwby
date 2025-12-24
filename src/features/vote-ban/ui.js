@@ -112,9 +112,9 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const keyboard = { inline_keyboard: rows };
 
     if (isEdit) {
-        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'report');
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'report');
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
@@ -148,9 +148,9 @@ async function sendCategoryActionsUI(ctx, db, isEdit = false) {
     };
 
     if (isEdit) {
-        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'report');
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'report');
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 // ========== END CATEGORY ACTIONS ==========
@@ -181,7 +181,7 @@ async function sendConfirmationPrompt(ctx, targetUser, targetMsgId) {
         ]
     };
 
-    return await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    return await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
 }
 
 module.exports = {

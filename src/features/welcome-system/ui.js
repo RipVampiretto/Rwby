@@ -86,10 +86,10 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
 
     if (isEdit) {
         try {
-            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+            await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
         } catch (e) { }
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
@@ -139,7 +139,7 @@ async function sendCaptchaModeMenu(ctx) {
     };
 
     try {
-        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     } catch (e) {
         console.error('Edit Mode Menu Error:', e);
     }
@@ -205,7 +205,7 @@ async function sendRulesWizardPrompt(ctx) {
     };
 
     try {
-        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     } catch (e) { }
 }
 
@@ -262,7 +262,7 @@ async function sendWizardPrompt(ctx) {
     };
 
     try {
-        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     } catch (e) { }
 }
 

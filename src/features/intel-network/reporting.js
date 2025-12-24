@@ -80,7 +80,7 @@ async function handleReport(ctx) {
             await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
                 message_thread_id: billsThread,
                 reply_markup: keyboard,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         }
 

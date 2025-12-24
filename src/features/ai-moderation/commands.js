@@ -41,9 +41,9 @@ function registerCommands(bot, db) {
                 `Response Category: \`${result?.category || 'N/A'}\`\n` +
                 `Confidence: \`${result?.confidence ? Math.round(result.confidence * 100) + '%' : 'N/A'}\``;
 
-            await ctx.reply(response, { parse_mode: 'Markdown' });
+            await ctx.reply(response, { parse_mode: 'HTML' });
         } catch (e) {
-            await ctx.reply(`❌ **AI HEALTH CHECK FAILED**\n\nError: ${e.message}`, { parse_mode: 'Markdown' });
+            await ctx.reply(`❌ **AI HEALTH CHECK FAILED**\n\nError: ${e.message}`, { parse_mode: 'HTML' });
         }
     });
 

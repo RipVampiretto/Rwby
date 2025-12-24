@@ -41,9 +41,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     };
 
     if (isEdit) {
-        await safeEdit(ctx, statusText, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'anti-spam');
+        await safeEdit(ctx, statusText, { reply_markup: keyboard, parse_mode: 'HTML' }, 'anti-spam');
     } else {
-        await ctx.reply(statusText, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(statusText, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 

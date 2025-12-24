@@ -50,9 +50,9 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     };
 
     if (isEdit) {
-        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'Markdown' }, 'intelligent-profiler');
+        await safeEdit(ctx, text, { reply_markup: keyboard, parse_mode: 'HTML' }, 'intelligent-profiler');
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 

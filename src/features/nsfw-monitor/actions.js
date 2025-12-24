@@ -13,7 +13,7 @@ const logger = require('../../middlewares/logger');
  */
 async function sendMediaToChannel(ctx, channelId, caption = null) {
     const msg = ctx.message;
-    const options = caption ? { caption, parse_mode: 'Markdown' } : {};
+    const options = caption ? { caption, parse_mode: 'HTML' } : {};
 
     try {
         if (msg.photo) {
@@ -78,16 +78,18 @@ async function executeAction(ctx, action, reason, type) {
 
         // Forward original media to Parliament BEFORE deleting (with gban option)
         if (superAdmin.forwardMediaToParliament) {
-            const caption = `🖼️ **CONTENUTO NON CONFORME**\n\n` +
-                `🏛️ Gruppo: ${ctx.chat.title}\n` +
-                `👤 Utente: [${user.first_name}](tg://user?id=${user.id}) [\`${user.id}\`]\n` +
-                `📝 Categoria: ${reason}\n` + // Keep detailed reason for Parliament
-                `📁 Tipo: ${type}`;
+            const parlLang = await i18n.getLanguage(ctx.chat.id);
+            const t = (key) => i18n.t(parlLang, key);
+            const caption = `🖼️ <b>NSFW CONTENT</b>\n\n` +
+                `${t('common.logs.group')}: ${ctx.chat.title}\n` +
+                `${t('common.logs.user')}: <a href="tg://user?id=${user.id}">${user.first_name}</a> [<code>${user.id}</code>]\n` +
+                `📝 Category: ${reason}\n` +
+                `📁 Type: ${type}`;
 
             await superAdmin.forwardMediaToParliament('image_spam', ctx, caption, [
                 [
-                    { text: '🌍 Global Ban Utente', callback_data: `gban:${user.id}` },
-                    { text: '✅ Ignora', callback_data: 'parl_dismiss' }
+                    { text: t('common.logs.global_ban_user'), callback_data: `gban:${user.id}` },
+                    { text: '✅ Ignore', callback_data: 'parl_dismiss' }
                 ]
             ]);
         }
@@ -211,16 +213,18 @@ async function executeAlbumAction(violations, config) {
             });
         } else if (superAdmin.forwardMediaToParliament) {
             // Fallback to single media
-            const caption = `🖼️ **ALBUM NON CONFORME**\n\n` +
-                `🏛️ Gruppo: ${firstCtx.chat.title}\n` +
-                `👤 Utente: [${user.first_name}](tg://user?id=${user.id}) [\`${user.id}\`]\n` +
-                `📁 Media eliminati: ${violations.length}\n` +
-                `📝 Categorie: ${aggregatedReason}`;
+            const parlLang = await i18n.getLanguage(firstCtx.chat.id);
+            const t = (key) => i18n.t(parlLang, key);
+            const caption = `🖼️ <b>NSFW ALBUM</b>\n\n` +
+                `${t('common.logs.group')}: ${firstCtx.chat.title}\n` +
+                `${t('common.logs.user')}: <a href="tg://user?id=${user.id}">${user.first_name}</a> [<code>${user.id}</code>]\n` +
+                `📁 Deleted media: ${violations.length}\n` +
+                `📝 Categories: ${aggregatedReason}`;
 
             await superAdmin.forwardMediaToParliament('image_spam', firstCtx, caption, [
                 [
-                    { text: '🌍 Global Ban Utente', callback_data: `gban:${user.id}` },
-                    { text: '✅ Ignora', callback_data: 'parl_dismiss' }
+                    { text: t('common.logs.global_ban_user'), callback_data: `gban:${user.id}` },
+                    { text: '✅ Ignore', callback_data: 'parl_dismiss' }
                 ]
             ]);
         }

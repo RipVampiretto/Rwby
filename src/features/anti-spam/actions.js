@@ -3,6 +3,7 @@ const { safeDelete, safeBan } = require('../../utils/error-handlers');
 const staffCoordination = require('../staff-coordination');
 const adminLogger = require('../admin-logger');
 const userReputation = require('../user-reputation');
+const i18n = require('../../i18n');
 
 let db = null;
 let _botInstance = null;
@@ -59,22 +60,24 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
         if (!globalConfig || !globalConfig.parliament_group_id) return;
 
         const flux = await userReputation.getLocalFlux(db, user.id, ctx.chat.id);
+        const lang = await i18n.getLanguage(globalConfig.parliament_group_id);
+        const t = (key) => i18n.t(lang, key);
 
         const text =
-            `🔨 **BAN ESEGUITO**\n\n` +
-            `🏛️ Gruppo: ${ctx.chat.title} (@${ctx.chat.username || 'private'})\n` +
-            `👤 Utente: ${user.first_name} (@${user.username}) (ID: \`${user.id}\`)\n` +
-            `📊 Flux: ${flux}\n` +
-            `⏰ Ora: ${new Date().toISOString()}\n\n` +
-            `📝 Motivo: ${trigger}\n` +
+            `${t('common.logs.ban_executed_title')}\n\n` +
+            `${t('common.logs.group')}: ${ctx.chat.title} (@${ctx.chat.username || 'private'})\n` +
+            `${t('common.logs.user')}: <a href="tg://user?id=${user.id}">${user.first_name}</a> (@${user.username}) [<code>${user.id}</code>]\n` +
+            `${t('common.logs.flux')}: ${flux}\n` +
+            `⏰ Time: ${new Date().toISOString()}\n\n` +
+            `${t('common.logs.reason')}: ${trigger}\n` +
             `🔧 Trigger: anti-spam\n\n` +
-            `💬 Content:\n"${ctx.message.text ? ctx.message.text.substring(0, 200) : 'N/A'}"`;
+            `${t('common.logs.evidence')}:\n"${ctx.message.text ? ctx.message.text.substring(0, 200) : 'N/A'}"`;
 
         const keyboard = {
             inline_keyboard: [
                 [
-                    { text: '🌍 Global Ban', callback_data: `gban:${user.id}` },
-                    { text: '✅ Solo Locale', callback_data: `gban_skip:${ctx.message.message_id}` }
+                    { text: t('common.logs.global_ban'), callback_data: `gban:${user.id}` },
+                    { text: t('common.logs.local_only'), callback_data: `gban_skip:${ctx.message.message_id}` }
                 ]
             ]
         };
@@ -82,7 +85,7 @@ async function forwardBanToSuperAdmin(ctx, user, trigger) {
         if (_botInstance) {
             await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
                 reply_markup: keyboard,
-                parse_mode: 'Markdown'
+                parse_mode: 'HTML'
             });
         }
     } catch (e) {

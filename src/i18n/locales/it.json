@@ -21,6 +21,31 @@
         "warnings": {
             "no_staff_group": "⚠️ ATTENZIONE: L'azione 'Segnala' richiede un Gruppo Staff configurato (/setstaff). Senza di esso, non verrà eseguita alcuna azione."
         },
+        "logs": {
+            "user": "👤 Utente",
+            "group": "🏛️ Gruppo",
+            "group_id": "ID Gruppo",
+            "reason": "📝 Motivo",
+            "evidence": "💬 Evidenza",
+            "link": "🔗 Link",
+            "text": "💬 Testo",
+            "flux": "📊 Flux",
+            "global_ban_user": "🌍 Global Ban Utente",
+            "global_ban": "🌍 Global Ban",
+            "local_only": "✅ Solo Locale",
+            "whitelist": "✅ Whitelist",
+            "blacklist": "🚫 Blacklist",
+            "unknown_link_title": "🔗 <b>LINK SCONOSCIUTO</b>",
+            "blacklisted_link_title": "🚫 <b>LINK BANNATO</b>",
+            "keyword_title": "🔤 <b>KEYWORD BANNATA</b>",
+            "ban_executed_title": "🔨 <b>BAN ESEGUITO</b>",
+            "add_to_list_question": "❓ Aggiungere a whitelist o blacklist?",
+            "global_ban_question": "⚠️ Bannare globalmente l'utente?",
+            "message_deleted": "🗑️ Messaggio eliminato",
+            "message_removed": "✅ Messaggio rimosso",
+            "welcome_saved": "✅ Messaggio di benvenuto salvato!",
+            "tier_group": "🏷️ Tier Gruppo"
+        },
         "start": {
             "greeting": "👋 Ciao! Sono il bot di moderazione per gruppi Telegram.",
             "instructions": "Usa /help per vedere i comandi disponibili o /settings per il pannello di controllo completo.",
@@ -31,23 +56,23 @@
             }
         },
         "help": {
-            "title": "📚 **COMANDI DISPONIBILI**",
-            "user_section": "👤 **Comandi Utente:**",
+            "title": "📚 <b>COMANDI DISPONIBILI</b>",
+            "user_section": "👤 <b>Comandi Utente:</b>",
             "myflux_cmd": "/myflux - Vedi il tuo livello di fiducia (Flux) e privilegi",
             "tier_cmd": "/tier - Informazioni sul sistema di fiducia",
-            "admin_section": "⚙️ **Comandi Admin:**",
-            "settings_cmd": "/settings - 🎛️ **PANNELLO DI CONTROLLO**",
+            "admin_section": "⚙️ <b>Comandi Admin:</b>",
+            "settings_cmd": "/settings - 🎛️ <b>PANNELLO DI CONTROLLO</b>",
             "settings_desc": "Il pannello centralizzato per gestire tutti i moduli di moderazione del gruppo. Configura filtri, azioni automatiche, regole e molto altro in un'unica interfaccia intuitiva.",
-            "other_commands": "🛠️ **Altri Comandi:**",
+            "other_commands": "🛠️ <b>Altri Comandi:</b>",
             "setstaff_cmd": "/setstaff \u003cid\u003e - Imposta il gruppo staff per le segnalazioni",
             "notes_cmd": "/notes \u003cid\u003e - Visualizza/aggiungi note su un utente",
-            "moderation_section": "👮 **Moderazione Collettiva:**",
+            "moderation_section": "👮 <b>Moderazione Collettiva:</b>",
             "voteban_trigger": "Rispondi a un messaggio con @admin, !admin, .admin o /admin per avviare una votazione di ban"
         }
     },
     "settings": {
         "main": {
-            "title": "⚙️ **Impostazioni**",
+            "title": "⚙️ <b>Impostazioni</b>",
             "subtitle": "Scegli una delle impostazioni che vuoi modificare.",
             "close": "❌ Chiudi"
         },
@@ -67,7 +92,7 @@
             "ui_language": "🌍 Lingua Bot"
         },
         "language": {
-            "title": "🌍 **LINGUA INTERFACCIA**",
+            "title": "🌍 <b>LINGUA INTERFACCIA</b>",
             "subtitle": "Scegli la lingua del bot per questo gruppo:",
             "current": "Attuale: {lang}",
             "changed": "✅ Lingua cambiata in {lang}",
@@ -75,7 +100,7 @@
         }
     },
     "report": {
-        "title": "📋 **SEGNALAZIONI**",
+        "title": "📋 <b>SEGNALAZIONI</b>",
         "description": "Sistema intelligente per segnalare utenti problematici.",
         "how_to_use": "Come si usa",
         "usage_info": "Rispondi al messaggio di chi disturba scrivendo @admin, !admin, .admin oppure /admin",
@@ -92,10 +117,10 @@
             "report_desc": "Invia la segnalazione allo staff per revisione manuale"
         },
         "vote_message": {
-            "title": "⚖️ **VOTAZIONE IN CORSO**",
+            "title": "⚖️ <b>VOTAZIONE IN CORSO</b>",
             "action": "Azione",
-            "votes": "📊 **Voti:** {current}/{required}",
-            "expires": "⏱️ **Tempo rimasto:** {time}",
+            "votes": "📊 <b>Voti:</b> {current}/{required}",
+            "expires": "⏱️ <b>Tempo rimasto:</b> {time}",
             "description": "La community sta decidendo. Vota!",
             "btn_yes": "✅ Sì ({count})",
             "btn_no": "❌ No ({count})"
@@ -113,7 +138,7 @@
             "report_sent_to_staff": "📋 Segnalazione inviata allo staff per revisione."
         },
         "confirm": {
-            "title": "⚖️ **CONFERMA SEGNALAZIONE**",
+            "title": "⚖️ <b>CONFERMA SEGNALAZIONE</b>",
             "target": "Utente segnalato",
             "instruction": "Scegli cosa fare se la votazione ha successo:",
             "timeout": "Hai 2 minuti per decidere, altrimenti la segnalazione verrà annullata."
@@ -124,19 +149,20 @@
             "not_initiator": "⚠️ Solo chi ha avviato la segnalazione può scegliere."
         },
         "result": {
-            "banned": "🚷 **{user}** è stato BANNATO dalla community.\n📊 Voti: {yes} favorevoli - {no} contrari",
-            "deleted": "🗑️ Il messaggio di **{user}** è stato eliminato.\n📊 Voti: {yes} favorevoli - {no} contrari",
-            "saved": "🛡️ **{user}** è SALVO! La community ha deciso di non intervenire."
+            "banned": "🚷 <b>{user}</b> è stato BANNATO dalla community.\n📊 Voti: {yes} favorevoli - {no} contrari",
+            "deleted": "🗑️ Il messaggio di <b>{user}</b> è stato eliminato.\n📊 Voti: {yes} favorevoli - {no} contrari",
+            "saved": "🛡️ <b>{user}</b> è SALVO! La community ha deciso di non intervenire."
         },
         "staff_alert": {
-            "message": "⚠️ <b>ATTENZIONE!</b>\n{reporter} <code>{reporterId}</code> ha richiesto un intervento degli admin nel gruppo \"{group}\"\n\n<b>Utente segnalato:</b> {target} <code>{targetId}</code>\n\n👉🏻 <a href=\"{link}\">Vai al messaggio</a>",
+            "message": "⚠️ <b>ATTENZIONE!</b>\n{reporter} [<code>{reporterId}</code>] ha richiesto un intervento degli admin nel gruppo \"{group}\"\n\n<b>Utente segnalato:</b> {target} [<code>{targetId}</code>]\n\n👉🏻 <a href=\"{link}\">Vai al messaggio</a>",
             "btn_resolved": "✅ Risolto",
             "resolved_toast": "✅ Segnato come risolto"
         },
+        "log_message": "🆘 #SEGNALAZIONE\n• Di: {reporter} [<code>{reporterId}</code>]\n• A: {target} [<code>{targetId}</code>]\n• Gruppo: {group} [<code>{groupId}</code>]\n• 👀 <a href=\"{link}\">Vai al messaggio</a>\n#id{reporterId} #id{targetId}",
         "no_reason": "Nessun motivo specificato"
     },
     "logger": {
-        "title": "📋 **REGISTRO AZIONI**",
+        "title": "📋 <b>REGISTRO AZIONI</b>",
         "description": "Tiene traccia di tutto quello che fa il bot automaticamente. Utile per capire cosa succede.",
         "channel": "Canale",
         "channel_set": "✅ Impostato",
@@ -155,7 +181,7 @@
         }
     },
     "antiedit": {
-        "title": "✏️ **CONTROLLO MODIFICHE**",
+        "title": "✏️ <b>CONTROLLO MODIFICHE</b>",
         "description": "Rileva modifiche sospette ai messaggi, come inserimento di link o cambiamenti radicali del contenuto.",
         "info_title": "Come funziona",
         "info_1": "Blocca l'inserimento di link in messaggi che prima non ne avevano",
@@ -174,7 +200,7 @@
         }
     },
     "modals": {
-        "title": "📋 **PATTERN**",
+        "title": "📋 <b>PATTERN</b>",
         "description": "Riconosce automaticamente messaggi sospetti usando pattern predefiniti. Pensalo come un filtro intelligente che impara dai tentativi passati.",
         "info_title": "Come funziona",
         "info_1": "Pattern caricati per le tue lingue: {count}",
@@ -194,7 +220,7 @@
         }
     },
     "link": {
-        "title": "🔗 **Link**",
+        "title": "🔗 <b>Link</b>",
         "description": "Elimina automaticamente i link a siti bannati globalmente (phishing, truffe, spam).",
         "status": "Stato",
         "notify": "Log",
@@ -205,7 +231,7 @@
         }
     },
     "language": {
-        "title": "🌐 **Lingua**",
+        "title": "🌐 <b>Lingua</b>",
         "description": "Interviene sui messaggi scritti in lingue non consentite.",
         "status": "Stato",
         "tier_bypass": "Bypass Tier",
@@ -221,7 +247,7 @@
         }
     },
     "keyword": {
-        "title": "🔤 **Parole Vietate**",
+        "title": "🔤 <b>Parole Vietate</b>",
         "description": "Elimina automaticamente i messaggi che contengono parole bannate globalmente.",
         "status": "Stato",
         "notify": "Log",
@@ -232,7 +258,7 @@
         }
     },
     "media": {
-        "title": "🖼️ **Analisi Media**",
+        "title": "🖼️ <b>Analisi Media</b>",
         "description": "Analizza foto, video e altri media per trovare contenuti non conformi: NSFW, truffe, spam visivo e altro.",
         "status": "Stato",
         "tier_bypass": "Bypass Tier",
@@ -298,7 +324,7 @@
         }
     },
     "ai": {
-        "title": "🤖 **MODERAZIONE INTELLIGENTE**",
+        "title": "🤖 <b>MODERAZIONE INTELLIGENTE</b>",
         "description": "Un assistente che legge e capisce il significato dei messaggi. Riesce a bloccare truffe e contenuti tossici anche quando usano parole normali.",
         "info_title": "Come funziona",
         "info_1": "Funziona come ultima linea di difesa dopo gli altri filtri",
@@ -315,12 +341,12 @@
             "threshold": "📊 Soglia"
         },
         "categories": {
-            "title": "⚙️ **AZIONI PER CATEGORIA**",
+            "title": "⚙️ <b>AZIONI PER CATEGORIA</b>",
             "subtitle": "Scegli cosa fare per ogni tipo di violazione (Elimina/Banna/Segnala)"
         }
     },
     "blacklist": {
-        "title": "🚫 **Blacklist**",
+        "title": "🚫 <b>Blacklist</b>",
         "description": "Banna automaticamente gli utenti bannati globalmente quando scrivono o entrano nel gruppo.",
         "status": "Stato",
         "notify": "Log",
@@ -330,7 +356,7 @@
         }
     },
     "staff": {
-        "title": "👮 **COORDINAMENTO STAFF**",
+        "title": "👮 <b>COORDINAMENTO STAFF</b>",
         "description": "Strumenti per coordinare lo staff del gruppo.",
         "staff_group": "Gruppo Staff",
         "commands_title": "Comandi disponibili",
@@ -344,8 +370,8 @@
     },
     "tier_system": {
         "menu": {
-            "title": "🏛️ **SISTEMA DI FIDUCIA**",
-            "your_rank": "{emoji} **{name}**",
+            "title": "🏛️ <b>SISTEMA DI FIDUCIA</b>",
+            "your_rank": "{emoji} <b>{name}</b>",
             "select_tier": "Scegli un livello per vedere i dettagli:",
             "buttons": {
                 "view_details": "📖 Vedi Dettagli",
@@ -369,11 +395,11 @@
             }
         },
         "details": {
-            "flux_required": "Punti richiesti: **{range}**",
-            "restrictions_title": "🚫 **RESTRIZIONI:**",
-            "bypasses_title": "✅ **PRIVILEGI:**",
+            "flux_required": "Punti richiesti: <b>{range}</b>",
+            "restrictions_title": "🚫 <b>RESTRIZIONI:</b>",
+            "bypasses_title": "✅ <b>PRIVILEGI:</b>",
             "bypasses_none": "Nessuno",
-            "how_to_advance": "💡 **CONSIGLIO:** Partecipa attivamente alle discussioni per guadagnare punti!",
+            "how_to_advance": "💡 <b>CONSIGLIO:</b> Partecipa attivamente alle discussioni per guadagnare punti!",
             "items": {
                 "all_security": "Tutti i controlli di sicurezza attivi",
                 "links_deleted": "I link vengono eliminati",
@@ -405,31 +431,31 @@
             }
         },
         "flux_calc": {
-            "title": "📊 **COME FUNZIONANO I PUNTI FIDUCIA (FLUX)**",
+            "title": "📊 <b>COME FUNZIONANO I PUNTI FIDUCIA (FLUX)</b>",
             "intro": "Il Flux è un punteggio che riflette quanto sei attivo e affidabile nel gruppo. Più punti accumuli, più privilegi ottieni (configurabili dagli admin).",
-            "earning_title": "**💚 Guadagnare Punti:**",
+            "earning_title": "<b>💚 Guadagnare Punti:</b>",
             "earning_items": "• +1 per ogni messaggio (massimo 1 ogni 6 minuti)\n• +1 al giorno come bonus passivo",
-            "losing_title": "**💔 Perdere Punti:**",
+            "losing_title": "<b>💔 Perdere Punti:</b>",
             "losing_items": "• -50 per comportamento spam\n• -50 per link pericolosi\n• -100 per contenuti vietati",
-            "thresholds_title": "**🎯 Livelli di Fiducia:**",
-            "thresholds_items": "• **Tier 0:** 0 - 99 punti\n• **Tier 1:** 100 - 299 punti\n• **Tier 2:** 300 - 499 punti\n• **Tier 3:** 500+ punti",
-            "cap": "ℹ️ **Nota:** I punti sono limitati tra -1000 e +1000. Le restrizioni e privilegi sono configurabili dagli admin del gruppo."
+            "thresholds_title": "<b>🎯 Livelli di Fiducia:</b>",
+            "thresholds_items": "• <b>Tier 0:</b> 0 - 99 punti\n• <b>Tier 1:</b> 100 - 299 punti\n• <b>Tier 2:</b> 300 - 499 punti\n• <b>Tier 3:</b> 500+ punti",
+            "cap": "ℹ️ <b>Nota:</b> I punti sono limitati tra -1000 e +1000. Le restrizioni e privilegi sono configurabili dagli admin del gruppo."
         },
         "my_flux": {
-            "title": "📊 **I TUOI PUNTI**",
+            "title": "📊 <b>I TUOI PUNTI</b>",
             "local_global": "🏠 In questo gruppo: {local} | 🌍 Totale: {global}",
             "no_data": "Nessun dato trovato. Unisciti a un gruppo dove sono attivo e inizia a chatttare!"
         }
     },
     "welcome": {
-        "title": "👋 **Sistema di Benvenuto & Captcha**",
-        "captcha": "🛡️ **Captcha:**",
-        "welcome_msg": "📨 **Benvenuto:**",
-        "mode": "🎮 **Modalità:**",
-        "timeout": "⏳ **Kick Timeout:**",
-        "autodelete": "⏱ **Autodistruzione:**",
-        "rules": "📜 **Regolamento:**",
-        "logs_label": "🚨 **Log Admin:**",
+        "title": "👋 <b>Sistema di Benvenuto & Captcha</b>",
+        "captcha": "🛡️ <b>Captcha:</b>",
+        "welcome_msg": "📨 <b>Benvenuto:</b>",
+        "mode": "🎮 <b>Modalità:</b>",
+        "timeout": "⏳ <b>Kick Timeout:</b>",
+        "autodelete": "⏱ <b>Autodistruzione:</b>",
+        "rules": "📜 <b>Regolamento:</b>",
+        "logs_label": "🚨 <b>Log Admin:</b>",
         "on_no_msg": "✅ ON (No Msg)",
         "minutes": "{count} min",
         "seconds": "{count} sec",
@@ -449,16 +475,16 @@
             "back_to_menu": "🔙 Torna al menu"
         },
         "modes": {
-            "title": "🎮 **Seleziona Modalità Captcha**",
+            "title": "🎮 <b>Seleziona Modalità Captcha</b>",
             "subtitle": "Puoi attivare più modalità contemporaneamente. Il bot ne sceglierà una a caso per ogni nuovo utente.",
             "descriptions": {
-                "button": "**1. Button** - Clicca 'Non sono un robot'",
-                "math": "**2. Math** - Operazioni (+, -, x)",
-                "char": "**3. Char** - Conta caratteri",
-                "emoji": "**4. Emoji** - Trova l'emoji corretta",
-                "color": "**5. Color** - Trova il colore corretto",
-                "logic": "**6. Logic** - Sequenze logiche",
-                "reverse": "**7. Reverse** - Parole al contrario"
+                "button": "<b>1. Button</b> - Clicca 'Non sono un robot'",
+                "math": "<b>2. Math</b> - Operazioni (+, -, x)",
+                "char": "<b>3. Char</b> - Conta caratteri",
+                "emoji": "<b>4. Emoji</b> - Trova l'emoji corretta",
+                "color": "<b>5. Color</b> - Trova il colore corretto",
+                "logic": "<b>6. Logic</b> - Sequenze logiche",
+                "reverse": "<b>7. Reverse</b> - Parole al contrario"
             },
             "active": "Attive: `{modes}`"
         },
@@ -472,31 +498,31 @@
             "complete_sequence": "Accedi al gruppo completando la sequenza logica:",
             "confirm_human": "Clicca il pulsante qui sotto per confermare che sei umano.",
             "timeout": "Hai {minutes} minuti di tempo.",
-            "math_question": "** Quanto fa {a} {op} {b}? **",
-            "char_question": "** Quante {char} contiene la parola: {word}? **",
-            "emoji_question": "** Clicca su: {emoji} **",
-            "color_question": "** Clicca sul cerchio {color} **",
-            "reverse_question": "** Qual è il contrario di: {word}? **",
-            "logic_question": "** {sequence} **"
+            "math_question": "<b> Quanto fa {a} {op} {b}? </b>",
+            "char_question": "<b> Quante {char} contiene la parola: {word}? </b>",
+            "emoji_question": "<b> Clicca su: {emoji} </b>",
+            "color_question": "<b> Clicca sul cerchio {color} </b>",
+            "reverse_question": "<b> Qual è il contrario di: {word}? </b>",
+            "logic_question": "<b> {sequence} </b>"
         },
         "rules_prompt": {
-            "title": "📜 **Imposta Link Regolamento**",
+            "title": "📜 <b>Imposta Link Regolamento</b>",
             "instruction": "Invia ora il link al regolamento (es. `https://t.me/...` o `http://...`).",
             "usage": "Questo link verrà usato nel bottone 'Leggi Regolamento'.",
             "cancel": "🔴 *Scrivi 'cancel' per annullare.*",
             "button_cancel": "❌ Annulla"
         },
         "rules_message": {
-            "title": "📜 **Leggi il Regolamento**",
+            "title": "📜 <b>Leggi il Regolamento</b>",
             "instruction": "Prima di accedere, conferma di aver letto le regole del gruppo."
         },
         "wizard": {
-            "title": "✏️ **Imposta Messaggio di Benvenuto**",
+            "title": "✏️ <b>Imposta Messaggio di Benvenuto</b>",
             "instruction": "Invia ora il messaggio che vuoi impostare.",
-            "user_data": "**Dati Utente**",
-            "group_data": "**Dati Gruppo**",
-            "special_functions": "**Funzioni Speciali**",
-            "custom_buttons": "**Per i bottoni personalizzati:**",
+            "user_data": "<b>Dati Utente</b>",
+            "group_data": "<b>Dati Gruppo</b>",
+            "special_functions": "<b>Funzioni Speciali</b>",
+            "custom_buttons": "<b>Per i bottoni personalizzati:</b>",
             "placeholders": {
                 "mention": "`{mention}` - Link cliccabile al nome",
                 "user": "`{user}` - Nome visualizzato",
@@ -512,7 +538,13 @@
             },
             "buttons_format": "Aggiungi `||` alla fine del testo seguito dalla configurazione.",
             "buttons_example": "Es: `Messaggio... || Label,URL | Label2,URL`",
-            "cancel": "🔴 *Scrivi 'cancel' per annullare.*"
+            "cancel": "🔴 *Scrivi 'cancel' per annullare.*",
+            "text_required": "⚠️ Per favore invia un messaggio di testo.",
+            "text_empty": "⚠️ Il testo non può essere vuoto.",
+            "saved": "✅ Messaggio di benvenuto salvato!",
+            "link_invalid": "⚠️ Invia un link valido (inizia con http:// o tg://).",
+            "rules_saved": "✅ Link regolamento salvato!",
+            "message_removed": "✅ Messaggio rimosso."
         },
         "preview": {
             "no_message": "⚠️ Nessun messaggio da visualizzare."
@@ -525,9 +557,9 @@
         }
     },
     "antispam": {
-        "title": "🛡️ **ANTI-SPAM**",
+        "title": "🛡️ <b>ANTI-SPAM</b>",
         "description": "Blocca chi invia troppi messaggi veloci o copia-incolla ripetuti. Protegge il gruppo da flood e bot.",
-        "info_title": "ℹ️ **Info:**",
+        "info_title": "ℹ️ <b>Info:</b>",
         "info_items": {
             "sensitivity": "• Sensibilità: Regola quanto deve essere severo",
             "detects": "• Rileva: Messaggi a raffica e ripetizioni",
@@ -548,9 +580,9 @@
         }
     },
     "profiler": {
-        "title": "🔍 **PROFILER NUOVI UTENTI**",
+        "title": "🔍 <b>PROFILER NUOVI UTENTI</b>",
         "description": "Analizza i nuovi arrivati per bloccare bot e spammer istantanei. Smette di controllare gli utenti appena diventano fidati.",
-        "info_title": "ℹ️ **Info:**",
+        "info_title": "ℹ️ <b>Info:</b>",
         "info_items": {
             "checks": "• Controlla se inviano subito Link o Inoltrati",
             "detects": "• Rileva frasi tipiche da bot (\"guadagna subito\", ecc)",
@@ -568,9 +600,9 @@
         }
     },
     "visual": {
-        "title": "🧬 **IMMUNITÀ VISIVA**",
+        "title": "🧬 <b>IMMUNITÀ VISIVA</b>",
         "description": "Riconosce e blocca le immagini che sono già state segnalate in passato. Anche se vengono leggermente modificate, il bot le riconosce lo stesso.",
-        "info_title": "ℹ️ **Info:**",
+        "info_title": "ℹ️ <b>Info:</b>",
         "info_items": {
             "blocks": "• Blocca meme spam o immagini raid ricorrenti",
             "shares": "• Condivide le \"impronte\" delle immagini cattive con altri gruppi",
@@ -588,36 +620,36 @@
         }
     },
     "superadmin": {
-        "title": "🌍 **GLOBAL GOVERNANCE PANEL**",
+        "title": "🌍 <b>GLOBAL GOVERNANCE PANEL</b>",
         "description": "Pannello di controllo per la supervisione globale della rete.",
-        "groups_monitored": "👥 **Gruppi monitorati:** {count}",
-        "total_users": "🌍 **Utenti totali:** {count}",
-        "active_bills": "📋 **Bill attive:** {count}",
+        "groups_monitored": "👥 <b>Gruppi monitorati:</b> {count}",
+        "total_users": "🌍 <b>Utenti totali:</b> {count}",
+        "active_bills": "📋 <b>Bill attive:</b> {count}",
         "buttons": {
             "stats": "📊 Statistiche",
             "bills": "📜 Bills",
             "actions": "⚖️ Azioni"
         },
         "stats": {
-            "title": "📊 **NETWORK STATISTICS**",
+            "title": "📊 <b>NETWORK STATISTICS</b>",
             "total_groups": "👥 Gruppi: {count}",
             "total_users": "🧑 Utenti unici: {count}",
             "active_modules": "⚙️ Moduli attivi: {list}",
             "recent_actions": "🚨 Azioni recenti (24h): {count}"
         },
         "ban_executed": {
-            "title": "🔨 **BAN ESEGUITO**",
+            "title": "🔨 <b>BAN ESEGUITO</b>",
             "user": "👤 Utente: {user}",
             "reason": "📝 Motivo: {reason}",
             "groups": "🌐 Ban applicato a {count} gruppi"
         },
         "global_log": {
-            "title": "📋 **GLOBAL LOG: {type}**",
+            "title": "📋 <b>GLOBAL LOG: {type}</b>",
             "details": "Dettagli evento globale"
         }
     },
     "intel": {
-        "title": "🌐 **INTEL NETWORK STATUS**",
+        "title": "🌐 <b>INTEL NETWORK STATUS</b>",
         "description": "Sistema di intelligence condivisa tra i gruppi della rete.",
         "sharing_enabled": "🔄 Condivisione: {status}",
         "reports_sent": "📤 Report inviati: {count}",
@@ -627,20 +659,20 @@
             "stats": "📊 Statistiche"
         },
         "bill": {
-            "title": "📜 **NUOVO BILL #{id}**",
+            "title": "📜 <b>NUOVO BILL #{id}</b>",
             "submitted": "Proposta inviata al Parliament per revisione."
         },
         "report": {
-            "title": "📥 **REVIEW REQUEST**",
+            "title": "📥 <b>REVIEW REQUEST</b>",
             "from_group": "da {group}",
             "requires_review": "Richiede revisione da parte dello staff."
         }
     },
     "smart_report": {
-        "category_title": "⚙️ **AZIONI PER CATEGORIA**",
+        "category_title": "⚙️ <b>AZIONI PER CATEGORIA</b>",
         "category_subtitle": "Scegli l'azione da eseguire per ogni tipo di violazione rilevata dall'AI.",
-        "action_delete": "🤖 **Contenuto Rimosso**\n\n⚠️ Rilevata violazione: _{category}_\n\n_Il messaggio è stato eliminato automaticamente._",
-        "action_ban": "🚨 **Utente Bannato**\n\n👤 {user} è stato rimosso dal gruppo.\n⚠️ Motivo: _{category}_\n\n_Grazie per la segnalazione! (+2 Flux)_",
-        "action_report": "📋 **Segnalazione Inviata**\n\n⚠️ Possibile violazione: _{category}_\n\n_Lo staff esaminerà la segnalazione._"
+        "action_delete": "🤖 <b>Contenuto Rimosso</b>\n\n⚠️ Rilevata violazione: _{category}_\n\n_Il messaggio è stato eliminato automaticamente._",
+        "action_ban": "🚨 <b>Utente Bannato</b>\n\n👤 {user} è stato rimosso dal gruppo.\n⚠️ Motivo: _{category}_\n\n_Grazie per la segnalazione! (+2 Flux)_",
+        "action_report": "📋 <b>Segnalazione Inviata</b>\n\n⚠️ Possibile violazione: _{category}_\n\n_Lo staff esaminerà la segnalazione._"
     }
 }

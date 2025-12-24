@@ -19,9 +19,9 @@ async function sendGovernancePanel(ctx, stats) {
     };
 
     if (ctx.callbackQuery) {
-        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     } else {
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
@@ -37,7 +37,7 @@ function sendFullStats(ctx, stats) {
         inline_keyboard: [[{ text: '🔙 Indietro', callback_data: 'g_menu' }]]
     };
 
-    return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'Markdown' });
+    return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
 }
 
 module.exports = {

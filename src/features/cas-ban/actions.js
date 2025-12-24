@@ -133,7 +133,7 @@ async function flushBanQueue(logChannelId) {
             text += `\n_...e altri ${bans.length - 30} utenti_`;
         }
 
-        await _botInstance.api.sendMessage(logChannelId, text, { parse_mode: 'Markdown' });
+        await _botInstance.api.sendMessage(logChannelId, text, { parse_mode: 'HTML' });
 
         logger.info(`[cas-ban] Sent aggregated notification to ${logChannelId}: ${bans.length} users`);
     } catch (e) {
@@ -225,7 +225,7 @@ async function notifyParliament(newUsers, banCount, guildCount) {
 
         await _botInstance.api.sendMessage(globalConfig.parliament_group_id, text, {
             message_thread_id: topicId,
-            parse_mode: 'Markdown'
+            parse_mode: 'HTML'
         });
 
         logger.info('[cas-ban] Parliament notification sent');
