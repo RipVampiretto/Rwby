@@ -9,7 +9,6 @@
         "disabled": "Disabled",
         "status": "Status",
         "action": "Action",
-        "tier_bypass": "Tier Bypass",
         "threshold": "Sensitivity",
         "actions": {
             "delete": "DELETE",
@@ -235,7 +234,6 @@
         "title": "🌐 <b>Language</b>",
         "description": "Takes action on messages written in non-allowed languages.",
         "status": "Status",
-        "tier_bypass": "Tier Bypass",
         "action": "Action",
         "allowed": "Languages",
         "warning": "{user}, this group only allows: {languages}. Please use one of these languages.",
@@ -243,7 +241,6 @@
         "ban_reason": "Language Ban: {detected} not allowed.",
         "buttons": {
             "filter": "🛡️ Status",
-            "tier": "👤 Bypass",
             "action": "⚡ Action"
         }
     },
@@ -262,7 +259,6 @@
         "title": "🖼️ <b>Media Analysis</b>",
         "description": "Analyzes photos, videos and other media to find non-compliant content: NSFW, scams, visual spam and more.",
         "status": "Status",
-        "tier_bypass": "Tier Bypass",
         "action": "Action",
         "threshold": "Sensitivity",
         "check_types": "Check",
@@ -271,7 +267,6 @@
         "warning_album": "{user}, {count} media were deleted because they violate the group rules.",
         "buttons": {
             "monitor": "🖼️ Monitor",
-            "tier": "👤 Bypass",
             "action": "⚡ Action",
             "threshold": "📊 Threshold",
             "categories": "🚫 Categories",
@@ -332,12 +327,10 @@
         "info_2": "Understands the context of the conversation",
         "info_3": "Blocks Scams, Adult Content and Spam",
         "status": "Status",
-        "tier_bypass": "Tier Bypass",
         "threshold": "Confidence Threshold",
         "buttons": {
             "system": "🤖 AI",
             "context": "🎭 Context",
-            "tier": "👤 Tier Bypass",
             "categories": "⚙️ Configure Category Actions",
             "threshold": "📊 Threshold"
         },
@@ -418,8 +411,6 @@
         "details": {
             "flux_required": "Points required: <b>{range}</b>",
             "restrictions_title": "🚫 <b>RESTRICTIONS:</b>",
-            "bypasses_title": "✅ <b>PRIVILEGES:</b>",
-            "bypasses_none": "None",
             "how_to_advance": "💡 <b>TIP:</b> Participate actively in discussions to earn points!",
             "items": {
                 "all_security": "All security checks active",
@@ -435,20 +426,7 @@
                 "nsfw_active": "Adult content check active",
                 "vote_ban": "Can start ban votes",
                 "ai_severe": "AI only for severe cases",
-                "ai_critical": "AI only for critical threats",
-                "profiler_bypass": "New user check disabled",
-                "edit_allowed": "Can edit messages",
-                "lang_bypass": "Language filter disabled",
-                "forwards_allowed": "Can forward messages",
-                "spam_bypass": "Anti-Spam disabled",
-                "keyword_bypass": "Word filter disabled",
-                "link_bypass": "Link check disabled",
-                "modal_bypass": "Anti-spam patterns disabled",
-                "antiedit_bypass": "Edit monitoring disabled",
-                "profiler_disabled": "Profiler completely disabled",
-                "all_bypass": "Almost all filters disabled",
-                "nsfw_bypass": "Adult content check disabled",
-                "visual_bypass": "Visual system disabled"
+                "ai_critical": "AI only for critical threats"
             }
         },
         "flux_calc": {
