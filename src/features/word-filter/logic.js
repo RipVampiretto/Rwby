@@ -13,8 +13,8 @@ async function scanMessage(ctx) {
 
     const text = ctx.message.text;
 
-    // Only check global word filters (guild_id = 0)
-    const rules = await db.queryAll('SELECT * FROM word_filters WHERE guild_id = 0');
+    // Only check global word filters
+    const rules = await db.queryAll('SELECT * FROM word_filters');
 
     for (const rule of rules) {
         let match = false;
@@ -22,7 +22,7 @@ async function scanMessage(ctx) {
             try {
                 const regex = new RegExp(rule.word, 'i');
                 if (regex.test(text)) match = true;
-            } catch (e) {}
+            } catch (e) { }
         } else {
             if (rule.match_whole_word) {
                 const regex = new RegExp(`\\b${escapeRegExp(rule.word)}\\b`, 'i');

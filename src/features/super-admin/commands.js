@@ -38,13 +38,13 @@ function registerCommands(bot, db) {
             await logic.setupParliament(db, ctx, bot);
             await ctx.reply(
                 '✅ **Parliament Group Configurato**\n\n' +
-                    'Creati i topic per:\n' +
-                    '- Bans (Ban globali)\n' +
-                    '- Logs (Sistema)\n' +
-                    '- Join Logs (Ingressi)\n' +
-                    '- Add Group (Nuovi gruppi)\n' +
-                    '- Image Spam (Analisi AI)\n' +
-                    '- Link Checks (Link checks)'
+                'Creati i topic per:\n' +
+                '- Bans (Ban globali)\n' +
+                '- Logs (Sistema)\n' +
+                '- Join Logs (Ingressi)\n' +
+                '- Add Group (Nuovi gruppi)\n' +
+                '- Image Spam (Analisi AI)\n' +
+                '- Link Checks (Link checks)'
             );
         } catch (e) {
             logger.error(`[super-admin] Setup error: ${e.message}`);
@@ -75,50 +75,50 @@ function registerCommands(bot, db) {
 
         if (!action || action === 'list') {
             const items = await db.queryAll(
-                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND status = 'active'"
+                "SELECT * FROM link_rules WHERE type = 'domain' AND action = 'allow'"
             );
 
             if (items.length === 0) {
-                return ctx.reply('🔗 **WHITELIST DOMINI GLOBALE**\n\nNessun dominio in whitelist.');
+                return ctx.reply('🔗 <b>WHITELIST DOMINI GLOBALE</b>\n\nNessun dominio in whitelist.', { parse_mode: 'HTML' });
             }
 
-            let msg = '🔗 **WHITELIST DOMINI GLOBALE**\n\n';
+            let msg = '🔗 <b>WHITELIST DOMINI GLOBALE</b>\n\n';
             items.forEach((item, i) => {
-                msg += `${i + 1}. \`${item.value}\`\n`;
+                msg += `${i + 1}. <code>${item.pattern}</code>\n`;
             });
-            msg += '\n_Usa /gwhitelist add <dominio> o /gwhitelist remove <dominio>_';
+            msg += '\n<i>Usa /gwhitelist add <dominio> o /gwhitelist remove <dominio></i>';
             return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         if (action === 'add' && domain) {
             const existing = await db.queryOne(
-                "SELECT * FROM intel_data WHERE type = 'global_whitelist_domain' AND value = $1",
+                "SELECT * FROM link_rules WHERE type = 'domain' AND pattern = $1",
                 [domain]
             );
 
             if (existing) {
-                if (existing.status === 'active') {
-                    return ctx.reply(`⚠️ \`${domain}\` è già in whitelist.`, { parse_mode: 'HTML' });
+                if (existing.action === 'allow') {
+                    return ctx.reply(`⚠️ <code>${domain}</code> è già in whitelist.`, { parse_mode: 'HTML' });
                 }
-                await db.query("UPDATE intel_data SET status = 'active' WHERE id = $1", [existing.id]);
+                await db.query("UPDATE link_rules SET action = 'allow' WHERE id = $1", [existing.id]);
             } else {
                 await db.query(
-                    "INSERT INTO intel_data (type, value, added_by_user) VALUES ('global_whitelist_domain', $1, $2)",
+                    "INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'allow', $2)",
                     [domain, ctx.from.id]
                 );
             }
-            return ctx.reply(`✅ \`${domain}\` aggiunto alla whitelist globale.`, { parse_mode: 'HTML' });
+            return ctx.reply(`✅ <code>${domain}</code> aggiunto alla whitelist globale.`, { parse_mode: 'HTML' });
         }
 
         if (action === 'remove' && domain) {
             const result = await db.query(
-                "UPDATE intel_data SET status = 'removed' WHERE type = 'global_whitelist_domain' AND value = $1",
+                "DELETE FROM link_rules WHERE type = 'domain' AND pattern = $1 AND action = 'allow'",
                 [domain]
             );
 
             if (result.rowCount > 0)
-                return ctx.reply(`🗑️ \`${domain}\` rimosso dalla whitelist globale.`, { parse_mode: 'HTML' });
-            return ctx.reply(`⚠️ \`${domain}\` non trovato in whitelist.`, { parse_mode: 'HTML' });
+                return ctx.reply(`🗑️ <code>${domain}</code> rimosso dalla whitelist globale.`, { parse_mode: 'HTML' });
+            return ctx.reply(`⚠️ <code>${domain}</code> non trovato in whitelist.`, { parse_mode: 'HTML' });
         }
 
         return ctx.reply('❓ Uso: /gwhitelist [list|add|remove] [dominio]');
@@ -136,86 +136,101 @@ function registerCommands(bot, db) {
         // Show help if no args or just 'list'
         if (!typeArg || typeArg === 'list') {
             const domains = await db.queryAll(
-                "SELECT * FROM intel_data WHERE type = 'blacklist_domain' AND status = 'active'"
+                "SELECT * FROM link_rules WHERE type = 'domain' AND action = 'delete'"
             );
             const words = await db.queryAll(
-                "SELECT * FROM intel_data WHERE type = 'blacklist_word' AND status = 'active'"
+                "SELECT * FROM word_filters"
             );
 
-            let msg = '🚫 **BLACKLIST GLOBALE**\n\n';
+            let msg = '🚫 <b>BLACKLIST GLOBALE</b>\n\n';
 
-            msg += `**🔗 Domini (${domains.length}):**\n`;
-            if (domains.length === 0) msg += '_Nessuno_\n';
-            else domains.slice(0, 10).forEach((item, i) => (msg += `${i + 1}. \`${item.value}\`\n`));
-            if (domains.length > 10) msg += `_...e altri ${domains.length - 10}_\n`;
+            msg += `<b>🔗 Domini (${domains.length}):</b>\n`;
+            if (domains.length === 0) msg += '<i>Nessuno</i>\n';
+            else domains.slice(0, 10).forEach((item, i) => (msg += `${i + 1}. <code>${item.pattern}</code>\n`));
+            if (domains.length > 10) msg += `<i>...e altri ${domains.length - 10}</i>\n`;
 
-            msg += `\n**🔤 Parole (${words.length}):**\n`;
-            if (words.length === 0) msg += '_Nessuna_\n';
-            else words.slice(0, 10).forEach((item, i) => (msg += `${i + 1}. \`${item.value}\`\n`));
-            if (words.length > 10) msg += `_...e altre ${words.length - 10}_\n`;
+            msg += `\n<b>🔤 Parole (${words.length}):</b>\n`;
+            if (words.length === 0) msg += '<i>Nessuna</i>\n';
+            else words.slice(0, 10).forEach((item, i) => (msg += `${i + 1}. <code>${item.word}</code>\n`));
+            if (words.length > 10) msg += `<i>...e altre ${words.length - 10}</i>\n`;
 
-            msg += '\n**Uso:**\n';
-            msg += '`/gblacklist d add example.com` - Aggiungi dominio\n';
-            msg += '`/gblacklist w add parola` - Aggiungi parola\n';
-            msg += '`/gblacklist d remove example.com` - Rimuovi dominio\n';
-            msg += '`/gblacklist w remove parola` - Rimuovi parola';
+            msg += '\n<b>Uso:</b>\n';
+            msg += '<code>/gblacklist d add example.com</code> - Aggiungi dominio\n';
+            msg += '<code>/gblacklist w add parola</code> - Aggiungi parola\n';
+            msg += '<code>/gblacklist d remove example.com</code> - Rimuovi dominio\n';
+            msg += '<code>/gblacklist w remove parola</code> - Rimuovi parola';
             return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         // Determine type
-        let dbType;
+        let tableName;
         let typeName;
+        let column;
+
         if (typeArg === 'w' || typeArg === 'word') {
-            dbType = 'blacklist_word';
+            tableName = 'word_filters';
             typeName = 'parola';
+            column = 'word';
         } else if (typeArg === 'd' || typeArg === 'domain') {
-            dbType = 'blacklist_domain';
+            tableName = 'link_rules';
             typeName = 'dominio';
+            column = 'pattern';
         } else {
-            return ctx.reply('❌ Tipo non valido. Usa `w` (word) o `d` (domain).', { parse_mode: 'HTML' });
+            return ctx.reply('❌ Tipo non valido. Usa <code>w</code> (word) o <code>d</code> (domain).', { parse_mode: 'HTML' });
         }
 
         // List specific type
         if (action === 'list' || !action) {
-            const items = await db.queryAll(`SELECT * FROM intel_data WHERE type = $1 AND status = 'active'`, [dbType]);
+            let sql = `SELECT * FROM ${tableName}`;
+            if (tableName === 'link_rules') {
+                sql += " WHERE type = 'domain' AND action = 'delete'";
+            }
+
+            const items = await db.queryAll(sql);
             if (items.length === 0) return ctx.reply(`🚫 Nessun ${typeName} in blacklist.`);
 
-            let msg = `🚫 **BLACKLIST ${typeName.toUpperCase()}**\n\n`;
-            items.forEach((item, i) => (msg += `${i + 1}. \`${item.value}\`\n`));
+            let msg = `🚫 <b>BLACKLIST ${typeName.toUpperCase()}</b>\n\n`;
+            items.forEach((item, i) => (msg += `${i + 1}. <code>${item[column]}</code>\n`));
             return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         // Add
         if (action === 'add' && value) {
-            const existing = await db.queryOne(`SELECT * FROM intel_data WHERE type = $1 AND value = $2`, [
-                dbType,
-                value
-            ]);
-            if (existing) {
-                if (existing.status === 'active')
-                    return ctx.reply(`⚠️ \`${value}\` già in blacklist.`, { parse_mode: 'HTML' });
-                await db.query("UPDATE intel_data SET status='active' WHERE id=$1", [existing.id]);
+            if (tableName === 'link_rules') {
+                const existing = await db.queryOne(`SELECT * FROM link_rules WHERE pattern = $1 AND type = 'domain'`, [value]);
+                if (existing) {
+                    if (existing.action === 'delete')
+                        return ctx.reply(`⚠️ <code>${value}</code> già in blacklist.`, { parse_mode: 'HTML' });
+                    await db.query("UPDATE link_rules SET action='delete' WHERE id=$1", [existing.id]);
+                } else {
+                    await db.query("INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'delete', $2)", [value, ctx.from.id]);
+                }
             } else {
-                await db.query('INSERT INTO intel_data (type, value, added_by_user) VALUES ($1, $2, $3)', [
-                    dbType,
-                    value,
-                    ctx.from.id
-                ]);
+                // word_filters
+                const existing = await db.queryOne(`SELECT * FROM word_filters WHERE word = $1`, [value]);
+                if (existing) {
+                    return ctx.reply(`⚠️ <code>${value}</code> già in blacklist.`, { parse_mode: 'HTML' });
+                } else {
+                    await db.query("INSERT INTO word_filters (word) VALUES ($1)", [value]);
+                }
             }
-            return ctx.reply(`✅ ${typeName} \`${value}\` aggiunto alla blacklist.`, { parse_mode: 'HTML' });
+            return ctx.reply(`✅ ${typeName} <code>${value}</code> aggiunto alla blacklist.`, { parse_mode: 'HTML' });
         }
 
         // Remove
         if (action === 'remove' && value) {
-            const result = await db.query(`UPDATE intel_data SET status='removed' WHERE type=$1 AND value=$2`, [
-                dbType,
-                value
-            ]);
-            if (result.rowCount > 0) return ctx.reply(`🗑️ ${typeName} \`${value}\` rimosso.`, { parse_mode: 'HTML' });
-            return ctx.reply(`⚠️ \`${value}\` non trovato.`, { parse_mode: 'HTML' });
+            let result;
+            if (tableName === 'link_rules') {
+                result = await db.query(`DELETE FROM link_rules WHERE pattern = $1 AND type = 'domain' AND action = 'delete'`, [value]);
+            } else {
+                result = await db.query(`DELETE FROM word_filters WHERE word = $1`, [value]);
+            }
+
+            if (result.rowCount > 0) return ctx.reply(`🗑️ ${typeName} <code>${value}</code> rimosso.`, { parse_mode: 'HTML' });
+            return ctx.reply(`⚠️ <code>${value}</code> non trovato.`, { parse_mode: 'HTML' });
         }
 
-        return ctx.reply('❓ Uso: `/gblacklist <w|d> <add|remove|list> [valore]`', { parse_mode: 'HTML' });
+        return ctx.reply('❓ Uso: <code>/gblacklist <w|d> <add|remove|list> [valore]</code>', { parse_mode: 'HTML' });
     });
 
     // Command: /gmodal
@@ -300,7 +315,7 @@ function registerCommands(bot, db) {
             if (!domain) return ctx.answerCallbackQuery('❌ Dominio non valido');
 
             await db.query(
-                "INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('whitelist_domain', $1, $2, 'active') ON CONFLICT DO NOTHING",
+                "INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'allow', $2) ON CONFLICT DO NOTHING",
                 [domain, ctx.from.id]
             );
             await ctx.answerCallbackQuery('✅ Whitelisted');
@@ -314,7 +329,7 @@ function registerCommands(bot, db) {
             if (!domain) return ctx.answerCallbackQuery('❌ Dominio non valido');
 
             await db.query(
-                "INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_domain', $1, $2, 'active') ON CONFLICT DO NOTHING",
+                "INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'delete', $2) ON CONFLICT DO NOTHING",
                 [domain, ctx.from.id]
             );
             await ctx.answerCallbackQuery('🚫 Blacklisted');
@@ -348,7 +363,7 @@ function registerCommands(bot, db) {
         } else if (data.startsWith('gwl_add:')) {
             const domain = data.split(':')[1];
             await db.query(
-                "INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('global_whitelist_domain', $1, $2, 'active') ON CONFLICT DO NOTHING",
+                "INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'allow', $2) ON CONFLICT DO NOTHING",
                 [domain, ctx.from.id]
             );
             await ctx.answerCallbackQuery('✅ Whitelisted');
@@ -370,7 +385,7 @@ function registerCommands(bot, db) {
         try {
             if (type === 'link') {
                 await db.query(
-                    "INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_domain', $1, $2, 'active')",
+                    "INSERT INTO link_rules (pattern, type, action, added_by) VALUES ($1, 'domain', 'delete', $2)",
                     [input, userId]
                 );
                 await ctx.reply(`✅ Dominio \`${input}\` aggiunto alla Blacklist Globale.`);
@@ -379,12 +394,12 @@ function registerCommands(bot, db) {
                 if (session.origGuildId && session.origMsgId) {
                     try {
                         await bot.api.deleteMessage(session.origGuildId, session.origMsgId);
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             } else if (type === 'word') {
                 await db.query(
-                    "INSERT INTO intel_data (type, value, added_by_user, status) VALUES ('blacklist_word', $1, $2, 'active')",
-                    [input, userId]
+                    "INSERT INTO word_filters (word) VALUES ($1)",
+                    [input]
                 );
                 await ctx.reply(`✅ Parola \`${input}\` aggiunta alla Blacklist Globale.`);
             }

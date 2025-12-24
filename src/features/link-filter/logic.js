@@ -22,15 +22,14 @@ async function checkIntel(domain) {
     if (!db) return 'unknown';
     const res = await db.queryOne(
         `
-        SELECT type FROM intel_data 
-        WHERE (type = 'whitelist_domain' OR type = 'blacklist_domain') 
-        AND value = $1 AND status = 'active'
+        SELECT action FROM link_rules 
+        WHERE type = 'domain' AND pattern = $1
     `,
         [domain]
     );
 
     if (res) {
-        return res.type === 'whitelist_domain' ? 'whitelist' : 'blacklist';
+        return res.action === 'allow' ? 'whitelist' : 'blacklist';
     }
     return 'unknown';
 }
