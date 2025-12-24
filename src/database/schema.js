@@ -225,8 +225,7 @@ async function createTables() {
         CREATE TABLE IF NOT EXISTS global_config (
             id INTEGER PRIMARY KEY DEFAULT 1,
             parliament_group_id BIGINT,
-            global_topics JSONB DEFAULT '{}',
-            global_log_channel BIGINT
+            global_topics JSONB DEFAULT '{}'
         )
     `);
 

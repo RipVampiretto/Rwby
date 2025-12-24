@@ -13,7 +13,7 @@ function init(bot, database) {
 async function logEvent(params) {
     if (!db || !_botInstance) return;
 
-    const { guildId, guildName, eventType, targetUser, executorModule, reason, messageLink, isGlobal } = params;
+    const { guildId, guildName, eventType, targetUser, executorModule, reason, messageLink } = params;
 
     const config = await db.getGuildConfig(guildId);
     if (!config) return;
@@ -97,19 +97,6 @@ async function logEvent(params) {
         }
     }
 
-    if (isGlobal) {
-        try {
-            const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
-            if (globalConfig && globalConfig.global_log_channel) {
-                await _botInstance.api.sendMessage(globalConfig.global_log_channel, text + '\n#GLOBAL', {
-                    disable_web_page_preview: true,
-                    parse_mode: 'HTML'
-                });
-            }
-        } catch (e) {
-            logger.error(`[action-log] Failed to send global log: ${e.message}`);
-        }
-    }
 }
 
 module.exports = {

@@ -264,10 +264,10 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
 async function sendGlobalLog(bot, db, event) {
     try {
         const globalConfig = await db.queryOne('SELECT * FROM global_config WHERE id = 1');
-        if (!globalConfig || !globalConfig.global_log_channel) return;
+        if (!globalConfig || !globalConfig.parliament_group_id) return;
 
         let threadId = null;
-        if (globalConfig.global_topics && globalConfig.parliament_group_id === globalConfig.global_log_channel) {
+        if (globalConfig.global_topics) {
             try {
                 const topics =
                     typeof globalConfig.global_topics === 'string'
@@ -290,16 +290,19 @@ async function sendGlobalLog(bot, db, event) {
             `ℹ️ Details: ${event.details || 'N/A'}`;
 
         try {
-            await bot.api.sendMessage(globalConfig.global_log_channel, text, {
+            await bot.api.sendMessage(globalConfig.parliament_group_id, text, {
                 message_thread_id: threadId,
                 parse_mode: 'HTML'
             });
         } catch (e) {
+            // If topic fails, try without thread
             if (threadId) {
-                await bot.api.sendMessage(globalConfig.global_log_channel, text, { parse_mode: 'HTML' });
+                await bot.api.sendMessage(globalConfig.parliament_group_id, text, { parse_mode: 'HTML' });
             }
         }
-    } catch (e) { }
+    } catch (e) {
+        logger.error(`[super-admin] sendGlobalLog error: ${e.message}`);
+    }
 }
 
 async function executeGlobalBan(ctx, db, bot, userId) {
@@ -406,12 +409,11 @@ async function setupParliament(db, ctx, bot) {
 
     await db.query(
         `
-        INSERT INTO global_config (id, parliament_group_id, global_topics, global_log_channel) 
-        VALUES (1, $1, $2, $1)
+        INSERT INTO global_config (id, parliament_group_id, global_topics) 
+        VALUES (1, $1, $2)
         ON CONFLICT(id) DO UPDATE SET 
             parliament_group_id = $1, 
-            global_topics = $2,
-            global_log_channel = $1
+            global_topics = $2
     `,
         [ctx.chat.id, JSON.stringify(topics)]
     );

@@ -53,18 +53,7 @@ function registerCommands(bot, db) {
         }
     });
 
-    // Command: /setglog
-    bot.command('setglog', async ctx => {
-        if (!isSuperAdmin(ctx.from.id)) return;
-        await db.query(
-            `
-            INSERT INTO global_config (id, global_log_channel) VALUES (1, $1)
-            ON CONFLICT(id) DO UPDATE SET global_log_channel = $1
-        `,
-            [ctx.chat.id]
-        );
-        await ctx.reply('✅ Global Log Channel impostato.');
-    });
+
 
     // Command: /ungban <user_id>
     bot.command('ungban', async ctx => {
