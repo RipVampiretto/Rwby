@@ -271,7 +271,7 @@
         "status": "Status",
         "action": "Action",
         "notify": "Log",
-        "warning_scam": "{user}, your message was removed because it appears to be a scam.",
+        "warning_scam": "{user}, your message was removed because it contained non-compliant content.",
         "warning_gbanned": "{user}, your message was removed because you mentioned a globally banned user: {mentioned}",
         "reason_gbanned": "Mentioned globally banned user: @{user}",
         "reason_scam": "AI Scam Detection ({percent}%): {reason}",

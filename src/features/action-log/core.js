@@ -70,7 +70,9 @@ async function logEvent(params) {
     text += `• ${t('logger.log.by')}: ${botLink} [${botInfo.id}]\n`;
     text += `• ${t('logger.log.to')}: ${userLink} [${targetUser?.id}]\n`;
     text += `• ${t('logger.log.group')}: ${guildName || config.guild_name || guildId} [${guildId}]\n`;
-    text += `• ${t('logger.log.reason')}: ${reason}\n`;
+    if (reason) {
+        text += `• ${t('logger.log.reason')}: ${reason}\n`;
+    }
     if (messageLink) {
         text += `• 👀 ${t('logger.log.go_to_message')} (${messageLink})\n`;
     }
@@ -90,6 +92,17 @@ async function logEvent(params) {
                         messageThreadId = topics.logs;
                     }
                 } catch (e) { }
+            }
+
+            // Forward message if requested
+            if (params.messageIdToForward && params.chatIdToForwardFrom) {
+                try {
+                    await _botInstance.api.forwardMessage(targetChatId, params.chatIdToForwardFrom, params.messageIdToForward, {
+                        message_thread_id: messageThreadId
+                    });
+                } catch (e) {
+                    logger.debug(`[action-log] Failed to forward message: ${e.message}`);
+                }
             }
 
             await _botInstance.api.sendMessage(targetChatId, text, {

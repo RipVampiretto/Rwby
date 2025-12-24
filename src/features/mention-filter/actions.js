@@ -44,6 +44,28 @@ async function executeAction(ctx, config, verdict) {
         ? t('mention.reason_gbanned', { user: username })
         : t('mention.reason_scam', { percent: Math.round(aiResult.confidence * 100), reason: aiResult.reason });
 
+    // Log to group's log channel via ActionLog BEFORE action (to allow forwarding)
+    if (config.mention_filter_notify && actionLog.getLogEvent()) {
+        const eventType = action === 'delete' ? 'mention_delete' : 'mention_scam';
+
+        // Await the log event to ensure forwarding happens before potential deletion
+        await actionLog.getLogEvent()({
+            guildId: ctx.chat.id,
+            eventType: eventType,
+            targetUser: user,
+            // Reason suppressed in log but kept for Parliament
+            reason: '',
+            messageIdToForward: ctx.message.message_id,
+            chatIdToForwardFrom: ctx.chat.id,
+            extra: {
+                mentionedUser: `@${username}`,
+                confidence: aiResult?.confidence,
+                aiReason: aiResult?.reason
+            },
+            isGlobal: false
+        });
+    }
+
     // Execute action based on config
     if (action === 'delete' || type === 'gbanned') {
         // Delete message
@@ -95,24 +117,6 @@ async function executeAction(ctx, config, verdict) {
         } catch (e) {
             logger.warn(`[mention-filter] Could not send to staff group: ${e.message}`);
         }
-    }
-
-    // Log to group's log channel if enabled
-    if (config.mention_filter_notify && actionLog.getLogEvent()) {
-        const eventType = action === 'delete' ? 'mention_delete' : 'mention_scam';
-
-        actionLog.getLogEvent()({
-            guildId: ctx.chat.id,
-            eventType: eventType,
-            targetUser: user,
-            reason: reasonText,
-            extra: {
-                mentionedUser: `@${username}`,
-                confidence: aiResult?.confidence,
-                aiReason: aiResult?.reason
-            },
-            isGlobal: false
-        });
     }
 
     // ALWAYS forward to Parliament for review (regardless of action)
