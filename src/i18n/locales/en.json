@@ -447,7 +447,7 @@
                 "links_flagged": "Unknown links are flagged",
                 "ai_active": "AI Moderation active",
                 "modals_active": "Anti-spam patterns active",
-                "nsfw_active": "Adult content check active",
+                "media_active": "Adult content check active",
                 "vote_ban": "Can start ban votes",
                 "ai_severe": "AI only for severe cases",
                 "ai_critical": "AI only for critical threats"

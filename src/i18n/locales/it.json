@@ -447,7 +447,7 @@
                 "links_flagged": "I link sconosciuti vengono segnalati",
                 "ai_active": "Moderazione AI attiva",
                 "modals_active": "Pattern anti-spam attivi",
-                "nsfw_active": "Controllo contenuti adulti attivo",
+                "media_active": "Controllo contenuti adulti attivo",
                 "vote_ban": "Puoi avviare votazioni di ban",
                 "ai_severe": "Solo AI per casi gravi",
                 "ai_critical": "Solo AI per minacce critiche"

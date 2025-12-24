@@ -163,7 +163,7 @@ function registerCommands(bot, db) {
             await db.updateGuildConfig(ctx.chat.id, { media_action: nextAct });
         } else if (data.startsWith('nsf_tog_')) {
             const type = data.split('_')[2]; // photo, video, gif, sticker
-            const key = `nsfw_check_${type}s`;
+            const key = `media_check_${type}s`;
             if (config[key] !== undefined) {
                 await db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
             }
@@ -177,7 +177,7 @@ function registerCommands(bot, db) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) {}
+                    } catch (e) { }
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }

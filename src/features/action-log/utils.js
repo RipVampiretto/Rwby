@@ -16,8 +16,8 @@ async function isAdmin(ctx) {
 const MODULE_MAP = {
     lang_delete: 'Language Monitor',
     lang_ban: 'Language Monitor',
-    nsfw_delete: 'NSFW Monitor',
-    nsfw_ban: 'NSFW Monitor',
+    media_delete: 'Media Monitor',
+    media_ban: 'Media Monitor',
     link_delete: 'Link Monitor',
     ai_delete: 'AI Moderation',
     ai_ban: 'AI Moderation',
@@ -34,8 +34,8 @@ const MODULE_MAP = {
 const EMOJI_MAP = {
     lang_delete: '🌐',
     lang_ban: '🌐',
-    nsfw_delete: '🔞',
-    nsfw_ban: '🔞',
+    media_delete: '🔞',
+    media_ban: '🔞',
     link_delete: '🔗',
     ai_delete: '🤖',
     ai_ban: '🤖',

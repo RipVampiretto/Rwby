@@ -33,13 +33,13 @@ const TIER_INFO = {
         id: '1',
         emoji: '⚔️',
         fluxRange: '100 - 299',
-        restrictions: ['links_flagged', 'ai_active', 'modals_active', 'nsfw_active', 'vote_ban']
+        restrictions: ['links_flagged', 'ai_active', 'modals_active', 'media_active', 'vote_ban']
     },
     2: {
         id: '2',
         emoji: '🛡️',
         fluxRange: '300 - 499',
-        restrictions: ['ai_severe', 'nsfw_active']
+        restrictions: ['ai_severe', 'media_active']
     },
     3: {
         id: '3',

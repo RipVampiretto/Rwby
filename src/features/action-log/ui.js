@@ -17,7 +17,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -53,11 +53,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
                 { text: has('lang_delete'), callback_data: 'log_t:lang_delete' },
                 { text: has('lang_ban'), callback_data: 'log_t:lang_ban' }
             ],
-            // NSFW
+            // Media
             [
-                { text: '🔞 NSFW', callback_data: 'log_noop' },
-                { text: has('nsfw_delete'), callback_data: 'log_t:nsfw_delete' },
-                { text: has('nsfw_ban'), callback_data: 'log_t:nsfw_ban' }
+                { text: '🔞 Media', callback_data: 'log_noop' },
+                { text: has('media_delete'), callback_data: 'log_t:media_delete' },
+                { text: has('media_ban'), callback_data: 'log_t:media_ban' }
             ],
             // Link
             [
