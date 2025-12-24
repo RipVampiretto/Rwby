@@ -19,36 +19,33 @@ const TIER_INFO = {
             'max_ai',
             'strict_rate'
         ],
-        bypasses: []
+        restrictions: [
+            'all_security',
+            'links_deleted',
+            'forwards_deleted',
+            'no_edit',
+            'scam_checked',
+            'max_ai',
+            'strict_rate'
+        ]
     },
     1: {
         id: '1',
         emoji: '⚔️',
         fluxRange: '100 - 299',
-        restrictions: ['links_flagged', 'ai_active', 'modals_active', 'nsfw_active', 'vote_ban'],
-        bypasses: ['profiler_bypass', 'edit_allowed', 'lang_bypass', 'forwards_allowed']
+        restrictions: ['links_flagged', 'ai_active', 'modals_active', 'nsfw_active', 'vote_ban']
     },
     2: {
         id: '2',
         emoji: '🛡️',
         fluxRange: '300 - 499',
-        restrictions: ['ai_severe', 'nsfw_active'],
-        bypasses: [
-            'spam_bypass',
-            'keyword_bypass',
-            'lang_bypass',
-            'link_bypass',
-            'modal_bypass',
-            'antiedit_bypass',
-            'profiler_disabled'
-        ]
+        restrictions: ['ai_severe', 'nsfw_active']
     },
     3: {
         id: '3',
         emoji: '👁️',
         fluxRange: '500+',
-        restrictions: ['ai_critical'],
-        bypasses: ['all_bypass', 'nsfw_bypass', 'visual_bypass']
+        restrictions: ['ai_critical']
     }
 };
 

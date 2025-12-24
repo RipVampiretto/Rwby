@@ -18,7 +18,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
         // Only DELETE or REPORT - no BAN
         const action = config.media_action === 'report_only' ? t('common.actions.report') : t('common.actions.delete');
-        const tierBypass = config.media_tier_bypass ?? 2;
+
 
         // Toggles
         const p = config.media_check_photos ? '✅' : '❌';

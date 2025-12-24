@@ -34,7 +34,6 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'media_check_gifs',
     'media_check_stickers',
     'media_frame_interval',
-    'media_tier_bypass',
     'media_blocked_categories',
     // Report System
     'report_enabled',
@@ -50,7 +49,6 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'spam_patterns_enabled',
     'spam_patterns_action',
     'spam_patterns_sync_global',
-    'spam_patterns_tier_bypass',
     // Global Blacklist
     'blacklist_enabled',
     'blacklist_notify',

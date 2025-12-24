@@ -64,7 +64,6 @@ async function createTables() {
             media_check_gifs BOOLEAN DEFAULT FALSE,
             media_check_stickers BOOLEAN DEFAULT FALSE,
             media_frame_interval INTEGER DEFAULT 5,
-            media_tier_bypass INTEGER DEFAULT 2,
             media_blocked_categories JSONB DEFAULT '["minors"]'::jsonb,
             
             -- Report System (ex VoteBan)
@@ -82,7 +81,6 @@ async function createTables() {
             spam_patterns_enabled BOOLEAN DEFAULT FALSE,
             spam_patterns_action TEXT DEFAULT 'report_only',
             spam_patterns_sync_global BOOLEAN DEFAULT FALSE,
-            spam_patterns_tier_bypass INTEGER DEFAULT 2,
             
             -- Global Blacklist (ex CAS Ban)
             blacklist_enabled BOOLEAN DEFAULT FALSE,

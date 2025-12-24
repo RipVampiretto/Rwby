@@ -33,14 +33,7 @@ function registerCommands(bot, db) {
                 return next();
             }
 
-            // Tier bypass (-1 = OFF, no bypass)
-            const tierBypass = config.media_tier_bypass ?? 2;
-            if (tierBypass !== -1 && ctx.userTier !== undefined && ctx.userTier >= tierBypass) {
-                logger.debug(
-                    `[media-filter] ⏭️ Skipping: user ${userId} has tier ${ctx.userTier} (bypass >= ${tierBypass})`
-                );
-                return next();
-            }
+
 
             // Check types enabled
             const isVideo =
@@ -195,12 +188,6 @@ function registerCommands(bot, db) {
             // Toggle
             logEvents[logKey] = !logEvents[logKey];
             await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
-        } else if (data === 'nsf_tier') {
-            const current = config.media_tier_bypass ?? 2;
-            const tiers = [0, 1, 2, 3, -1];
-            const idx = tiers.indexOf(current);
-            const next = tiers[(idx + 1) % tiers.length];
-            await db.updateGuildConfig(ctx.chat.id, { media_tier_bypass: next });
         }
 
         await ui.sendConfigUI(ctx, db, true, fromSettings);
