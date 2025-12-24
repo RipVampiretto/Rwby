@@ -17,15 +17,13 @@ async function sendConfigUI(ctx, db, isEdit = false) {
         } else if (typeof config.allowed_languages === 'string') {
             try {
                 allowed = JSON.parse(config.allowed_languages);
-            } catch (e) { }
+            } catch (e) {}
         }
     }
     if (allowed.length === 0) allowed = ['it', 'en'];
 
     let text =
-        `${t('language.title')}\n\n` +
-        `${t('language.description')}\n\n` +
-        `${t('language.status')}: ${enabled}`;
+        `${t('language.title')}\n\n` + `${t('language.description')}\n\n` + `${t('language.status')}: ${enabled}`;
 
     // Show details only when enabled
     if (config.lang_enabled) {
@@ -61,7 +59,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
             if (typeof config.log_events === 'string') {
                 try {
                     logEvents = JSON.parse(config.log_events);
-                } catch (e) { }
+                } catch (e) {}
             } else if (typeof config.log_events === 'object') {
                 logEvents = config.log_events;
             }

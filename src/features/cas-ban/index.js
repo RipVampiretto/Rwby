@@ -93,21 +93,25 @@ function register(bot) {
                         const superAdmin = require('../super-admin');
                         const result = await superAdmin.syncGlobalBansToGuild(ctx.chat.id);
 
-                        logger.info(`[cas-ban] Blacklist sync to ${ctx.chat.id}: ${result.success} internal gbans applied`);
+                        logger.info(
+                            `[cas-ban] Blacklist sync to ${ctx.chat.id}: ${result.success} internal gbans applied`
+                        );
 
                         // Delete sync start message
                         try {
                             await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                        } catch (e) { }
+                        } catch (e) {}
 
                         // Send completion message
-                        const completeMsg = await ctx.reply(`✅ Sincronizzazione completata: ${result.success} utenti bannati.`);
+                        const completeMsg = await ctx.reply(
+                            `✅ Sincronizzazione completata: ${result.success} utenti bannati.`
+                        );
 
                         // Auto-delete after 10s
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, completeMsg.message_id);
-                            } catch (e) { }
+                            } catch (e) {}
                         }, 10000);
                     } catch (e) {
                         logger.error(`[cas-ban] Sync failed: ${e.message}`);
@@ -118,7 +122,7 @@ function register(bot) {
                 setTimeout(async () => {
                     try {
                         await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                    } catch (e) { }
+                    } catch (e) {}
                 }, 30000);
             }
 

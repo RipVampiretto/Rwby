@@ -11,9 +11,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const notifyEnabled = config.casban_notify ? t('common.on') : t('common.off');
 
     let text =
-        `${t('blacklist.title')}\n\n` +
-        `${t('blacklist.description')}\n\n` +
-        `${t('blacklist.status')}: ${enabled}`;
+        `${t('blacklist.title')}\n\n` + `${t('blacklist.description')}\n\n` + `${t('blacklist.status')}: ${enabled}`;
 
     // Show details only when enabled
     if (config.casban_enabled) {

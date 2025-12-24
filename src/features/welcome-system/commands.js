@@ -27,7 +27,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) { }
+        } catch (e) {}
         return;
     }
 
@@ -43,7 +43,7 @@ async function handleCallback(ctx) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) { }
+                    } catch (e) {}
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
@@ -58,7 +58,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) { }
+        } catch (e) {}
         return;
     }
 
@@ -88,7 +88,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) { }
+        } catch (e) {}
         return;
     }
 

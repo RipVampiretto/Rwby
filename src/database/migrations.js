@@ -50,9 +50,7 @@ async function runMigrations() {
     const check3 = await query(`SELECT 1 FROM migrations WHERE name = $1`, [migration3]);
     if (check3.rowCount === 0) {
         try {
-            await query(
-                `ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS keyword_enabled BOOLEAN DEFAULT FALSE`
-            );
+            await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS keyword_enabled BOOLEAN DEFAULT FALSE`);
             await query(`INSERT INTO migrations (name) VALUES ($1)`, [migration3]);
             logger.info(`[migrations] Applied: ${migration3}`);
         } catch (e) {
@@ -65,9 +63,7 @@ async function runMigrations() {
     const check4 = await query(`SELECT 1 FROM migrations WHERE name = $1`, [migration4]);
     if (check4.rowCount === 0) {
         try {
-            await query(
-                `ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS casban_notify BOOLEAN DEFAULT FALSE`
-            );
+            await query(`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS casban_notify BOOLEAN DEFAULT FALSE`);
             await query(`INSERT INTO migrations (name) VALUES ($1)`, [migration4]);
             logger.info(`[migrations] Applied: ${migration4}`);
         } catch (e) {
