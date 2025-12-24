@@ -208,7 +208,7 @@
         "action": "Action",
         "warning": "{user}, your message was deleted because it matched a suspicious pattern.",
         "categories": {
-            "spam": "📧 Generic Spam",
+            "spam": "📧 Generic spam",
             "crypto": "💸 Cryptocurrency",
             "sex": "🔞 Sexual Content"
         },

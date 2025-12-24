@@ -208,7 +208,7 @@
         "action": "Azione",
         "warning": "{user}, il tuo messaggio è stato eliminato perché corrisponde a un pattern sospetto.",
         "categories": {
-            "spam": "📧 Spam Generico",
+            "spam": "📧 Spam generico",
             "crypto": "💸 Criptovalute",
             "sex": "🔞 Contenuti Sessuali"
         },
