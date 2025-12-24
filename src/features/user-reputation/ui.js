@@ -10,7 +10,7 @@ async function sendTierDetail(ctx, tierNum) {
     if (!info) return;
 
     const tierName = ctx.t(`tier_system.tiers.${tierNum}.name`);
-    let text = `**${info.emoji} ${tierName}**\n`;
+    let text = `<b>${info.emoji} ${tierName}</b>\n`;
     text += ctx.t('tier_system.details.flux_required', { range: info.fluxRange }) + '\n\n';
 
     if (info.restrictions.length > 0) {
@@ -29,7 +29,7 @@ async function sendTierDetail(ctx, tierNum) {
 
     try {
         await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
@@ -55,7 +55,7 @@ async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
     }
@@ -139,14 +139,14 @@ async function sendGlobalFluxOverview(ctx, db) {
             const progressBar = '█'.repeat(progress) + '░'.repeat(10 - progress);
             const target = tier < 3 ? nextTierFlux : 'MAX';
 
-            text += `🏘 **${row.guild_name || 'Unknown Group'}**\n`;
+            text += `🏘 <b>${row.guild_name || 'Unknown Group'}</b>\n`;
             text += `${ctx.t('tier_system.menu.your_rank', { emoji: tierInfo.emoji, name: tierName })}\n`;
             text += `🏠 Flux: ${flux}\n`;
             text += `${progressBar} ${flux}/${target}\n\n`;
         }
     }
 
-    text += `**Global**\n🌍 Totale: ${globalFlux}`;
+    text += `<b>Global</b>\n🌍 Totale: ${globalFlux}`;
 
     const keyboard = {
         inline_keyboard: [
@@ -158,7 +158,7 @@ async function sendGlobalFluxOverview(ctx, db) {
     if (ctx.callbackQuery) {
         try {
             await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
     }

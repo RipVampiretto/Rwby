@@ -189,11 +189,11 @@ const sendStartMenu = (ctx) => {
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: t('common.start.buttons.add_group'), url: `https://t.me/${ctx.me.username}?startgroup=true` }],
-            [
-                { text: t('common.start.buttons.my_flux'), callback_data: "my_flux_overview" },
-                { text: t('common.start.buttons.tier_info'), callback_data: "tier_explainer" }
-            ]
+            [{ text: t('common.start.buttons.add_group'), url: `https://t.me/${ctx.me.username}?startgroup=true` }]
+            // [
+            //     { text: t('common.start.buttons.my_flux'), callback_data: "my_flux_overview" },
+            //     { text: t('common.start.buttons.tier_info'), callback_data: "tier_explainer" }
+            // ]
         ]
     };
 
@@ -209,42 +209,42 @@ const sendStartMenu = (ctx) => {
 bot.command("start", (ctx) => sendStartMenu(ctx));
 bot.callbackQuery("back_to_start", (ctx) => sendStartMenu(ctx));
 
-bot.command("help", async (ctx) => {
-    const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
-    let isGroupAdmin = false;
+// bot.command("help", async (ctx) => {
+//     const guildId = ctx.chat.id;
+//     const t = (key, params) => i18n.t(guildId, key, params);
+//     let isGroupAdmin = false;
 
-    // Check admin status if in group
-    if (ctx.chat.type !== 'private') {
-        try {
-            const member = await ctx.getChatMember(ctx.from.id);
-            isGroupAdmin = ['creator', 'administrator'].includes(member.status);
-        } catch (e) { }
-    }
+//     // Check admin status if in group
+//     if (ctx.chat.type !== 'private') {
+//         try {
+//             const member = await ctx.getChatMember(ctx.from.id);
+//             isGroupAdmin = ['creator', 'administrator'].includes(member.status);
+//         } catch (e) { }
+//     }
 
-    let helpText = `${t('common.help.title')}\n\n`;
+//     let helpText = `${t('common.help.title')}\n\n`;
 
-    // User commands
-    helpText += `${t('common.help.user_section')}\n`;
-    helpText += `${t('common.help.myflux_cmd')}\n`;
-    helpText += `${t('common.help.tier_cmd')}\n\n`;
+//     // User commands
+//     helpText += `${t('common.help.user_section')}\n`;
+//     helpText += `${t('common.help.myflux_cmd')}\n`;
+//     helpText += `${t('common.help.tier_cmd')}\n\n`;
 
-    if (isGroupAdmin) {
-        // Admin commands
-        helpText += `${t('common.help.admin_section')}\n`;
-        helpText += `${t('common.help.settings_cmd')}\n`;
-        helpText += `${t('common.help.settings_desc')}\n\n`;
+//     if (isGroupAdmin) {
+//         // Admin commands
+//         helpText += `${t('common.help.admin_section')}\n`;
+//         helpText += `${t('common.help.settings_cmd')}\n`;
+//         helpText += `${t('common.help.settings_desc')}\n\n`;
 
-        helpText += `${t('common.help.other_commands')}\n`;
-        helpText += `${t('common.help.setstaff_cmd')}\n`;
-        helpText += `${t('common.help.notes_cmd')}\n\n`;
+//         helpText += `${t('common.help.other_commands')}\n`;
+//         helpText += `${t('common.help.setstaff_cmd')}\n`;
+//         helpText += `${t('common.help.notes_cmd')}\n\n`;
 
-        helpText += `${t('common.help.moderation_section')}\n`;
-        helpText += `${t('common.help.voteban_trigger')}\n`;
-    }
+//         helpText += `${t('common.help.moderation_section')}\n`;
+//         helpText += `${t('common.help.voteban_trigger')}\n`;
+//     }
 
-    await ctx.reply(helpText, { parse_mode: "Markdown" });
-});
+//     await ctx.reply(helpText, { parse_mode: "Markdown" });
+// });
 
 // ============================================================================
 // ERROR HANDLER
