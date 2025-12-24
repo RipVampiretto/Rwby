@@ -203,12 +203,15 @@
         "title": "📋 <b>PATTERN</b>",
         "description": "Riconosce automaticamente messaggi sospetti usando pattern predefiniti.",
         "info_title": "Come funziona",
-        "info_1": "Pattern caricati per le tue lingue: {count}",
-        "info_2": "Lingue del gruppo: {languages}",
+        "info_global": "Categorie attive: {count}/{total}",
         "status": "Stato",
         "action": "Azione",
         "warning": "{user}, il tuo messaggio è stato eliminato perché corrisponde a un pattern sospetto.",
-        "warning_dependency": "⚠️ <b>Nota:</b> Usa le lingue definite nel filtro Lingua, ma funziona indipendentemente (puoi disattivare il filtro Lingua).",
+        "categories": {
+            "spam": "📧 Spam Generico",
+            "crypto": "💸 Criptovalute",
+            "sex": "🔞 Contenuti Sessuali"
+        },
         "buttons": {
             "system": "📋 Sistema",
             "action": "👮 Azione",

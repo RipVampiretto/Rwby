@@ -203,12 +203,15 @@
         "title": "📋 <b>PATTERNS</b>",
         "description": "Automatically recognizes suspicious messages using predefined patterns.",
         "info_title": "How it works",
-        "info_1": "Patterns loaded for your languages: {count}",
-        "info_2": "Group languages: {languages}",
+        "info_global": "Active categories: {count}/{total}",
         "status": "Status",
         "action": "Action",
         "warning": "{user}, your message was deleted because it matched a suspicious pattern.",
-        "warning_dependency": "⚠️ <b>Note:</b> Uses languages defined in Language filter, but works independently (you can disable Language filter).",
+        "categories": {
+            "spam": "📧 Generic Spam",
+            "crypto": "💸 Cryptocurrency",
+            "sex": "🔞 Sexual Content"
+        },
         "buttons": {
             "system": "📋 System",
             "action": "👮 Action",

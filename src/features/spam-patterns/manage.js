@@ -33,6 +33,56 @@ async function toggleGuildModal(guildId, modalId) {
     }
 }
 
+/**
+ * Toggle all modals of a specific category for a guild
+ */
+async function toggleGuildCategory(guildId, category) {
+    if (!db) return null;
+    try {
+        // Determine current state (if ANY in this category is enabled, we treat as enabled and toggle to disabled)
+        const modals = await logic.getAllModals();
+        const categoryModals = modals.filter(m => m.category === category);
+
+        let anyEnabled = false;
+        for (const m of categoryModals) {
+            if (await logic.isModalEnabledForGuild(guildId, m.id)) {
+                anyEnabled = true;
+                break;
+            }
+        }
+
+        const newState = !anyEnabled;
+
+        // Apply to ALL modals in this category
+        for (const m of categoryModals) {
+            await db.query(
+                `
+                INSERT INTO guild_pattern_overrides (guild_id, modal_id, enabled)
+                VALUES ($1, $2, $3)
+                ON CONFLICT(guild_id, modal_id) DO UPDATE SET enabled = $3
+            `,
+                [guildId, m.id, newState]
+            );
+        }
+
+        return newState;
+    } catch (e) {
+        logger.error(`[spam-patterns] Failed to toggle category ${category}: ${e.message}`);
+        return null;
+    }
+}
+
+async function isCategoryEnabledForGuild(guildId, category) {
+    const modals = await logic.getAllModals();
+    const categoryModals = modals.filter(m => m.category === category);
+
+    // If any is enabled, we show checked
+    for (const m of categoryModals) {
+        if (await logic.isModalEnabledForGuild(guildId, m.id)) return true;
+    }
+    return false;
+}
+
 // ============================================================================
 // SUPERADMIN MODAL MANAGEMENT
 // ============================================================================
@@ -56,8 +106,8 @@ async function upsertModal(language, category, patterns, action = 'report_only',
 
     await db.query(
         `
-        INSERT INTO spam_patterns (language, category, patterns, action, similarity_threshold, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO spam_patterns (language, category, patterns, action, similarity_threshold, created_by, enabled)
+        VALUES ($1, $2, $3, $4, $5, $6, TRUE)
         ON CONFLICT(language, category) DO UPDATE SET
             patterns = $3,
             action = $4,
@@ -145,6 +195,8 @@ async function updateModalAction(language, category, action) {
 module.exports = {
     init,
     toggleGuildModal,
+    toggleGuildCategory,
+    isCategoryEnabledForGuild,
     listModals,
     getModal,
     upsertModal,

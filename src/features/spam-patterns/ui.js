@@ -12,29 +12,20 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const enabled = config.spam_patterns_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.spam_patterns_action || 'report_only');
 
-    // Count active modals for this group's languages
-    let allowedLangs = ['it', 'en'];
-    if (config.allowed_languages) {
-        if (Array.isArray(config.allowed_languages)) {
-            allowedLangs = config.allowed_languages;
-        } else if (typeof config.allowed_languages === 'string') {
-            try {
-                const parsed = JSON.parse(config.allowed_languages);
-                if (parsed.length > 0) allowedLangs = parsed;
-            } catch (e) {}
-        }
-    }
+    // Count active modals (total enabled categories)
+    const modals = await logic.getAllModals();
+    const categories = [...new Set(modals.map(m => m.category))];
+    let activeCount = 0;
 
-    const modals = await logic.getModalsForLanguages(allowedLangs);
-    const activeCount = modals.filter(m => m.enabled).length;
+    for (const cat of categories) {
+        if (await manage.isCategoryEnabledForGuild(guildId, cat)) activeCount++;
+    }
 
     let text =
         `${t('modals.title')}\n\n` +
         `${t('modals.description')}\n\n` +
         `ℹ️ <b>${t('modals.info_title')}:</b>\n` +
-        `• ${t('modals.info_1', { count: activeCount })}\n` +
-        `• ${t('modals.info_2', { languages: allowedLangs.join(', ').toUpperCase() })}\n\n` +
-        `${t('modals.warning_dependency')}\n\n` +
+        `• ${t('modals.info_global', { count: activeCount, total: categories.length })}\n\n` +
         `${t('modals.status')}: ${enabled}`;
 
     // Show details only when enabled
@@ -53,7 +44,9 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     // Show options only when enabled
     if (config.spam_patterns_enabled) {
         rows.push([{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }]);
-        rows.push([{ text: `${t('modals.buttons.manage')} (${activeCount})`, callback_data: 'mdl_list' }]);
+        rows.push([
+            { text: `${t('modals.buttons.manage')} (${activeCount}/${categories.length})`, callback_data: 'mdl_list' }
+        ]);
     }
 
     rows.push([{ text: t('common.back'), callback_data: 'settings_main' }]);
@@ -72,24 +65,13 @@ async function sendModalListUI(ctx, db, isEdit = false) {
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
 
-    const config = await db.fetchGuildConfig(guildId);
+    const modals = await logic.getAllModals();
 
-    // Get group's allowed languages
-    let allowedLangs = ['it', 'en'];
-    if (config.allowed_languages) {
-        if (Array.isArray(config.allowed_languages)) {
-            allowedLangs = config.allowed_languages;
-        } else if (typeof config.allowed_languages === 'string') {
-            try {
-                const parsed = JSON.parse(config.allowed_languages);
-                if (parsed.length > 0) allowedLangs = parsed;
-            } catch (e) {}
-        }
-    }
+    // Group by category
+    const categories = [...new Set(modals.map(m => m.category))];
+    categories.sort();
 
-    const modals = await logic.getModalsForLanguages(allowedLangs);
-
-    if (modals.length === 0) {
+    if (categories.length === 0) {
         const text = `${t('modals.list.title')}\n\n${t('modals.list.empty')}`;
         const keyboard = {
             inline_keyboard: [[{ text: t('common.back'), callback_data: 'mdl_back' }]]
@@ -104,15 +86,19 @@ async function sendModalListUI(ctx, db, isEdit = false) {
 
     const text = `${t('modals.list.title')}\n\n${t('modals.list.toggle_info')}\n`;
 
-    // Build toggle buttons for each modal
+    // Build toggle buttons for each category
     const buttons = await Promise.all(
-        modals.map(async m => {
-            const isEnabled = await logic.isModalEnabledForGuild(guildId, m.id);
-            const patterns = logic.safeJsonParse(m.patterns, []);
+        categories.map(async cat => {
+            const isEnabled = await manage.isCategoryEnabledForGuild(guildId, cat);
             const icon = isEnabled ? '✅' : '❌';
+
+            // Try to translate category, fallback to raw name
+            let catName = t(`modals.categories.${cat}`);
+            if (catName === `modals.categories.${cat}`) catName = cat.charAt(0).toUpperCase() + cat.slice(1);
+
             return {
-                text: `${icon} ${m.language.toUpperCase()}/${m.category} (${patterns.length})`,
-                callback_data: `mdl_tog:${m.id}`
+                text: `${icon} ${catName}`,
+                callback_data: `mdl_cat:${cat}`
             };
         })
     );

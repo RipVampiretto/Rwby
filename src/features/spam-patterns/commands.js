@@ -48,9 +48,9 @@ function registerCommands(bot, db) {
             await ui.sendModalListUI(ctx, db, true);
         } else if (data === 'mdl_back') {
             await ui.sendConfigUI(ctx, db, true);
-        } else if (data.startsWith('mdl_tog:')) {
-            const modalId = parseInt(data.split(':')[1]);
-            manage.toggleGuildModal(ctx.chat.id, modalId);
+        } else if (data.startsWith('mdl_cat:')) {
+            const category = data.split(':')[1];
+            await manage.toggleGuildCategory(ctx.chat.id, category);
             await ui.sendModalListUI(ctx, db, true);
         }
     });

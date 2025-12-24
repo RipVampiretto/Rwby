@@ -25,18 +25,18 @@ async function refreshCache() {
 }
 
 /**
- * Load modals for specified languages (with caching)
+ * Load all modals (with caching)
  */
-async function getModalsForLanguages(languages) {
+async function getAllModals() {
     if (!db) return [];
 
     if (Date.now() - modalCacheTime < CACHE_TTL && modalCache.length > 0) {
-        return modalCache.filter(m => languages.includes(m.language) || m.language === '*');
+        return modalCache;
     }
 
     await refreshCache();
 
-    return modalCache.filter(m => languages.includes(m.language) || m.language === '*');
+    return modalCache;
 }
 
 function safeJsonParse(str, defaultVal) {
@@ -87,13 +87,8 @@ async function checkMessageAgainstModals(ctx, config) {
     const text = (ctx.message.text || '').toLowerCase().trim();
     if (text.length < 10) return null;
 
-    let allowedLangs = ['en'];
-    try {
-        const parsed = safeJsonParse(config.allowed_languages, []);
-        if (parsed.length > 0) allowedLangs = parsed;
-    } catch (e) {}
-
-    const modals = await getModalsForLanguages(allowedLangs);
+    // Check against ALL modals regardless of language
+    const modals = await getAllModals();
     const guildId = ctx.chat.id;
 
     for (const modal of modals) {
@@ -121,7 +116,7 @@ async function checkMessageAgainstModals(ctx, config) {
 module.exports = {
     init,
     refreshCache,
-    getModalsForLanguages,
+    getAllModals,
     isModalEnabledForGuild,
     checkMessageAgainstModals,
     safeJsonParse,
