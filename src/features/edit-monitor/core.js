@@ -35,7 +35,14 @@ async function processEdit(ctx, config) {
     const originalText = snapshot.original_text || '';
     const newText = editedMsg.text || '';
     const originalHasLink = snapshot.original_has_link === true || snapshot.original_has_link === 1;
-    const newHasLink = /(https?:\/\/[^\s]+)/.test(newText);
+
+    // Use Telegram entities to detect links (catches hidden text_links too)
+    const entities = editedMsg.entities || editedMsg.caption_entities || [];
+    let newHasLink = entities.some(e => e.type === 'url' || e.type === 'text_link');
+    // Fallback regex check
+    if (!newHasLink) {
+        newHasLink = /(https?:\/\/[^\s]+)/.test(newText);
+    }
 
     // Check A: Link Injection
     if (!originalHasLink && newHasLink) {
@@ -74,7 +81,7 @@ async function executeAction(ctx, config, reason, original, current) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -116,9 +123,9 @@ async function executeAction(ctx, config, reason, original, current) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 60000);
-        } catch (e) {}
+        } catch (e) { }
 
         // Log if enabled
         if (logEvents['edit_delete'] && actionLog.getLogEvent()) {

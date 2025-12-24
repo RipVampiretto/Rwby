@@ -8,10 +8,25 @@ function init(database) {
     setInterval(cleanupSnapshots, 3600000);
 }
 
+/**
+ * Check if message has links using Telegram entities
+ */
+function messageHasLinks(message) {
+    const entities = message.entities || message.caption_entities || [];
+    for (const entity of entities) {
+        if (entity.type === 'url' || entity.type === 'text_link') {
+            return true;
+        }
+    }
+    // Fallback regex check
+    const text = message.text || message.caption || '';
+    return /(https?:\/\/[^\s]+)/.test(text);
+}
+
 async function saveSnapshot(message) {
     if (!db) return;
     try {
-        const hasLink = /(https?:\/\/[^\s]+)/.test(message.text || '');
+        const hasLink = messageHasLinks(message);
         await db.query(
             `
             INSERT INTO message_snapshots (message_id, chat_id, user_id, original_text, original_has_link, created_at)
