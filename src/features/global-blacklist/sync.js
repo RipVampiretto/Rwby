@@ -48,7 +48,7 @@ async function syncCasBans() {
             logger.info(`[global-blacklist] No new CAS bans, sync completed in ${elapsed}s`);
             return {
                 success: true,
-                message: `✅ **CAS Sync Completata**\n\nNessun nuovo ban da aggiungere.`,
+                message: `✅ <b>CAS Sync Completata</b>\n\nNessun nuovo ban da aggiungere.`,
                 newBans: 0
             };
         }
@@ -61,7 +61,7 @@ async function syncCasBans() {
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         const message =
-            `✅ **CAS Sync Completata**\n\n` +
+            `✅ <b>CAS Sync Completata</b>\n\n` +
             `📊 Totale nel file: ${allUsers.length.toLocaleString()}\n` +
             `🆕 Nuovi aggiunti: ${newUsers.length.toLocaleString()}\n` +
             `⏱️ Tempo: ${elapsed}s`;

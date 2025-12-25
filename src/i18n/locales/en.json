@@ -719,8 +719,8 @@
     "smart_report": {
         "category_title": "⚙️ <b>CATEGORY ACTIONS</b>",
         "category_subtitle": "Choose the action to perform for each type of AI-detected violation.",
-        "action_delete": "🤖 <b>Content Removed</b>\n\n⚠️ Violation detected: _{category}_\n\n_The message was automatically deleted._",
-        "action_ban": "🚨 <b>User Banned</b>\n\n👤 {user} has been removed from the group.\n⚠️ Reason: _{category}_\n\n_Thanks for the report! (+2 Flux)_",
-        "action_report": "📋 <b>Report Submitted</b>\n\n⚠️ Possible violation: _{category}_\n\n_Staff will review the report._"
+        "action_delete": "🤖 <b>Content Removed</b>\n\n⚠️ Violation detected: <i>{category}</i>\n\n<i>The message was automatically deleted.</i>",
+        "action_ban": "🚨 <b>User Banned</b>\n\n👤 {user} has been removed from the group.\n⚠️ Reason: <i>{category}</i>\n\n<i>Thanks for the report! (+2 Flux)</i>",
+        "action_report": "📋 <b>Report Submitted</b>\n\n⚠️ Possible violation: <i>{category}</i>\n\n<i>Staff will review the report.</i>"
     }
 }

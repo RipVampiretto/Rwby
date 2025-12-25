@@ -67,7 +67,7 @@ async function reviewQueue(bot, db, params) {
             const topics =
                 typeof config.staff_topics === 'string' ? JSON.parse(config.staff_topics) : config.staff_topics;
             threadId = topics.reports;
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const { source, user, reason, messageId, content } = params;
@@ -86,9 +86,9 @@ async function reviewQueue(bot, db, params) {
     };
 
     const text =
-        `📥 **REVIEW REQUEST**\n` +
+        `📥 <b>REVIEW REQUEST</b>\n` +
         `🔧 Source: ${source}\n` +
-        `👤 Utente: [${user.first_name}](tg://user?id=${user.id}) (\`${user.id}\`)\n` +
+        `👤 Utente: <a href="tg://user?id=${user.id}">${user.first_name}</a> [<code>${user.id}</code>]\n` +
         `📝 Reason: ${reason}\n\n` +
         `💬 Content: "${content ? content.substring(0, 100) : 'N/A'}"`;
 
@@ -145,12 +145,12 @@ async function handleStaffAction(ctx, bot, action, data) {
         try {
             await bot.api.banChatMember(originalGuildId, targetUserId);
             await ctx.editMessageCaption({
-                caption: ctx.callbackQuery.message.caption + '\n\n✅ **BANNED by ' + ctx.from.first_name + '**'
+                caption: ctx.callbackQuery.message.caption + '\n\n✅ <b>BANNED by ' + ctx.from.first_name + '</b>'
             });
         } catch (e) {
             logger.error(`[staff-coordination] Ban failed: ${e.message}`);
             await ctx.editMessageCaption({
-                caption: ctx.callbackQuery.message.caption + '\n\n❌ **Ban fallito: ' + e.message + '**'
+                caption: ctx.callbackQuery.message.caption + '\n\n❌ <b>Ban fallito: ' + e.message + '</b>'
             });
         }
 
@@ -188,7 +188,7 @@ async function handleStaffAction(ctx, bot, action, data) {
                 const lang = await i18n.getLanguage(ctx.chat.id);
                 await ctx.answerCallbackQuery(i18n.t(lang, 'common.logs.message_deleted'));
                 await ctx.editMessageCaption({
-                    caption: ctx.callbackQuery.message.caption + '\n\n✅ **DELETED by Staff**'
+                    caption: ctx.callbackQuery.message.caption + '\n\n✅ <b>DELETED by Staff</b>'
                 });
 
                 if (actionLog.getLogEvent()) {

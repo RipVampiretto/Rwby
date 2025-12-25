@@ -13,7 +13,7 @@ async function getVoteMessage(guildId, target, initiator, actionType, yes, no, r
         `${t('report.vote_message.action')}: ${actionDisplay}\n` +
         `${t('report.vote_message.votes', { current: yes + no, required: required })}\n` +
         `${t('report.vote_message.expires', { time: `${minLeft} min` })}\n\n` +
-        `_${t('report.vote_message.description')}_`;
+        `<i>${t('report.vote_message.description')}</i>`;
 
     const k = {
         inline_keyboard: [
@@ -143,11 +143,11 @@ async function sendCategoryActionsUI(ctx, db, isEdit = false) {
     const hateAction = getActionDisplay(config.report_action_hate || 'report_only', t);
 
     const text =
-        `⚙️ **${t('report.category_title')}**\n\n` +
+        `⚙️ <b>${t('report.category_title')}</b>\n\n` +
         `${t('report.category_subtitle')}\n\n` +
-        `🎭 **Scam**: ${scamAction}\n` +
-        `🔞 **NSFW**: ${nsfwAction}\n` +
-        `💢 **Hate**: ${hateAction}`;
+        `🎭 <b>Scam</b>: ${scamAction}\n` +
+        `🔞 <b>NSFW</b>: ${nsfwAction}\n` +
+        `💢 <b>Hate</b>: ${hateAction}`;
 
     const keyboard = {
         inline_keyboard: [
@@ -181,7 +181,7 @@ async function sendConfirmationPrompt(ctx, targetUser, targetMsgId) {
         `${t('report.confirm.title')}\n\n` +
         `${t('report.confirm.target')}: ${targetName}\n\n` +
         `${t('report.confirm.instruction')}\n` +
-        `_${t('report.confirm.timeout')}_`;
+        `<i>${t('report.confirm.timeout')}</i>`;
 
     const keyboard = {
         inline_keyboard: [

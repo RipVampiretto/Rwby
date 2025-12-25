@@ -1,6 +1,6 @@
 async function sendGovernancePanel(ctx, stats) {
     const text =
-        `🌍 **GLOBAL GOVERNANCE PANEL**\n` +
+        `🌍 <b>GLOBAL GOVERNANCE PANEL</b>\n` +
         `🏛️ Gruppi: ${stats.guilds || 0}\n` +
         `🚫 Ban globali: ${stats.global_bans || 0}`;
 
@@ -23,7 +23,7 @@ async function sendGovernancePanel(ctx, stats) {
 
 function sendFullStats(ctx, stats) {
     const text =
-        `📊 **NETWORK STATISTICS**\n\n` +
+        `📊 <b>NETWORK STATISTICS</b>\n\n` +
         `🏛️ Active Guilds: ${stats.guilds || 0}\n` +
         `🚫 Global Bans: ${stats.global_bans || 0}`;
 

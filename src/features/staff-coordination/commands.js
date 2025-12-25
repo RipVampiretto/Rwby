@@ -17,7 +17,7 @@ function registerCommands(bot, db) {
         // /notes add <id> <text>
         if (args[0] === 'add') {
             if (args.length < 3) {
-                return ctx.reply('❌ Uso: `/notes add <user_id> <testo>`', { parse_mode: 'HTML' });
+                return ctx.reply('❌ Uso: <code>/notes add &lt;user_id&gt; &lt;testo&gt;</code>', { parse_mode: 'HTML' });
             }
 
             const targetId = parseInt(args[1]);
@@ -27,7 +27,7 @@ function registerCommands(bot, db) {
 
             const noteText = args.slice(2).join(' ');
             await logic.addNote(db, ctx, targetId, noteText, staffGroupId);
-            await ctx.reply(`✅ Nota aggiunta per utente \`${targetId}\``, { parse_mode: 'HTML' });
+            await ctx.reply(`✅ Nota aggiunta per utente <code>${targetId}</code>`, { parse_mode: 'HTML' });
             return;
         }
 
@@ -41,7 +41,7 @@ function registerCommands(bot, db) {
 
         if (!targetId) {
             return ctx.reply(
-                '❌ Uso:\n`/notes <user_id>` - Visualizza note\n`/notes add <user_id> <severity> <testo>` - Aggiungi nota',
+                '❌ Uso:\n<code>/notes &lt;user_id&gt;</code> - Visualizza note\n<code>/notes add &lt;user_id&gt; &lt;severity&gt; &lt;testo&gt;</code> - Aggiungi nota',
                 { parse_mode: 'HTML' }
             );
         }

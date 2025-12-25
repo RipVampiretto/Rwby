@@ -720,8 +720,8 @@
     "smart_report": {
         "category_title": "⚙️ <b>AZIONI PER CATEGORIA</b>",
         "category_subtitle": "Scegli l'azione da eseguire per ogni tipo di violazione rilevata dall'AI.",
-        "action_delete": "🤖 <b>Contenuto Rimosso</b>\n\n⚠️ Rilevata violazione: _{category}_\n\n_Il messaggio è stato eliminato automaticamente._",
-        "action_ban": "🚨 <b>Utente Bannato</b>\n\n👤 {user} è stato rimosso dal gruppo.\n⚠️ Motivo: _{category}_\n\n_Grazie per la segnalazione! (+2 Flux)_",
-        "action_report": "📋 <b>Segnalazione Inviata</b>\n\n⚠️ Possibile violazione: _{category}_\n\n_Lo staff esaminerà la segnalazione._"
+        "action_delete": "🤖 <b>Contenuto Rimosso</b>\n\n⚠️ Rilevata violazione: <i>{category}</i>\n\n<i>Il messaggio è stato eliminato automaticamente.</i>",
+        "action_ban": "🚨 <b>Utente Bannato</b>\n\n👤 {user} è stato rimosso dal gruppo.\n⚠️ Motivo: <i>{category}</i>\n\n<i>Grazie per la segnalazione! (+2 Flux)</i>",
+        "action_report": "📋 <b>Segnalazione Inviata</b>\n\n⚠️ Possibile violazione: <i>{category}</i>\n\n<i>Lo staff esaminera la segnalazione.</i>"
     }
 }

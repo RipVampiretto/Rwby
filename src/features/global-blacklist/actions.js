@@ -225,9 +225,9 @@ async function notifyParliament(newUsers, banCount, guildCount) {
 
         const processedCount = Math.min(newUsers.length, 100);
         const text =
-            `🛡️ **CAS SYNC REPORT**\n\n` +
-            `📊 Nuovi ban CAS rilevati: **${newUsers.length.toLocaleString()}**\n` +
-            `🌍 Global ban eseguiti: **${banCount}** (su ${guildCount} gruppi)\n` +
+            `🛡️ <b>CAS SYNC REPORT</b>\n\n` +
+            `📊 Nuovi ban CAS rilevati: <b>${newUsers.length.toLocaleString()}</b>\n` +
+            `🌍 Global ban eseguiti: <b>${banCount}</b> (su ${guildCount} gruppi)\n` +
             `👥 Utenti processati: ${processedCount}${newUsers.length > 100 ? ' (limite)' : ''}\n` +
             `⏰ Ora: ${new Date().toISOString().replace('T', ' ').substring(0, 16)}\n\n` +
             `ℹ️ I nuovi utenti CAS sono stati bannati automaticamente da tutti i gruppi.`;
