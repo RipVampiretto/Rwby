@@ -218,16 +218,19 @@
             "crypto": "💸 Criptovalute",
             "sex": "🔞 Contenuti Sessuali"
         },
+        "notify_local": "Log",
         "buttons": {
             "system": "📋 Sistema",
             "action": "👮 Azione",
-            "manage": "📝 Gestisci Pattern"
+            "manage": "📝 Gestisci Pattern",
+            "notify": "📋 Log"
         },
         "list": {
             "title": "📋 PATTERN DISPONIBILI",
             "empty": "Nessun pattern disponibile per le tue lingue.",
             "toggle_info": "Attiva/disattiva i pattern per questo gruppo:"
-        }
+        },
+        "log_reason": "Rilevato come spam"
     },
     "link": {
         "title": "🔗 <b>Link</b>",

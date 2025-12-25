@@ -44,6 +44,26 @@ function registerCommands(bot, db) {
             const nextAct = acts[(acts.indexOf(cur) + 1) % 2];
             await db.updateGuildConfig(ctx.chat.id, { spam_patterns_action: nextAct });
             await ui.sendConfigUI(ctx, db, true);
+        } else if (data === 'mdl_notify') {
+            // Toggle local notifications for current action
+            let logEvents = {};
+            if (config.log_events) {
+                if (typeof config.log_events === 'string') {
+                    try {
+                        logEvents = JSON.parse(config.log_events);
+                    } catch (e) { }
+                } else if (typeof config.log_events === 'object') {
+                    logEvents = config.log_events;
+                }
+            }
+
+            // Toggle the appropriate event based on current action
+            const currentAction = config.spam_patterns_action || 'report_only';
+            const logEventKey = currentAction === 'delete' ? 'modal_delete' : 'modal_report';
+            logEvents[logEventKey] = !logEvents[logEventKey];
+
+            await db.updateGuildConfig(ctx.chat.id, { log_events: JSON.stringify(logEvents) });
+            await ui.sendConfigUI(ctx, db, true);
         } else if (data === 'mdl_list') {
             await ui.sendModalListUI(ctx, db, true);
         } else if (data === 'mdl_back') {

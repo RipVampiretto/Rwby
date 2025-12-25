@@ -31,7 +31,9 @@ const MODULE_MAP = {
     gban_ban: 'Global Ban',
     mention_delete: 'Mention Filter',
     mention_ban: 'Mention Filter',
-    mention_scam: 'Mention Filter'
+    mention_scam: 'Mention Filter',
+    modal_delete: 'Pattern Monitor',
+    modal_report: 'Pattern Monitor'
 };
 
 // Emoji map
@@ -53,7 +55,9 @@ const EMOJI_MAP = {
     gban_ban: '🌍',
     mention_delete: '🗑️',
     mention_ban: '🚷',
-    mention_scam: '⚠️'
+    mention_scam: '⚠️',
+    modal_delete: '🎭',
+    modal_report: '🎭'
 };
 
 module.exports = {

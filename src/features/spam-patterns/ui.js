@@ -12,6 +12,24 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const enabled = config.spam_patterns_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.spam_patterns_action || 'report_only');
 
+    // Parse log_events to check notification status
+    let logEvents = {};
+    if (config.log_events) {
+        if (typeof config.log_events === 'string') {
+            try {
+                logEvents = JSON.parse(config.log_events);
+            } catch (e) { }
+        } else if (typeof config.log_events === 'object') {
+            logEvents = config.log_events;
+        }
+    }
+
+    // Determine which log event to check based on action
+    const currentAction = config.spam_patterns_action || 'report_only';
+    const logEventKey = currentAction === 'delete' ? 'modal_delete' : 'modal_report';
+    const notifyEnabled = logEvents[logEventKey] ? true : false;
+    const notifyStatus = notifyEnabled ? '✅' : '❌';
+
     // Count active modals (total enabled categories) - exclude hidden
     const allModals = await logic.getAllModals();
     const modals = allModals.filter(m => !m.hidden);
@@ -32,6 +50,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     // Show details only when enabled
     if (config.spam_patterns_enabled) {
         text += `\n${t('modals.action')}: ${action}`;
+        text += `\n📋 ${t('modals.notify_local') || 'Notifica locale'}: ${notifyStatus}`;
 
         if (!config.staff_group_id && (config.spam_patterns_action || 'report_only') === 'report_only') {
             text += `\n${t('common.warnings.no_staff_group')}`;
@@ -45,6 +64,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     // Show options only when enabled
     if (config.spam_patterns_enabled) {
         rows.push([{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }]);
+        rows.push([{ text: `📋 ${t('modals.buttons.notify') || 'Notifica'}: ${notifyStatus}`, callback_data: 'mdl_notify' }]);
         rows.push([
             { text: `${t('modals.buttons.manage')} (${activeCount}/${categories.length})`, callback_data: 'mdl_list' }
         ]);

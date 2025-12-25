@@ -218,16 +218,19 @@
             "crypto": "💸 Cryptocurrency",
             "sex": "🔞 Sexual Content"
         },
+        "notify_local": "Log",
         "buttons": {
             "system": "📋 System",
             "action": "👮 Action",
-            "manage": "📝 Manage Patterns"
+            "manage": "📝 Manage Patterns",
+            "notify": "📋 Log"
         },
         "list": {
             "title": "📋 AVAILABLE PATTERNS",
             "empty": "No patterns available for your languages.",
             "toggle_info": "Enable/disable patterns for this group:"
-        }
+        },
+        "log_reason": "Detected as spam"
     },
     "link": {
         "title": "🔗 <b>Links</b>",

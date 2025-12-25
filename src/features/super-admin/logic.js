@@ -25,7 +25,7 @@ async function forwardToParliament(bot, db, params) {
                     topicId = topics[params.topic];
                 } else if (params.type === 'link_unknown' || params.type === 'link_blacklist') {
                     topicId = topics.link_checks;
-                } else if (params.type === 'keyword') {
+                } else if (params.type === 'keyword' || params.type === 'modal_pattern') {
                     topicId = topics.reports || topics.bans;
                 } else {
                     topicId = topics.bans;
@@ -111,6 +111,16 @@ async function forwardToParliament(bot, db, params) {
                 `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
                 `${t('common.logs.reason')}: ${params.reason}\n` +
                 `${t('common.logs.evidence')}: "${params.evidence?.substring(0, 500)}"\n\n` +
+                `${t('common.logs.global_ban_question')}`;
+        } else if (params.type === 'modal_pattern') {
+            // Pattern detection from spam-patterns module
+            text =
+                `🎭 <b>PATTERN DETECTED</b>\n\n` +
+                `${t('common.logs.group')}: ${params.guildName}\n` +
+                `${t('common.logs.user')}: ${userLink} [<code>${params.user?.id}</code>]\n` +
+                `${t('common.logs.reason')}: ${params.reason}\n` +
+                `📊 Similarity: ${params.similarity}%\n` +
+                `${t('common.logs.evidence')}: "${params.evidence?.substring(0, 300)}"\n\n` +
                 `${t('common.logs.global_ban_question')}`;
         } else {
             // Default format (backward compat)
