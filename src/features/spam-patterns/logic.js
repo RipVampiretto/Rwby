@@ -66,18 +66,37 @@ async function isModalEnabledForGuild(guildId, modalId) {
 }
 
 /**
- * Jaccard Similarity - Token based comparison
+ * Normalize text for comparison:
+ * - Lowercase
+ * - Remove punctuation
+ * - Normalize whitespace
  */
-function jaccardSimilarity(text1, text2) {
-    const tokens1 = new Set(text1.split(/\s+/).filter(t => t.length > 2));
-    const tokens2 = new Set(text2.split(/\s+/).filter(t => t.length > 2));
+function normalizeText(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')  // Replace punctuation with spaces
+        .replace(/\s+/g, ' ')       // Normalize multiple spaces
+        .trim();
+}
+
+/**
+ * Dice Similarity Coefficient - More generous than Jaccard for partial matches
+ * Formula: 2 * |intersection| / (|A| + |B|)
+ * Keeps all tokens (no length filter) for better accuracy
+ */
+function diceSimilarity(text1, text2) {
+    const normalized1 = normalizeText(text1);
+    const normalized2 = normalizeText(text2);
+
+    const tokens1 = new Set(normalized1.split(/\s+/).filter(t => t.length > 0));
+    const tokens2 = new Set(normalized2.split(/\s+/).filter(t => t.length > 0));
 
     if (tokens1.size === 0 || tokens2.size === 0) return 0;
 
     const intersection = new Set([...tokens1].filter(x => tokens2.has(x)));
-    const union = new Set([...tokens1, ...tokens2]);
 
-    return intersection.size / union.size;
+    // Dice: 2 * intersection / (size1 + size2)
+    return (2 * intersection.size) / (tokens1.size + tokens2.size);
 }
 
 /**
@@ -96,7 +115,7 @@ async function checkMessageAgainstModals(ctx, config) {
 
         const patterns = safeJsonParse(modal.patterns, []);
         for (const pattern of patterns) {
-            const similarity = jaccardSimilarity(text, pattern.toLowerCase());
+            const similarity = diceSimilarity(text, pattern);
 
             if (similarity >= (modal.similarity_threshold || 0.6)) {
                 return {
@@ -120,5 +139,6 @@ module.exports = {
     isModalEnabledForGuild,
     checkMessageAgainstModals,
     safeJsonParse,
-    jaccardSimilarity
+    diceSimilarity,
+    normalizeText
 };

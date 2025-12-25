@@ -7,10 +7,20 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 async function migrate() {
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
-    });
+    const dbConfig = process.env.DATABASE_URL
+        ? {
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+        }
+        : {
+            host: process.env.POSTGRES_HOST || 'localhost',
+            port: parseInt(process.env.POSTGRES_PORT) || 5433,
+            database: process.env.POSTGRES_DB || 'rwby_bot',
+            user: process.env.POSTGRES_USER || 'rwby',
+            password: process.env.POSTGRES_PASSWORD || 'rwby_secure_password',
+        };
+
+    const pool = new Pool(dbConfig);
 
     console.log('🔄 Running migration: Add hidden column to spam_patterns...');
 
