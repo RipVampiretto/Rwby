@@ -259,6 +259,7 @@ async function createTables() {
             action TEXT DEFAULT 'report_only',
             similarity_threshold REAL DEFAULT 0.6,
             enabled BOOLEAN DEFAULT FALSE,
+            hidden BOOLEAN DEFAULT FALSE,
             created_by BIGINT,
             created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW(),

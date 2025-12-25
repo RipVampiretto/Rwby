@@ -181,6 +181,22 @@ async function toggleModal(language, category) {
     return newState;
 }
 
+async function toggleModalHidden(language, category) {
+    if (!db) return null;
+    const modal = await getModal(language, category);
+    if (!modal) return null;
+
+    const newState = !modal.hidden;
+    await db.query('UPDATE spam_patterns SET hidden = $1 WHERE language = $2 AND category = $3', [
+        newState,
+        language,
+        category
+    ]);
+
+    await logic.refreshCache();
+    return newState;
+}
+
 async function updateModalAction(language, category, action) {
     if (!db) return;
     await db.query('UPDATE spam_patterns SET action = $1, updated_at = NOW() WHERE language = $2 AND category = $3', [
@@ -204,5 +220,6 @@ module.exports = {
     removePatternsFromModal,
     deleteModal,
     toggleModal,
+    toggleModalHidden,
     updateModalAction
 };

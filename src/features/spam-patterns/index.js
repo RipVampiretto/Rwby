@@ -37,6 +37,7 @@ module.exports = {
     removePatternsFromModal: manage.removePatternsFromModal,
     deleteModal: manage.deleteModal,
     toggleModal: manage.toggleModal,
+    toggleModalHidden: manage.toggleModalHidden,
     updateModalAction: manage.updateModalAction,
     refreshCache: logic.refreshCache
 };
