@@ -1,4 +1,4 @@
-const { handleNewMember, handleCaptchaCallback } = require('./core');
+const { handleNewMember, handleCaptchaCallback, handleMemberLeft } = require('./core');
 const { handleCallback } = require('./commands');
 const { handleMessage } = require('./wizard');
 const ui = require('./ui');
@@ -12,7 +12,12 @@ function init(database) {
 
 function register(bot) {
     // Events
-    bot.on('chat_member', handleNewMember);
+    bot.on('chat_member', async (ctx, next) => {
+        // Handle both joins and leaves in chat_member updates
+        await handleNewMember(ctx);
+        await handleMemberLeft(ctx);
+        return next();
+    });
     bot.on('message:new_chat_members', handleNewMember);
 
     // Callbacks

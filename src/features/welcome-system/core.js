@@ -5,7 +5,7 @@ const { InlineKeyboard } = require('grammy');
 const i18n = require('../../i18n');
 const superAdmin = require('../super-admin');
 
-// Track pending captchas for timeout: userId:chatId -> timeoutHandle
+// Track pending captchas: userId:chatId -> { timeoutHandle, messageId }
 const PENDING_CAPTCHAS = new Map();
 
 // --- DATA LISTS ---
@@ -397,7 +397,10 @@ async function processUserJoin(ctx, user, config) {
         // SET TIMEOUT
         const ms = timeoutMins * 60 * 1000;
         const key = `${user.id}:${ctx.chat.id}`;
-        if (PENDING_CAPTCHAS.has(key)) clearTimeout(PENDING_CAPTCHAS.get(key));
+        if (PENDING_CAPTCHAS.has(key)) {
+            clearTimeout(PENDING_CAPTCHAS.get(key).timeoutHandle);
+            PENDING_CAPTCHAS.delete(key);
+        }
 
         const timeoutHandle = setTimeout(async () => {
             logger.info(`[Welcome] Kicking ${user.id} for timeout.`);
@@ -431,7 +434,7 @@ async function processUserJoin(ctx, user, config) {
             PENDING_CAPTCHAS.delete(key);
         }, ms);
 
-        PENDING_CAPTCHAS.set(key, timeoutHandle);
+        PENDING_CAPTCHAS.set(key, { timeoutHandle, messageId: msg.message_id });
     } catch (e) {
         logger.error(`[Welcome] Failed to send captcha: ${e.message}`);
     }
@@ -497,7 +500,7 @@ async function handleCaptchaCallback(ctx) {
     if (success) {
         const key = `${ctx.from.id}:${ctx.chat.id}`;
         if (PENDING_CAPTCHAS.has(key)) {
-            clearTimeout(PENDING_CAPTCHAS.get(key));
+            clearTimeout(PENDING_CAPTCHAS.get(key).timeoutHandle);
             PENDING_CAPTCHAS.delete(key);
         }
 
@@ -633,12 +636,44 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
     }
 }
 
-module.exports = {
-    handleNewMember,
-    handleCaptchaCallback
-};
+/**
+ * Handle member leaving - clean up pending captcha if exists
+ */
+async function handleMemberLeft(ctx) {
+    if (!ctx.chatMember) return;
+
+    const newStatus = ctx.chatMember.new_chat_member.status;
+    const oldStatus = ctx.chatMember.old_chat_member.status;
+
+    // Only trigger on leave (left/kicked from member/restricted)
+    const isLeave = (newStatus === 'left' || newStatus === 'kicked') &&
+        (oldStatus === 'member' || oldStatus === 'restricted');
+
+    if (!isLeave) return;
+
+    const user = ctx.chatMember.new_chat_member.user;
+    const key = `${user.id}:${ctx.chat.id}`;
+
+    if (PENDING_CAPTCHAS.has(key)) {
+        const pending = PENDING_CAPTCHAS.get(key);
+
+        // Clear the timeout
+        clearTimeout(pending.timeoutHandle);
+
+        // Delete the captcha message
+        try {
+            await ctx.api.deleteMessage(ctx.chat.id, pending.messageId);
+            logger.info(`[Welcome] Deleted pending captcha for user ${user.id} who left the group.`);
+        } catch (e) {
+            logger.debug(`[Welcome] Failed to delete captcha message for leaving user: ${e.message}`);
+        }
+
+        PENDING_CAPTCHAS.delete(key);
+    }
+}
 
 module.exports = {
     handleNewMember,
-    handleCaptchaCallback
+    handleCaptchaCallback,
+    handleMemberLeft
 };
