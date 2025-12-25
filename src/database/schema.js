@@ -16,6 +16,7 @@ async function createTables() {
             first_name TEXT,
             last_name TEXT,
             language_code TEXT,
+            preferred_language TEXT DEFAULT 'en',
             first_seen TIMESTAMPTZ DEFAULT NOW(),
             last_seen TIMESTAMPTZ DEFAULT NOW(),
             is_banned_global BOOLEAN DEFAULT FALSE

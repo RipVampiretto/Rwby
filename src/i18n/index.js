@@ -109,6 +109,22 @@ async function getLanguage(guildId) {
 }
 
 /**
+ * Get current language for a user (ASYNC) - used for private chats
+ * @param {number} userId - User ID
+ * @returns {Promise<string>} Language code
+ */
+async function getUserLanguage(userId) {
+    if (!db || !userId) return DEFAULT_LANG;
+
+    try {
+        const lang = await db.getUserLanguage(userId);
+        return lang || DEFAULT_LANG;
+    } catch (e) {
+        return DEFAULT_LANG;
+    }
+}
+
+/**
  * Set language for a guild (ASYNC)
  * @param {number} guildId - Guild ID
  * @param {string} langCode - Language code
@@ -149,12 +165,24 @@ function getDefaultLanguage() {
 /**
  * Middleware to attach i18n functions to context
  * Pre-loads language from DB at request start for sync access
+ * Uses user language for private chats, guild language for groups
  */
 function middleware() {
     return async (ctx, next) => {
         // Pre-load language at start of request
+        const isPrivate = ctx.chat?.type === 'private';
         const guildId = ctx.chat?.id;
-        const lang = guildId ? await getLanguage(guildId) : DEFAULT_LANG;
+        const userId = ctx.from?.id;
+
+        let lang = DEFAULT_LANG;
+
+        if (isPrivate && userId) {
+            // Use user's preferred language for private chats
+            lang = await getUserLanguage(userId);
+        } else if (guildId) {
+            // Use guild language for groups
+            lang = await getLanguage(guildId);
+        }
 
         // Attach sync translation function that uses pre-loaded language
         ctx.t = (key, params) => {
@@ -167,8 +195,8 @@ function middleware() {
         // Attach other helpers
         ctx.i18n = {
             lang,
-            getLanguage: () => getLanguage(ctx.chat?.id),
-            setLanguage: langCode => setLanguage(ctx.chat?.id, langCode),
+            getLanguage: () => isPrivate ? getUserLanguage(userId) : getLanguage(guildId),
+            setLanguage: langCode => setLanguage(guildId, langCode),
             available: AVAILABLE_LANGUAGES
         };
 
@@ -203,6 +231,7 @@ module.exports = {
     init,
     t,
     getLanguage,
+    getUserLanguage,
     setLanguage,
     getAvailableLanguages,
     getDefaultLanguage,

@@ -47,12 +47,67 @@
             "tier_group": "🏷️ Tier Gruppo"
         },
         "start": {
-            "greeting": "👋 Ciao! Sono il bot di moderazione per gruppi Telegram.",
-            "instructions": "Usa /help per vedere i comandi disponibili o /settings per il pannello di controllo completo.",
+            "greeting": "👋 <b>Benvenuto!</b>",
+            "description": "Sono un bot di moderazione avanzato per gruppi Telegram. Proteggo i gruppi da spam, truffe e contenuti inappropriati usando intelligenza artificiale e filtri intelligenti.",
             "buttons": {
                 "add_group": "➕ Aggiungi al Gruppo",
+                "change_language": "🌐 Cambia Lingua",
+                "features": "📋 Funzionalità",
+                "info": "ℹ️ Informazioni",
                 "my_flux": "📊 Il mio Flux",
                 "tier_info": "ℹ️ Info Livelli"
+            },
+            "language": {
+                "title": "🌐 <b>LINGUA</b>",
+                "subtitle": "Seleziona la tua lingua preferita:"
+            },
+            "features": {
+                "title": "📋 <b>FUNZIONALITÀ</b>",
+                "subtitle": "Scopri tutte le funzionalità del bot. Seleziona una categoria:",
+                "categories": {
+                    "moderation": "🤖 Moderazione Intelligente",
+                    "protection": "🛡️ Protezione Gruppo",
+                    "welcome": "👋 Sistema di Benvenuto",
+                    "admin": "⚙️ Strumenti Admin"
+                },
+                "moderation": {
+                    "title": "🤖 <b>MODERAZIONE INTELLIGENTE</b>",
+                    "ai": "<b>🧠 Riconoscimento Spam</b>\nIl bot confronta ogni messaggio con migliaia di esempi di spam già conosciuti. Se un messaggio assomiglia troppo a uno spam, viene bloccato automaticamente.\n",
+                    "patterns": "<b>🔤 Parole Vietate</b>\nBlocca i messaggi che contengono parole o frasi proibite. Supporta anche pattern avanzati (regex). Gli admin scelgono se eliminare o segnalare.\n",
+                    "words": "<b>👤 Menzioni Sospette</b>\nQuando qualcuno menziona un @utente che non è nel gruppo, un'intelligenza artificiale analizza il messaggio per capire se è un tentativo di truffa o reclutamento fraudolento.\n",
+                    "mentions": "<b>📋 Segnalazioni</b>\nGli utenti possono segnalare messaggi rispondendo con @admin. Due modalità: votazione (il gruppo vota se bannare/eliminare) oppure invio diretto al gruppo staff.\n",
+                    "reports": "<b>✏️ Controllo Modifiche</b>\nSe qualcuno modifica un messaggio per aggiungerci un link che prima non c'era, o lo cambia completamente, il bot se ne accorge e interviene.\n"
+                },
+                "protection": {
+                    "title": "🛡️ <b>PROTEZIONE GRUPPO</b>",
+                    "links": "<b>🔗 Controllo Link</b>\nOgni link viene controllato (anche quelli nascosti dietro testo cliccabile). Se porta a siti pericolosi viene bloccato. I link sconosciuti vengono segnalati per una verifica.\n",
+                    "media": "<b>🖼️ Controllo Immagini e Video</b>\nFoto, video, GIF e sticker vengono analizzati da un'intelligenza artificiale. Contenuti per adulti, violenti o truffe visive vengono bloccati.\n",
+                    "blacklist": "<b>🚫 Lista Nera Globale</b>\nSincronizza automaticamente con il database anti-spam CAS. Gli utenti già noti come spammer vengono bannati automaticamente appena entrano o scrivono.\n",
+                    "antiedit": "<b>🌐 Controllo Lingua</b>\nRileva automaticamente la lingua di ogni messaggio. Puoi impostare quali lingue sono permesse nel gruppo - le altre vengono eliminate o segnalate.\n",
+                    "language": "<b>🔒 Ban Globali</b>\nI gestori del bot possono bannare utenti in modo globale: il ban viene applicato automaticamente in tutti i gruppi dove il bot è presente.\n"
+                },
+                "welcome": {
+                    "title": "👋 <b>SISTEMA DI BENVENUTO</b>",
+                    "captcha": "<b>🛡️ Verifica Anti-Bot</b>\nI nuovi membri devono superare un test per dimostrare di essere umani. 6 tipi disponibili: pulsante, quiz matematici, conta lettere, emoji, colori, sequenze logiche e parole al contrario.\n",
+                    "message": "<b>📨 Messaggio di Benvenuto</b>\nCrea un messaggio personalizzato che viene inviato a ogni nuovo membro. Puoi usare variabili come il nome utente, nome del gruppo, e aggiungere pulsanti.\n",
+                    "rules": "<b>📜 Accettazione Regole</b>\nDopo il captcha, i nuovi membri devono cliccare per confermare di aver letto il regolamento prima di poter scrivere. Puoi impostare il link al regolamento.\n",
+                    "autodelete": "<b>⏱️ Pulizia Automatica</b>\nImposta il timeout per il captcha (1-30 minuti). Chi non lo completa viene espulso. I messaggi di benvenuto possono auto-eliminarsi dopo un tempo configurabile.\n"
+                },
+                "admin": {
+                    "title": "⚙️ <b>STRUMENTI ADMIN</b>",
+                    "staff": "<b>👥 Gruppo Staff</b>\nCrea un gruppo privato dove ricevere le segnalazioni e gli avvisi di sicurezza. Ogni notifica include un link diretto al messaggio originale.\n",
+                    "logs": "<b>📋 Registro Attività</b>\nTutte le azioni del bot (messaggi eliminati, utenti bannati, captcha completati o falliti) vengono registrate in un canale a tua scelta.\n",
+                    "settings": "<b>⚙️ Pannello di Controllo</b>\nUsa /settings per configurare tutto: attiva o disattiva ogni funzione, scegli le azioni da eseguire, imposta timeout e personalizza i messaggi.\n",
+                    "notes": "<b>� Sistema Reputazione</b>\nOgni utente accumula punti reputazione (Flux) in base al comportamento. Gli admin possono vedere lo storico e la reputazione di ogni membro.\n"
+                }
+            },
+            "info": {
+                "title": "ℹ️ <b>INFORMAZIONI</b>",
+                "version": "Versione",
+                "developer": "Sviluppatore",
+                "updated": "Ultimo Aggiornamento",
+                "log_channel": "Canale Log",
+                "description": "Bot creato per proteggere le community Telegram da spam, truffe e contenuti inappropriati. Utilizza tecnologie avanzate di intelligenza artificiale per garantire la sicurezza dei gruppi."
             }
         },
         "help": {

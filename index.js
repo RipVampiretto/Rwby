@@ -183,31 +183,200 @@ if (features.isEnabled('settingsMenu')) {
 
 // COMMANDS - Basic
 // ============================================================================
-const sendStartMenu = (ctx) => {
-    const guildId = ctx.chat.id;
-    const t = (key, params) => i18n.t(guildId, key, params);
+const packageJson = require('./package.json');
+
+const sendStartMenu = async (ctx) => {
+    // Only work in private chats
+    if (ctx.chat.type !== 'private') {
+        return;
+    }
+
+    const userId = ctx.from.id;
+    const userLang = await db.getUserLanguage(userId) || 'en';
+    const t = (key, params) => i18n.t(userLang, key, params);
 
     const keyboard = {
         inline_keyboard: [
-            [{ text: t('common.start.buttons.add_group'), url: `https://t.me/${ctx.me.username}?startgroup=true` }]
-            // [
-            //     { text: t('common.start.buttons.my_flux'), callback_data: "my_flux_overview" },
-            //     { text: t('common.start.buttons.tier_info'), callback_data: "tier_explainer" }
-            // ]
+            [{ text: t('common.start.buttons.add_group'), url: `https://t.me/${ctx.me.username}?startgroup=true` }],
+            [
+                { text: t('common.start.buttons.features'), callback_data: 'start_features' },
+                { text: t('common.start.buttons.info'), callback_data: 'start_info' }
+            ],
+            [{ text: t('common.start.buttons.change_language'), callback_data: 'start_change_lang' }]
         ]
     };
 
-    const text = `${t('common.start.greeting')}\n\n${t('common.start.instructions')}`;
+    const text = `${t('common.start.greeting')}\n\n${t('common.start.description')}`;
 
     if (ctx.callbackQuery) {
-        return ctx.editMessageText(text, { reply_markup: keyboard }).catch(() => { });
+        return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' }).catch(() => { });
     } else {
-        return ctx.reply(text, { reply_markup: keyboard });
+        return ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 };
 
+// Language selection menu
+const sendLanguageMenu = async (ctx) => {
+    const userId = ctx.from.id;
+    const currentLang = await db.getUserLanguage(userId) || 'en';
+    const t = (key, params) => i18n.t(currentLang, key, params);
+
+    const keyboard = {
+        inline_keyboard: [
+            [
+                { text: currentLang === 'it' ? '🇮🇹 Italiano ✓' : '🇮🇹 Italiano', callback_data: 'start_set_lang:it' },
+                { text: currentLang === 'en' ? '🇬🇧 English ✓' : '🇬🇧 English', callback_data: 'start_set_lang:en' }
+            ],
+            [{ text: t('common.back'), callback_data: 'back_to_start' }]
+        ]
+    };
+
+    const text = `${t('common.start.language.title')}\n\n${t('common.start.language.subtitle')}`;
+
+    return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' }).catch(() => { });
+};
+
+// Features main menu
+const sendFeaturesMenu = async (ctx) => {
+    const userId = ctx.from.id;
+    const userLang = await db.getUserLanguage(userId) || 'en';
+    const t = (key, params) => i18n.t(userLang, key, params);
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: t('common.start.features.categories.moderation'), callback_data: 'start_feat:moderation' }],
+            [{ text: t('common.start.features.categories.protection'), callback_data: 'start_feat:protection' }],
+            [{ text: t('common.start.features.categories.welcome'), callback_data: 'start_feat:welcome' }],
+            [{ text: t('common.start.features.categories.admin'), callback_data: 'start_feat:admin' }],
+            [{ text: t('common.back'), callback_data: 'back_to_start' }]
+        ]
+    };
+
+    const text = `${t('common.start.features.title')}\n\n${t('common.start.features.subtitle')}`;
+
+    return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' }).catch(() => { });
+};
+
+// Features category detail
+const sendFeatureCategory = async (ctx, category) => {
+    const userId = ctx.from.id;
+    const userLang = await db.getUserLanguage(userId) || 'en';
+    const t = (key, params) => i18n.t(userLang, key, params);
+
+    const categoryData = {
+        moderation: {
+            title: t('common.start.features.moderation.title'),
+            items: [
+                t('common.start.features.moderation.ai'),
+                t('common.start.features.moderation.patterns'),
+                t('common.start.features.moderation.words'),
+                t('common.start.features.moderation.mentions'),
+                t('common.start.features.moderation.reports')
+            ]
+        },
+        protection: {
+            title: t('common.start.features.protection.title'),
+            items: [
+                t('common.start.features.protection.links'),
+                t('common.start.features.protection.media'),
+                t('common.start.features.protection.blacklist'),
+                t('common.start.features.protection.antiedit'),
+                t('common.start.features.protection.language')
+            ]
+        },
+        welcome: {
+            title: t('common.start.features.welcome.title'),
+            items: [
+                t('common.start.features.welcome.captcha'),
+                t('common.start.features.welcome.message'),
+                t('common.start.features.welcome.rules'),
+                t('common.start.features.welcome.autodelete')
+            ]
+        },
+        admin: {
+            title: t('common.start.features.admin.title'),
+            items: [
+                t('common.start.features.admin.staff'),
+                t('common.start.features.admin.logs'),
+                t('common.start.features.admin.settings'),
+                t('common.start.features.admin.notes')
+            ]
+        }
+    };
+
+    const data = categoryData[category];
+    if (!data) return;
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: t('common.back'), callback_data: 'start_features' }]
+        ]
+    };
+
+    const itemsList = data.items.map(item => `• ${item}`).join('\n');
+    const text = `${data.title}\n\n${itemsList}`;
+
+    return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' }).catch(() => { });
+};
+
+// Info menu
+const sendInfoMenu = async (ctx) => {
+    const userId = ctx.from.id;
+    const userLang = await db.getUserLanguage(userId) || 'en';
+    const t = (key, params) => i18n.t(userLang, key, params);
+
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: t('common.back'), callback_data: 'back_to_start' }]
+        ]
+    };
+
+    const text = `${t('common.start.info.title')}
+
+📦 <b>${t('common.start.info.version')}:</b> ${packageJson.version}
+👨‍💻 <b>${t('common.start.info.developer')}:</b> <a href="tg://user?id=1768337867">RipVampiretto</a>
+📅 <b>${t('common.start.info.updated')}:</b> 25/12/2025
+📢 <b>${t('common.start.info.log_channel')}:</b> @RwbyLogs
+
+${t('common.start.info.description')}`;
+
+    return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML', link_preview_options: { is_disabled: true } }).catch(() => { });
+};
+
 bot.command("start", (ctx) => sendStartMenu(ctx));
-bot.callbackQuery("back_to_start", (ctx) => sendStartMenu(ctx));
+bot.callbackQuery("back_to_start", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return sendStartMenu(ctx);
+});
+
+bot.callbackQuery("start_change_lang", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return sendLanguageMenu(ctx);
+});
+
+bot.callbackQuery(/^start_set_lang:(.+)$/, async (ctx) => {
+    const lang = ctx.match[1];
+    const userId = ctx.from.id;
+    await db.setUserLanguage(userId, lang);
+    await ctx.answerCallbackQuery({ text: lang === 'it' ? '✅ Lingua cambiata!' : '✅ Language changed!' });
+    return sendLanguageMenu(ctx);
+});
+
+bot.callbackQuery("start_features", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return sendFeaturesMenu(ctx);
+});
+
+bot.callbackQuery(/^start_feat:(.+)$/, async (ctx) => {
+    const category = ctx.match[1];
+    await ctx.answerCallbackQuery();
+    return sendFeatureCategory(ctx, category);
+});
+
+bot.callbackQuery("start_info", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return sendInfoMenu(ctx);
+});
 
 // bot.command("help", async (ctx) => {
 //     const guildId = ctx.chat.id;

@@ -58,10 +58,36 @@ async function isUserGloballyBanned(userId) {
     return user?.is_banned_global === true;
 }
 
+/**
+ * Get user's preferred language
+ * @param {number} userId - The user ID
+ * @returns {Promise<string|null>}
+ */
+async function getUserLanguage(userId) {
+    const user = await queryOne('SELECT preferred_language FROM users WHERE user_id = $1', [userId]);
+    return user?.preferred_language || null;
+}
+
+/**
+ * Set user's preferred language
+ * @param {number} userId - The user ID
+ * @param {string} language - Language code (e.g., 'en', 'it')
+ */
+async function setUserLanguage(userId, language) {
+    await query(
+        `INSERT INTO users (user_id, preferred_language) 
+         VALUES ($1, $2) 
+         ON CONFLICT (user_id) DO UPDATE SET preferred_language = $2`,
+        [userId, language]
+    );
+}
+
 module.exports = {
     getUser,
     upsertUser,
     setUserGlobalBan,
     getGloballyBannedUsers,
-    isUserGloballyBanned
+    isUserGloballyBanned,
+    getUserLanguage,
+    setUserLanguage
 };

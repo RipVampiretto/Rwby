@@ -47,12 +47,67 @@
             "tier_group": "🏷️ Group Tier"
         },
         "start": {
-            "greeting": "👋 Hello! I'm the moderation bot for Telegram groups.",
-            "instructions": "Use /help to see available commands or /settings for the complete control panel.",
+            "greeting": "👋 <b>Welcome!</b>",
+            "description": "I'm an advanced moderation bot for Telegram groups. I protect groups from spam, scams and inappropriate content using artificial intelligence and smart filters.",
             "buttons": {
                 "add_group": "➕ Add to Group",
+                "change_language": "🌐 Change Language",
+                "features": "📋 Features",
+                "info": "ℹ️ Information",
                 "my_flux": "📊 My Flux",
                 "tier_info": "ℹ️ Tier Info"
+            },
+            "language": {
+                "title": "🌐 <b>LANGUAGE</b>",
+                "subtitle": "Select your preferred language:"
+            },
+            "features": {
+                "title": "📋 <b>FEATURES</b>",
+                "subtitle": "Discover all bot features. Select a category:",
+                "categories": {
+                    "moderation": "🤖 Smart Moderation",
+                    "protection": "🛡️ Group Protection",
+                    "welcome": "👋 Welcome System",
+                    "admin": "⚙️ Admin Tools"
+                },
+                "moderation": {
+                    "title": "🤖 <b>SMART MODERATION</b>",
+                    "ai": "<b>🧠 Spam Recognition</b>\nThe bot compares every message with thousands of known spam examples. If a message looks too much like spam, it gets blocked automatically.\n",
+                    "patterns": "<b>🔤 Banned Words</b>\nBlocks messages containing forbidden words or phrases. Also supports advanced patterns (regex). Admins choose to delete or report.\n",
+                    "words": "<b>👤 Suspicious Mentions</b>\nWhen someone mentions an @user not in the group, an AI analyzes the message to determine if it's a scam attempt or fraudulent recruitment.\n",
+                    "mentions": "<b>📋 Reports</b>\nUsers can report messages by replying with @admin. Two modes: voting (the group votes to ban/delete) or direct forwarding to staff group.\n",
+                    "reports": "<b>✏️ Edit Monitoring</b>\nIf someone edits a message to add a link that wasn't there before, or completely changes it, the bot notices and takes action.\n"
+                },
+                "protection": {
+                    "title": "🛡️ <b>GROUP PROTECTION</b>",
+                    "links": "<b>🔗 Link Checker</b>\nEvery link is checked (including hidden clickable text). If it leads to dangerous sites it gets blocked. Unknown links are flagged for review.\n",
+                    "media": "<b>🖼️ Image & Video Checker</b>\nPhotos, videos, GIFs and stickers are analyzed by AI. Adult content, violent content or visual scams get blocked.\n",
+                    "blacklist": "<b>🚫 Global Blacklist</b>\nAutomatically syncs with CAS anti-spam database. Users known as spammers are automatically banned when they join or write.\n",
+                    "antiedit": "<b>🌐 Language Control</b>\nAutomatically detects the language of each message. You can set which languages are allowed - others get deleted or reported.\n",
+                    "language": "<b>🔒 Global Bans</b>\nBot managers can globally ban users: the ban is automatically applied to all groups where the bot is present.\n"
+                },
+                "welcome": {
+                    "title": "👋 <b>WELCOME SYSTEM</b>",
+                    "captcha": "<b>🛡️ Anti-Bot Verification</b>\nNew members must pass a test to prove they're human. 6 types available: button, math quizzes, letter counting, emoji, colors, logic sequences and reverse words.\n",
+                    "message": "<b>📨 Welcome Message</b>\nCreate a custom message sent to every new member. You can use variables like username, group name, and add buttons.\n",
+                    "rules": "<b>📜 Rules Acceptance</b>\nAfter captcha, new members must click to confirm they've read the rules before they can write. You can set the rules link.\n",
+                    "autodelete": "<b>⏱️ Auto Cleanup</b>\nSet captcha timeout (1-30 minutes). Those who don't complete it get kicked. Welcome messages can auto-delete after a configurable time.\n"
+                },
+                "admin": {
+                    "title": "⚙️ <b>ADMIN TOOLS</b>",
+                    "staff": "<b>👥 Staff Group</b>\nCreate a private group to receive reports and security alerts. Each notification includes a direct link to the original message.\n",
+                    "logs": "<b>📋 Activity Log</b>\nAll bot actions (deleted messages, banned users, captcha passes or fails) are logged in a channel of your choice.\n",
+                    "settings": "<b>⚙️ Control Panel</b>\nUse /settings to configure everything: enable or disable each feature, choose actions to take, set timeouts and customize messages.\n",
+                    "notes": "<b>📊 Reputation System</b>\nEach user accumulates reputation points (Flux) based on behavior. Admins can view history and reputation of each member.\n"
+                }
+            },
+            "info": {
+                "title": "ℹ️ <b>INFORMATION</b>",
+                "version": "Version",
+                "developer": "Developer",
+                "updated": "Last Updated",
+                "log_channel": "Log Channel",
+                "description": "Bot created to protect Telegram communities from spam, scams and inappropriate content. Uses advanced artificial intelligence technologies to ensure group safety."
             }
         },
         "help": {
