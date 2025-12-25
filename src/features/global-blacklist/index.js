@@ -1,8 +1,23 @@
-// ============================================================================
-// CAS BAN MODULE - Global User Blacklist (Combot Anti-Spam Integration)
-// ============================================================================
-// SCOPO: Sincronizza lista ban CAS e verifica ogni messaggio contro di essa.
-// ============================================================================
+/**
+ * @fileoverview Modulo Global Blacklist - Blacklist globale con CAS
+ * @module features/global-blacklist
+ *
+ * @description
+ * Sistema di blacklist globale integrato con Combot Anti-Spam (CAS).
+ * Sincronizza la lista ban CAS e verifica ogni messaggio contro di essa.
+ * Supporta anche ban globali interni gestiti dal Parliament.
+ *
+ * Funzionalità:
+ * - Sincronizzazione giornaliera con CAS
+ * - Verifica utenti in tempo reale
+ * - Sincronizzazione ban globali interni
+ * - Notifiche configurabili
+ *
+ * @requires ./sync - Sincronizzazione con CAS
+ * @requires ./detection - Verifica ban
+ * @requires ./actions - Azioni su utenti bannati
+ * @requires ./ui - Interfaccia di configurazione
+ */
 
 const sync = require('./sync');
 const detection = require('./detection');
@@ -10,45 +25,69 @@ const actions = require('./actions');
 const ui = require('./ui');
 const logger = require('../../middlewares/logger');
 
+/**
+ * Riferimento al database
+ * @type {Object|null}
+ * @private
+ */
 let db = null;
+
+/**
+ * Istanza del bot
+ * @type {import('grammy').Bot|null}
+ * @private
+ */
 let _botInstance = null;
 
-// Sync interval: 24 hours in milliseconds
+/**
+ * Intervallo di sincronizzazione: 24 ore in millisecondi
+ * @constant {number}
+ */
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Inizializza il modulo con il database.
+ *
+ * @param {Object} database - Istanza del database PostgreSQL
+ */
 function init(database) {
     db = database;
-    // Initialize detection which only needs db
     detection.init(database);
 }
 
+/**
+ * Registra tutti gli handler del modulo sul bot.
+ * Include middleware per controllo CAS, comandi admin e sync schedulato.
+ *
+ * @param {import('grammy').Bot} bot - Istanza del bot grammY
+ */
 function register(bot) {
     _botInstance = bot;
 
-    // Initialize sub-modules that need bot
+    // Inizializza sotto-moduli che necessitano del bot
     sync.init(db, bot);
     actions.init(db, bot);
 
-    // Register message middleware for CAS checking
+    // Middleware per controllo CAS su ogni messaggio
     bot.on('message', async (ctx, next) => {
-        // Skip private chats
+        // Skip chat private
         if (ctx.chat.type === 'private') return next();
 
-        // Check if enabled for this guild
+        // Verifica se abilitato per questo gruppo
         const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.blacklist_enabled) return next();
 
-        // Check if user is CAS banned
+        // Verifica se l'utente è bannato da CAS
         const isBanned = await detection.isCasBanned(ctx.from.id);
         if (isBanned) {
             await actions.handleCasBan(ctx);
-            return; // Stop processing, user is banned
+            return; // Stop processing, utente bannato
         }
 
         return next();
     });
 
-    // Register super admin command for manual sync
+    // Comando super admin per sync manuale
     bot.command('cassync', async ctx => {
         const { isSuperAdmin } = require('../../utils/error-handlers');
         if (!isSuperAdmin(ctx.from.id)) {
@@ -60,7 +99,7 @@ function register(bot) {
         await ctx.reply(result.message);
     });
 
-    // Register callback handlers
+    // Handler callback
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('cas_')) return next();
@@ -79,15 +118,12 @@ function register(bot) {
             const newState = !config.blacklist_enabled;
             await db.updateGuildConfig(ctx.chat.id, { blacklist_enabled: newState ? 1 : 0 });
 
-            // Update UI immediately
             await ui.sendConfigUI(ctx, db, true, fromSettings);
 
-            // When enabling, sync all existing internal global bans to this group (in background)
+            // Quando si abilita, sincronizza ban globali interni in background
             if (newState) {
-                // Send sync start message (will be deleted after 30s)
                 const syncMsg = await ctx.reply('🔄 Sincronizzazione blacklist globale in corso...');
 
-                // Run sync in background
                 (async () => {
                     try {
                         const superAdmin = require('../super-admin');
@@ -97,32 +133,28 @@ function register(bot) {
                             `[global-blacklist] Blacklist sync to ${ctx.chat.id}: ${result.success} internal gbans applied`
                         );
 
-                        // Delete sync start message
                         try {
                             await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                        } catch (e) {}
+                        } catch (e) { }
 
-                        // Send completion message
                         const completeMsg = await ctx.reply(
                             `✅ Sincronizzazione completata: ${result.success} utenti bannati.`
                         );
 
-                        // Auto-delete after 10s
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, completeMsg.message_id);
-                            } catch (e) {}
+                            } catch (e) { }
                         }, 10000);
                     } catch (e) {
                         logger.error(`[global-blacklist] Sync failed: ${e.message}`);
                     }
                 })();
 
-                // Auto-delete sync message after 30s if still exists
                 setTimeout(async () => {
                     try {
                         await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                    } catch (e) {}
+                    } catch (e) { }
                 }, 30000);
             }
 
@@ -140,20 +172,25 @@ function register(bot) {
         await next();
     });
 
-    // Schedule daily sync
+    // Schedula sync giornaliero
     scheduleSync();
 
     logger.info('[global-blacklist] Module registered');
 }
 
+/**
+ * Schedula sincronizzazione periodica con CAS.
+ * Esegue sync iniziale dopo 5 secondi, poi ogni 24 ore.
+ * @private
+ */
 function scheduleSync() {
-    // Initial sync after 5 seconds (give bot time to start)
+    // Sync iniziale dopo 5 secondi
     setTimeout(async () => {
         logger.info('[global-blacklist] Running initial CAS sync...');
         await sync.syncCasBans();
     }, 5000);
 
-    // Schedule recurring sync every 24 hours
+    // Sync ricorrente ogni 24 ore
     setInterval(async () => {
         logger.info('[global-blacklist] Running scheduled CAS sync...');
         await sync.syncCasBans();
@@ -162,6 +199,14 @@ function scheduleSync() {
     logger.info('[global-blacklist] Scheduled daily sync');
 }
 
+/**
+ * Mostra l'interfaccia di configurazione del modulo.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {boolean} [isEdit=false] - Se modificare il messaggio esistente
+ * @param {boolean} [fromSettings=false] - Se chiamato dal menu settings
+ * @returns {Promise<void>}
+ */
 function sendConfigUI(ctx, isEdit = false, fromSettings = false) {
     return ui.sendConfigUI(ctx, db, isEdit, fromSettings);
 }
@@ -170,6 +215,6 @@ module.exports = {
     init,
     register,
     sendConfigUI,
-    // Expose for testing
+    /** Forza sync CAS (per testing) */
     forceSync: () => sync.syncCasBans()
 };

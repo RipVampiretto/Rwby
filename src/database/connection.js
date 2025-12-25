@@ -1,11 +1,31 @@
+/**
+ * @fileoverview Gestione connessione pool PostgreSQL
+ * @module database/connection
+ *
+ * @description
+ * Gestisce il pool di connessioni PostgreSQL e fornisce
+ * utility per l'esecuzione di query. Include wrapper di
+ * compatibilità per codice legacy che usava better-sqlite3.
+ *
+ * @requires pg
+ * @requires ../middlewares/logger
+ */
+
 const { Pool } = require('pg');
 const logger = require('../middlewares/logger');
 
+/**
+ * Pool di connessioni PostgreSQL.
+ * @type {import('pg').Pool|null}
+ * @private
+ */
 let pool = null;
 
 /**
- * Initialize PostgreSQL connection pool
- * @returns {Promise<Pool>} PostgreSQL pool instance
+ * Inizializza il pool di connessioni PostgreSQL.
+ *
+ * @returns {Promise<import('pg').Pool>} Istanza del pool
+ * @throws {Error} Se la connessione fallisce
  */
 async function init() {
     const config = {
@@ -14,14 +34,14 @@ async function init() {
         database: process.env.POSTGRES_DB || 'rwby_bot',
         user: process.env.POSTGRES_USER || 'rwby',
         password: process.env.POSTGRES_PASSWORD || 'rwby_secure_password',
-        max: 20, // Maximum pool size
+        max: 20, // Dimensione massima pool
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000
     };
 
     pool = new Pool(config);
 
-    // Test connection
+    // Test connessione
     try {
         const client = await pool.connect();
         await client.query('SELECT NOW()');
@@ -32,7 +52,7 @@ async function init() {
         throw err;
     }
 
-    // Handle pool errors
+    // Gestione errori pool
     pool.on('error', err => {
         logger.error(`PostgreSQL pool error: ${err.message}`);
     });
@@ -41,8 +61,10 @@ async function init() {
 }
 
 /**
- * Get pool instance
- * @returns {Pool}
+ * Ottiene l'istanza del pool.
+ *
+ * @returns {import('pg').Pool} Pool di connessioni
+ * @throws {Error} Se il database non è inizializzato
  */
 function getPool() {
     if (!pool) {
@@ -52,10 +74,13 @@ function getPool() {
 }
 
 /**
- * Execute a query
- * @param {string} text - SQL query
- * @param {Array} params - Query parameters
- * @returns {Promise<object>}
+ * Esegue una query SQL.
+ * Logga query lente (>1s) come warning.
+ *
+ * @param {string} text - Query SQL
+ * @param {Array} [params=[]] - Parametri della query
+ * @returns {Promise<import('pg').QueryResult>} Risultato della query
+ * @throws {Error} Se la query fallisce
  */
 async function query(text, params = []) {
     const start = Date.now();
@@ -73,10 +98,11 @@ async function query(text, params = []) {
 }
 
 /**
- * Get a single row
- * @param {string} text - SQL query
- * @param {Array} params - Query parameters
- * @returns {Promise<object|null>}
+ * Esegue una query e restituisce la prima riga.
+ *
+ * @param {string} text - Query SQL
+ * @param {Array} [params=[]] - Parametri della query
+ * @returns {Promise<Object|null>} Prima riga o null
  */
 async function queryOne(text, params = []) {
     const result = await query(text, params);
@@ -84,10 +110,11 @@ async function queryOne(text, params = []) {
 }
 
 /**
- * Get multiple rows
- * @param {string} text - SQL query
- * @param {Array} params - Query parameters
- * @returns {Promise<Array>}
+ * Esegue una query e restituisce tutte le righe.
+ *
+ * @param {string} text - Query SQL
+ * @param {Array} [params=[]] - Parametri della query
+ * @returns {Promise<Array>} Array di righe
  */
 async function queryAll(text, params = []) {
     const result = await query(text, params);
@@ -95,7 +122,9 @@ async function queryAll(text, params = []) {
 }
 
 /**
- * Close pool
+ * Chiude il pool di connessioni.
+ *
+ * @returns {Promise<void>}
  */
 async function close() {
     if (pool) {
@@ -106,9 +135,11 @@ async function close() {
 }
 
 /**
- * Compatibility wrapper for legacy code using db.getDb().prepare()
- * This allows gradual migration - legacy code will still work
- * Returns an object that mimics better-sqlite3 API but uses PostgreSQL
+ * Wrapper di compatibilità per codice legacy che usava better-sqlite3.
+ * Restituisce un oggetto che simula l'API di better-sqlite3 ma usa PostgreSQL.
+ *
+ * @returns {Object} Oggetto con metodo prepare()
+ * @throws {Error} Se il database non è inizializzato
  */
 function getDb() {
     if (!pool) {
@@ -116,8 +147,12 @@ function getDb() {
     }
 
     return {
+        /**
+         * Prepara una query (converte placeholder da ? a $1, $2, etc.)
+         * @param {string} sql - Query SQL con placeholder ?
+         */
         prepare: sql => {
-            // Convert SQLite placeholders (?) to PostgreSQL ($1, $2, ...)
+            // Converte placeholder SQLite (?) a PostgreSQL ($1, $2, ...)
             let paramIndex = 0;
             const pgSql = sql.replace(/\?/g, () => `$${++paramIndex}`);
 
@@ -145,7 +180,8 @@ function getDb() {
 module.exports = {
     init,
     getPool,
-    getDb, // Compatibility wrapper
+    /** Wrapper compatibilità per codice legacy */
+    getDb,
     query,
     queryOne,
     queryAll,

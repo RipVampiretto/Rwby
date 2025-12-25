@@ -1,21 +1,39 @@
 /**
- * ============================================================================
- * MENU OWNERSHIP MIDDLEWARE
- * ============================================================================
+ * @fileoverview Middleware per controllo ownership menu inline
+ * @module middlewares/menu-ownership
  *
- * Restricts ALL inline keyboard interactions to group admins only.
- * This prevents regular users from clicking config buttons, closing menus, etc.
+ * @description
+ * Restringe TUTTE le interazioni con tastiere inline solo agli admin.
+ * Impedisce agli utenti normali di cliccare pulsanti di configurazione,
+ * chiudere menu, ecc.
+ *
+ * Include cache degli admin per evitare chiamate API ripetute.
+ *
+ * @requires ./logger
  */
 
 const logger = require('./logger');
 
-// Cache admin status per user/chat to avoid repeated API calls
-// Key: `${chatId}:${userId}`, Value: { isAdmin: boolean, expires: timestamp }
+/**
+ * Cache status admin per utente/chat.
+ * Chiave: `${chatId}:${userId}`
+ * Valore: `{ isAdmin: boolean, expires: timestamp }`
+ * @type {Map<string, {isAdmin: boolean, expires: number}>}
+ * @private
+ */
 const adminCache = new Map();
-const CACHE_TTL = 60000; // 1 minute
 
 /**
- * Check if user is admin (with caching)
+ * Durata cache in millisecondi (1 minuto).
+ * @constant {number}
+ */
+const CACHE_TTL = 60000;
+
+/**
+ * Verifica se l'utente è admin (con caching).
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<boolean>} True se admin
  */
 async function isAdminCached(ctx) {
     const chatId = ctx.chat?.id;
@@ -46,9 +64,7 @@ async function isAdminCached(ctx) {
     }
 }
 
-/**
- * Cleanup expired cache entries periodically
- */
+// Pulizia periodica cache scadute
 setInterval(() => {
     const now = Date.now();
     for (const [key, value] of adminCache.entries()) {
@@ -59,28 +75,31 @@ setInterval(() => {
 }, 60000);
 
 /**
- * Middleware that restricts inline keyboard callbacks to admins only
+ * Middleware che restringe i callback inline solo agli admin.
+ * Whitelist alcuni prefissi per votazioni pubbliche.
+ *
+ * @returns {import('grammy').MiddlewareFn} Middleware grammY
  */
 function adminOnlyCallbacks() {
     return async (ctx, next) => {
-        // Only apply to callback queries
+        // Applica solo ai callback query
         if (!ctx.callbackQuery) {
             return next();
         }
 
-        // Allow in private chats
+        // Permetti nelle chat private
         if (ctx.chat?.type === 'private') {
             return next();
         }
 
-        // Check if user is admin
-        const isAdmin = await isAdminCached(ctx);
-
-        // Check whitelist first (public voting callbacks)
+        // Controlla whitelist per callback pubblici (votazioni)
         const allowedPrefixes = ['vote_', 'vb_confirm:', 'wc:'];
         if (allowedPrefixes.some(p => ctx.callbackQuery.data && ctx.callbackQuery.data.startsWith(p))) {
             return next();
         }
+
+        // Verifica se l'utente è admin
+        const isAdmin = await isAdminCached(ctx);
 
         if (!isAdmin) {
             logger.debug(`[menu-ownership] Blocked callback from non-admin ${ctx.from?.id} in ${ctx.chat?.id}`);
@@ -88,10 +107,10 @@ function adminOnlyCallbacks() {
                 text: '⛔ Solo gli admin possono usare questo menu',
                 show_alert: true
             });
-            return; // Stop propagation
+            return; // Blocca propagazione
         }
 
-        // User is admin, continue
+        // Utente è admin, continua
         return next();
     };
 }

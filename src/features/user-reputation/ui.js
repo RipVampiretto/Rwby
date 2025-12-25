@@ -1,10 +1,36 @@
+/**
+ * @fileoverview Interfacce utente per il modulo User Reputation
+ * @module features/user-reputation/ui
+ *
+ * @description
+ * Genera tutte le interfacce per visualizzare informazioni su Tier e Flux:
+ * - Menu Tier con spiegazione generale
+ * - Dettagli singoli Tier
+ * - Spiegazione calcolo Flux
+ * - Riepilogo Flux personale (locale e globale)
+ */
+
 const logic = require('./logic');
 
+/**
+ * Mostra il menu principale del sistema Tier.
+ * Attualmente reindirizza direttamente alla spiegazione Flux.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {boolean} [isEdit=false] - Se modificare il messaggio esistente
+ * @returns {Promise<void>}
+ */
 async function sendTierMenu(ctx, isEdit = false) {
-    // Simplified: directly show Flux calculation info
     await sendFluxCalculation(ctx, isEdit);
 }
 
+/**
+ * Mostra i dettagli di un singolo Tier.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {number} tierNum - Numero del Tier (0-3)
+ * @returns {Promise<void>}
+ */
 async function sendTierDetail(ctx, tierNum) {
     const info = logic.TIER_INFO[tierNum];
     if (!info) return;
@@ -29,9 +55,18 @@ async function sendTierDetail(ctx, tierNum) {
 
     try {
         await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-    } catch (e) {}
+    } catch (e) { }
 }
 
+/**
+ * Mostra la spiegazione del sistema Flux.
+ * Include come guadagnare/perdere Flux e le soglie dei Tier.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {boolean} [isEdit=false] - Se modificare il messaggio esistente
+ * @param {string|null} [backCallback=null] - Callback per il pulsante "Indietro"
+ * @returns {Promise<void>}
+ */
 async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     const p = 'tier_system.flux_calc.';
     const text =
@@ -55,12 +90,20 @@ async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
     }
 }
 
+/**
+ * Mostra il Flux dell'utente nel gruppo corrente.
+ * Include Tier, Flux locale/globale e barra di progresso.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} db - Istanza del database
+ * @returns {Promise<void>}
+ */
 async function sendMyFlux(ctx, db) {
     if (!ctx.from || ctx.chat.type === 'private') return;
 
@@ -71,6 +114,7 @@ async function sendMyFlux(ctx, db) {
     const tier = await logic.getUserTier(db, userId, guildId);
     const tierInfo = logic.TIER_INFO[tier];
 
+    // Calcola barra di progresso verso il prossimo Tier
     const nextTierFlux = tier < 3 ? logic.TIER_THRESHOLDS[`TIER_${tier + 1}`] : null;
     const progress = nextTierFlux ? Math.min(10, Math.max(0, Math.floor((localFlux / nextTierFlux) * 10))) : 10;
     const progressBar = '█'.repeat(progress) + '░'.repeat(10 - progress);
@@ -96,14 +140,21 @@ async function sendMyFlux(ctx, db) {
     await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
 }
 
+/**
+ * Mostra il riepilogo globale del Flux dell'utente.
+ * Lista tutti i gruppi con il rispettivo Flux e Tier.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} db - Istanza del database
+ * @returns {Promise<void>}
+ */
 async function sendGlobalFluxOverview(ctx, db) {
     if (!ctx.from) return;
     const userId = ctx.from.id;
 
-    // Get Global Flux
     const globalFlux = await logic.getGlobalFlux(db, userId);
 
-    // Get all Guilds Flux (async PostgreSQL)
+    // Ottieni Flux di tutti i gruppi
     const rows = await db.queryAll(
         `
         SELECT g.guild_name, u.guild_id, u.local_flux 
@@ -123,7 +174,7 @@ async function sendGlobalFluxOverview(ctx, db) {
     } else {
         for (const row of rows) {
             const flux = row.local_flux;
-            // Calculate Tier manually
+            // Calcola Tier
             let tier = 0;
             if (flux >= logic.TIER_THRESHOLDS.TIER_3) tier = 3;
             else if (flux >= logic.TIER_THRESHOLDS.TIER_2) tier = 2;
@@ -158,7 +209,7 @@ async function sendGlobalFluxOverview(ctx, db) {
     if (ctx.callbackQuery) {
         try {
             await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
     }

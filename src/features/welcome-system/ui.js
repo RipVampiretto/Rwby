@@ -1,9 +1,31 @@
+/**
+ * @fileoverview Interfacce utente per il modulo Welcome System
+ * @module features/welcome-system/ui
+ *
+ * @description
+ * Gestisce tutte le interfacce inline per la configurazione del sistema welcome:
+ * - Menu principale con tutti i toggle e opzioni
+ * - Sottomenu selezione modalità captcha
+ * - Anteprima messaggio di benvenuto
+ * - Prompt wizard per configurazione
+ * - Menu notifiche granulari
+ *
+ * @requires ../../database/repos/guild - Per lettura configurazione
+ * @requires ../../i18n - Per traduzioni
+ * @requires ./utils - Per parsing wildcards e pulsanti
+ */
+
 const { fetchGuildConfig: getGuildConfig } = require('../../database/repos/guild');
 const i18n = require('../../i18n');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
 
 /**
- * Send Welcome System Main Menu
+ * Mostra il menu principale del sistema Welcome.
+ * Include toggle per captcha, messaggio, timeout, regolamento, ecc.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {boolean} [isEdit=false] - Se true, modifica il messaggio esistente
+ * @returns {Promise<void>}
  */
 async function sendWelcomeMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
@@ -106,14 +128,18 @@ async function sendWelcomeMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }
 }
 
 /**
- * Send Captcha Mode Submenu
+ * Mostra il sottomenu per la selezione delle modalità captcha.
+ * Supporta multi-selezione (più modalità contemporaneamente).
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function sendCaptchaModeMenu(ctx) {
     const guildId = ctx.chat.id;
@@ -164,11 +190,15 @@ async function sendCaptchaModeMenu(ctx) {
     }
     try {
         await ctx.answerCallbackQuery();
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
- * Send Preview View
+ * Mostra l'anteprima del messaggio di benvenuto.
+ * Applica le wildcards con i dati dell'utente corrente.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function sendPreview(ctx) {
     const guildId = ctx.chat.id;
@@ -204,7 +234,10 @@ async function sendPreview(ctx) {
 }
 
 /**
- * Send Rules Wizard Prompt
+ * Mostra il prompt wizard per impostare il link al regolamento.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function sendRulesWizardPrompt(ctx) {
     const guildId = ctx.chat.id;
@@ -223,11 +256,15 @@ async function sendRulesWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
- * Send Wizard Prompt (Edit)
+ * Mostra il prompt wizard per impostare il messaggio di benvenuto.
+ * Include documentazione completa delle wildcards disponibili.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function sendWizardPrompt(ctx) {
     const guildId = ctx.chat.id;
@@ -278,11 +315,16 @@ async function sendWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 /**
- * Send Notifications Sub-Menu
+ * Mostra il menu delle notifiche granulari.
+ * Permette di abilitare/disabilitare singoli eventi di log.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {boolean} [isEdit=false] - Se true, modifica il messaggio esistente
+ * @returns {Promise<void>}
  */
 async function sendNotificationsMenu(ctx, isEdit = false) {
     const guildId = ctx.chat.id;
@@ -296,7 +338,7 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -331,7 +373,7 @@ async function sendNotificationsMenu(ctx, isEdit = false) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-        } catch (e) {}
+        } catch (e) { }
     } else {
         await ctx.reply(text, { reply_markup: keyboard, parse_mode: 'HTML' });
     }

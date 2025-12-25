@@ -1,3 +1,26 @@
+/**
+ * @fileoverview Azioni di moderazione per il modulo Media Filter
+ * @module features/media-filter/actions
+ *
+ * @description
+ * Gestisce l'esecuzione delle azioni di moderazione quando viene rilevato
+ * contenuto NSFW. Supporta sia media singoli che album.
+ *
+ * Azioni disponibili:
+ * - **delete**: Elimina il messaggio, invia al log channel e Parliament, avvisa l'utente
+ * - **report_only**: Inoltra alla coda di revisione dello staff senza eliminare
+ *
+ * Funzionalità aggiuntive:
+ * - Salvataggio media nel canale di log prima dell'eliminazione
+ * - Inoltro a Parliament con opzione di Global Ban
+ * - Messaggi di warning auto-eliminanti
+ * - Logging eventi configurabile
+ *
+ * @requires ../action-log - Per il logging delle azioni
+ * @requires ../super-admin - Per l'inoltro a Parliament
+ * @requires ../staff-coordination - Per la coda di revisione
+ */
+
 const actionLog = require('../action-log');
 const superAdmin = require('../super-admin');
 const staffCoordination = require('../staff-coordination');
@@ -6,10 +29,14 @@ const { safeDelete } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
 /**
- * Send media to a channel using file_id (not forward)
- * @param {Context} ctx - grammY context
- * @param {string} channelId - Target channel ID
- * @param {string} caption - Optional caption
+ * Invia un media a un canale usando il file_id (senza forward).
+ * Gestisce foto, video, animazioni, sticker e documenti.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY della richiesta
+ * @param {string} channelId - ID del canale di destinazione
+ * @param {string|null} [caption=null] - Caption opzionale in HTML
+ * @returns {Promise<void>}
+ * @private
  */
 async function sendMediaToChannel(ctx, channelId, caption = null) {
     const msg = ctx.message;
@@ -33,10 +60,29 @@ async function sendMediaToChannel(ctx, channelId, caption = null) {
     }
 }
 
+/**
+ * Esegue l'azione di moderazione per un singolo media NSFW.
+ *
+ * Flusso per action='delete':
+ * 1. Invia il media al Log Channel (se configurato)
+ * 2. Inoltra a Parliament con opzione Global Ban
+ * 3. Elimina il messaggio originale
+ * 4. Invia warning all'utente (auto-delete dopo 60s)
+ * 5. Logga l'evento se abilitato
+ *
+ * Flusso per action='report_only':
+ * 1. Inoltra alla coda di revisione dello staff
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY del messaggio con il media
+ * @param {string} action - Azione da eseguire: 'delete' | 'report_only'
+ * @param {string} reason - Motivo della violazione (es. "Real Nudity (95%)")
+ * @param {string} type - Tipo di media: 'photo' | 'video' | 'gif' | 'sticker'
+ * @returns {Promise<void>}
+ */
 async function executeAction(ctx, action, reason, type) {
     const user = ctx.from;
 
-    // Parse log events from config
+    // Recupera configurazione per log events
     const db = require('../../database');
     const config = await db.getGuildConfig(ctx.chat.id);
     let logEvents = {};
@@ -44,18 +90,15 @@ async function executeAction(ctx, action, reason, type) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
     }
 
-    // Simplify reason for logs (remove technical details like "Frame @...")
+    // Semplifica il motivo per i log (rimuove dettagli tecnici come "Frame @...")
     let simpleReason = reason;
     try {
-        // Extract category name if possible (remove frame info and percent)
-        // Example: "Frame @3.6s: Real Sex (95%)" -> "Real Sex"
-        // Example: "Real Sex (95%)" -> "Real Sex"
         const match = reason.match(/(?:Frame @[\d.]+s: )?([^(\n]+)/);
         if (match && match[1]) {
             simpleReason = match[1].trim();
@@ -64,6 +107,7 @@ async function executeAction(ctx, action, reason, type) {
         simpleReason = reason;
     }
 
+    /** @type {Object} Parametri per il log dell'azione */
     const logParams = {
         guildId: ctx.chat.id,
         eventType: 'media_delete',
@@ -73,12 +117,12 @@ async function executeAction(ctx, action, reason, type) {
     };
 
     if (action === 'delete') {
-        // Send original media to Log Channel (if set) BEFORE deleting
+        // Invia media originale al Log Channel PRIMA di eliminarlo
         if (config.log_channel_id) {
             await sendMediaToChannel(ctx, config.log_channel_id);
         }
 
-        // Forward original media to Parliament BEFORE deleting (with gban option)
+        // Inoltra a Parliament con opzione Global Ban
         if (superAdmin.forwardMediaToParliament) {
             const parlLang = await i18n.getLanguage(ctx.chat.id);
             const t = key => i18n.t(parlLang, key);
@@ -97,10 +141,10 @@ async function executeAction(ctx, action, reason, type) {
             ]);
         }
 
-        // Delete message
+        // Elimina il messaggio
         await safeDelete(ctx, 'media-monitor');
 
-        // Send warning to user (auto-delete after 1 minute)
+        // Invia warning all'utente (auto-delete dopo 1 minuto)
         try {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const userName = user.username
@@ -112,16 +156,16 @@ async function executeAction(ctx, action, reason, type) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 60000);
-        } catch (e) {}
+        } catch (e) { }
 
-        // Log only if enabled
+        // Logga solo se abilitato
         if (logEvents['media_delete'] && actionLog.getLogEvent()) {
             actionLog.getLogEvent()(logParams);
         }
     } else if (action === 'report_only') {
-        // Forward to staff group for review
+        // Inoltra al gruppo staff per revisione
         staffCoordination.reviewQueue({
             guildId: ctx.chat.id,
             source: 'Media-AI',
@@ -134,9 +178,23 @@ async function executeAction(ctx, action, reason, type) {
 }
 
 /**
- * Execute batched action for album violations
- * @param {Array} violations - Array of {ctx, reason, type}
- * @param {Object} config - Guild config
+ * @typedef {Object} AlbumViolation
+ * @property {import('grammy').Context} ctx - Contesto del messaggio violante
+ * @property {string} reason - Motivo della violazione
+ * @property {string} type - Tipo di media
+ */
+
+/**
+ * Esegue un'azione batched per le violazioni di un album.
+ * Ottimizza il processo eliminando tutti i media insieme e inviando
+ * un singolo warning invece di uno per ogni violazione.
+ *
+ * @param {AlbumViolation[]} violations - Array di violazioni trovate nell'album
+ * @param {Object} config - Configurazione del gruppo
+ * @param {string} config.media_action - Azione: 'delete' | 'report_only'
+ * @param {string} [config.log_channel_id] - ID del canale di log
+ * @param {Object|string} [config.log_events] - Eventi da loggare
+ * @returns {Promise<void>}
  */
 async function executeAlbumAction(violations, config) {
     if (!violations || violations.length === 0) return;
@@ -145,20 +203,20 @@ async function executeAlbumAction(violations, config) {
     const user = firstCtx.from;
     const action = config.media_action || 'delete';
 
-    // Parse log events from config
+    // Parse log events dalla config
     const db = require('../../database');
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
     }
 
-    // Aggregate reasons
+    // Aggrega i motivi (categorie uniche)
     const categories = [
         ...new Set(
             violations.map(v => {
@@ -178,7 +236,7 @@ async function executeAlbumAction(violations, config) {
     };
 
     if (action === 'delete') {
-        // Prepare media group from all violations
+        // Prepara media group da tutte le violazioni
         const mediaItems = violations
             .map((v, idx) => {
                 const msg = v.ctx.message;
@@ -189,12 +247,12 @@ async function executeAlbumAction(violations, config) {
                 } else if (msg.video) {
                     item = { type: 'video', media: msg.video.file_id };
                 } else if (msg.animation) {
-                    // Animations can't be in media group, treat as document
+                    // Le animazioni non possono stare in un media group, trattale come document
                     item = { type: 'document', media: msg.animation.file_id };
                 } else if (msg.document) {
                     item = { type: 'document', media: msg.document.file_id };
                 }
-                // Add caption only to first item
+                // Aggiungi caption solo al primo elemento
                 if (item && idx === 0) {
                     item.caption = `🚫 Album eliminato: ${aggregatedReason}`;
                 }
@@ -202,7 +260,7 @@ async function executeAlbumAction(violations, config) {
             })
             .filter(Boolean);
 
-        // Send album to Log Channel
+        // Invia album al Log Channel
         if (config.log_channel_id && mediaItems.length > 0) {
             try {
                 if (mediaItems.length === 1) {
@@ -215,7 +273,7 @@ async function executeAlbumAction(violations, config) {
             }
         }
 
-        // Send album to Parliament with summary
+        // Invia album a Parliament con summary
         if (superAdmin.forwardAlbumToParliament) {
             await superAdmin.forwardAlbumToParliament('image_spam', violations, {
                 groupTitle: firstCtx.chat.title,
@@ -224,7 +282,7 @@ async function executeAlbumAction(violations, config) {
                 count: violations.length
             });
         } else if (superAdmin.forwardMediaToParliament) {
-            // Fallback to single media
+            // Fallback a singolo media
             const parlLang = await i18n.getLanguage(firstCtx.chat.id);
             const t = key => i18n.t(parlLang, key);
             const caption =
@@ -242,21 +300,21 @@ async function executeAlbumAction(violations, config) {
             ]);
         }
 
-        // Delete all violating messages
+        // Elimina tutti i messaggi violanti
         for (const v of violations) {
             await safeDelete(v.ctx, 'media-monitor-album');
         }
 
-        // Send single warning to user (auto-delete after 1 minute) - use plural version
+        // Invia un singolo warning all'utente (auto-delete dopo 1 minuto)
         try {
             const lang = await i18n.getLanguage(firstCtx.chat.id);
             const userName = user.username
                 ? `@${user.username}`
                 : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
-            // Use plural warning for albums
+            // Usa versione plurale per album
             const warningKey = violations.length > 1 ? 'media.warning_album' : 'media.warning';
             let warningMsg = i18n.t(lang, warningKey, { user: userName, count: violations.length });
-            // Fallback to singular if plural key missing
+            // Fallback a singolare se la chiave plurale non esiste
             if (warningMsg === warningKey) {
                 warningMsg = i18n.t(lang, 'media.warning', { user: userName });
             }
@@ -265,16 +323,16 @@ async function executeAlbumAction(violations, config) {
             setTimeout(async () => {
                 try {
                     await firstCtx.api.deleteMessage(firstCtx.chat.id, warning.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 60000);
-        } catch (e) {}
+        } catch (e) { }
 
-        // Log only if enabled (single log for entire album)
+        // Logga solo se abilitato (singolo log per intero album)
         if (logEvents['media_delete'] && actionLog.getLogEvent()) {
             actionLog.getLogEvent()(logParams);
         }
     } else if (action === 'report_only') {
-        // Forward to staff group for review (single report)
+        // Inoltra al gruppo staff per revisione (singola segnalazione)
         staffCoordination.reviewQueue({
             guildId: firstCtx.chat.id,
             source: 'Media-AI (Album)',

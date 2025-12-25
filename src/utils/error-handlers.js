@@ -1,21 +1,25 @@
 /**
- * ============================================================================
- * ERROR HANDLERS - Utility functions for consistent error handling
- * ============================================================================
+ * @fileoverview Utility per gestione errori e operazioni sicure
+ * @module utils/error-handlers
  *
- * Provides safe wrappers for common Telegram operations that may fail,
- * with proper logging and context.
+ * @description
+ * Fornisce wrapper sicuri per operazioni Telegram che possono fallire,
+ * con logging appropriato. Le funzioni "safe*" non lanciano eccezioni
+ * ma restituiscono booleani o valori di fallback.
+ *
+ * @requires ../middlewares/logger
  */
 
 const logger = require('../middlewares/logger');
 
 /**
- * Log non-critical errors (delete failed, edit failed, etc.)
- * These are expected to fail sometimes (e.g., message already deleted)
- * @param {string} module - Module name (e.g., 'anti-spam')
- * @param {string} action - Action being performed (e.g., 'deleteMessage')
- * @param {Error} error - The caught error
- * @param {object} ctx - Optional grammY context for additional info
+ * Logga errori non critici (delete fallito, edit fallito, etc.).
+ * Questi errori sono attesi a volte (es. messaggio già eliminato).
+ *
+ * @param {string} module - Nome del modulo (es. 'anti-spam')
+ * @param {string} action - Azione in corso (es. 'deleteMessage')
+ * @param {Error} error - Errore catturato
+ * @param {import('grammy').Context|null} [ctx=null] - Contesto grammY opzionale
  */
 function handleTelegramError(module, action, error, ctx = null) {
     const userId = ctx?.from?.id || 'N/A';
@@ -24,11 +28,12 @@ function handleTelegramError(module, action, error, ctx = null) {
 }
 
 /**
- * Log critical errors that require attention
- * @param {string} module - Module name
- * @param {string} action - Action being performed
- * @param {Error} error - The caught error
- * @param {object} ctx - Optional grammY context
+ * Logga errori critici che richiedono attenzione.
+ *
+ * @param {string} module - Nome del modulo
+ * @param {string} action - Azione in corso
+ * @param {Error} error - Errore catturato
+ * @param {import('grammy').Context|null} [ctx=null] - Contesto grammY opzionale
  */
 function handleCriticalError(module, action, error, ctx = null) {
     const userId = ctx?.from?.id || 'N/A';
@@ -38,10 +43,11 @@ function handleCriticalError(module, action, error, ctx = null) {
 }
 
 /**
- * Safe JSON parse that never throws
- * @param {string} str - JSON string to parse
- * @param {*} fallback - Fallback value if parse fails (default: null)
- * @returns {*} Parsed object or fallback
+ * Parse JSON sicuro che non lancia mai eccezioni.
+ *
+ * @param {string} str - Stringa JSON da parsare
+ * @param {*} [fallback=null] - Valore di fallback se il parse fallisce
+ * @returns {*} Oggetto parsato o fallback
  */
 function safeJsonParse(str, fallback = null) {
     try {
@@ -52,10 +58,11 @@ function safeJsonParse(str, fallback = null) {
 }
 
 /**
- * Safely delete a message, logging if it fails
- * @param {object} ctx - grammY context
- * @param {string} module - Module name for logging (default: 'unknown')
- * @returns {Promise<boolean>} True if deleted, false if failed
+ * Elimina un messaggio in modo sicuro, loggando eventuali errori.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {string} [module='unknown'] - Nome del modulo per logging
+ * @returns {Promise<boolean>} True se eliminato, false se fallito
  */
 async function safeDelete(ctx, module = 'unknown') {
     try {
@@ -68,12 +75,13 @@ async function safeDelete(ctx, module = 'unknown') {
 }
 
 /**
- * Safely edit a message text, logging if it fails
- * @param {object} ctx - grammY context
- * @param {string} text - New message text
- * @param {object} options - Edit options (reply_markup, parse_mode, etc.)
- * @param {string} module - Module name for logging (default: 'unknown')
- * @returns {Promise<boolean>} True if edited, false if failed
+ * Modifica il testo di un messaggio in modo sicuro.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {string} text - Nuovo testo del messaggio
+ * @param {Object} [options={}] - Opzioni (reply_markup, parse_mode, etc.)
+ * @param {string} [module='unknown'] - Nome del modulo per logging
+ * @returns {Promise<boolean>} True se modificato, false se fallito
  */
 async function safeEdit(ctx, text, options = {}, module = 'unknown') {
     try {
@@ -83,7 +91,7 @@ async function safeEdit(ctx, text, options = {}, module = 'unknown') {
         if (e.error_code === 429) {
             try {
                 await ctx.answerCallbackQuery('⚠️ Slow down!');
-            } catch (ignore) {}
+            } catch (ignore) { }
             return false;
         }
         handleTelegramError(module, 'editMessageText', e, ctx);
@@ -92,11 +100,12 @@ async function safeEdit(ctx, text, options = {}, module = 'unknown') {
 }
 
 /**
- * Safely ban a chat member
- * @param {object} ctx - grammY context
- * @param {number} userId - User ID to ban
- * @param {string} module - Module name for logging
- * @returns {Promise<boolean>} True if banned, false if failed
+ * Banna un membro della chat in modo sicuro.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {number} userId - ID utente da bannare
+ * @param {string} [module='unknown'] - Nome del modulo per logging
+ * @returns {Promise<boolean>} True se bannato, false se fallito
  */
 async function safeBan(ctx, userId, module = 'unknown') {
     try {
@@ -109,11 +118,12 @@ async function safeBan(ctx, userId, module = 'unknown') {
 }
 
 /**
- * Safely get chat member status
- * @param {object} ctx - grammY context
- * @param {number} userId - User ID to check
- * @param {string} module - Module name for logging
- * @returns {Promise<object|null>} Member object or null if failed
+ * Ottiene le informazioni di un membro della chat in modo sicuro.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {number} userId - ID utente da verificare
+ * @param {string} [module='unknown'] - Nome del modulo per logging
+ * @returns {Promise<Object|null>} Oggetto membro o null se fallito
  */
 async function safeGetChatMember(ctx, userId, module = 'unknown') {
     try {
@@ -125,10 +135,11 @@ async function safeGetChatMember(ctx, userId, module = 'unknown') {
 }
 
 /**
- * Check if user is admin (creator or administrator)
- * @param {object} ctx - grammY context
- * @param {string} module - Module name for logging
- * @returns {Promise<boolean>} True if admin, false otherwise
+ * Verifica se l'utente corrente è un admin del gruppo.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {string} [module='unknown'] - Nome del modulo per logging
+ * @returns {Promise<boolean>} True se admin, false altrimenti
  */
 async function isAdmin(ctx, module = 'unknown') {
     const member = await safeGetChatMember(ctx, ctx.from.id, module);
@@ -137,10 +148,11 @@ async function isAdmin(ctx, module = 'unknown') {
 }
 
 /**
- * Check if callback query came from settings menu
- * Detects if the current keyboard contains a "settings_main" back button
- * @param {object} ctx - grammY callback query context
- * @returns {boolean} True if came from settings menu
+ * Verifica se un callback proviene dal menu settings.
+ * Rileva se la tastiera corrente contiene un pulsante "settings_main".
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY (callback query)
+ * @returns {boolean} True se proviene dal menu settings
  */
 function isFromSettingsMenu(ctx) {
     try {
@@ -155,9 +167,11 @@ function isFromSettingsMenu(ctx) {
 }
 
 /**
- * Check if user ID is a super admin
- * @param {number} userId - User ID to check
- * @returns {boolean} True if super admin
+ * Verifica se un ID utente è un super admin.
+ * Legge la lista da SUPER_ADMIN_IDS nell'ambiente.
+ *
+ * @param {number} userId - ID utente da verificare
+ * @returns {boolean} True se super admin
  */
 function isSuperAdmin(userId) {
     const superAdminIds = (process.env.SUPER_ADMIN_IDS || '')

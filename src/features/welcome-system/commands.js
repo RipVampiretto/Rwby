@@ -1,9 +1,36 @@
+/**
+ * @fileoverview Handler callback UI per il modulo Welcome System
+ * @module features/welcome-system/commands
+ *
+ * @description
+ * Gestisce tutti i callback delle interfacce utente del modulo welcome:
+ * - Navigazione tra menu (main, modes, preview, notifications)
+ * - Toggle configurazione (captcha, message, rules, logs)
+ * - Cicli di timeout e autodelete
+ * - Avvio wizard per configurazione messaggi
+ *
+ * Prefissi callback supportati:
+ * - `wc_goto:` - Navigazione
+ * - `wc_log:` - Toggle singoli eventi di log
+ * - `wc_toggle:` - Toggle on/off
+ * - `wc_toggle_mode:` - Selezione modalità captcha
+ * - `wc_cycle:` - Ciclo valori (timeout, autodelete)
+ * - `wc_set_msg` / `wc_set_rules` - Avvio wizard
+ * - `wc_del_msg` - Eliminazione messaggio
+ */
+
 const { getGuildConfig, updateGuildConfig } = require('../../database/repos/guild');
 const logger = require('../../middlewares/logger');
 const ui = require('./ui');
 const wizard = require('./wizard');
 const i18n = require('../../i18n');
 
+/**
+ * Gestisce tutti i callback UI del modulo welcome (prefisso `wc_`).
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
+ */
 async function handleCallback(ctx) {
     const data = ctx.callbackQuery.data;
 
@@ -27,7 +54,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) {}
+        } catch (e) { }
         return;
     }
 
@@ -43,7 +70,7 @@ async function handleCallback(ctx) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) {}
+                    } catch (e) { }
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
@@ -58,7 +85,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) {}
+        } catch (e) { }
         return;
     }
 
@@ -88,7 +115,7 @@ async function handleCallback(ctx) {
         }
         try {
             await ctx.answerCallbackQuery();
-        } catch (e) {}
+        } catch (e) { }
         return;
     }
 

@@ -1,9 +1,36 @@
+/**
+ * @fileoverview Definizione schema database PostgreSQL
+ * @module database/schema
+ *
+ * @description
+ * Contiene la definizione di tutte le tabelle del database.
+ * Viene eseguito all'avvio per creare le tabelle se non esistono.
+ *
+ * **Tabelle principali:**
+ * - `users` - Cache informazioni utenti
+ * - `guild_config` - Configurazione per gruppo
+ * - `user_trust_flux` - Reputazione locale per utente/gruppo
+ * - `user_global_flux` - Reputazione globale
+ * - `message_snapshots` - Snapshot messaggi per edit monitor
+ * - `word_filters` - Filtri parole globali
+ * - `link_rules` - Whitelist/blacklist link
+ * - `active_votes` - Votazioni attive
+ * - `staff_notes` - Note staff
+ * - `global_config` - Configurazione super admin
+ * - `pending_deletions` - Messaggi da eliminare
+ * - `spam_patterns` - Pattern spam
+ * - `guild_pattern_overrides` - Override pattern per gruppo
+ * - `cas_bans` - Cache ban CAS
+ */
+
 const { query } = require('./connection');
 const logger = require('../middlewares/logger');
 
 /**
- * Create all required tables (PostgreSQL)
- * Database will be rebuilt from scratch - no migration support
+ * Crea tutte le tabelle richieste (PostgreSQL).
+ * Database ricostruito da zero - nessun supporto migrazione.
+ *
+ * @returns {Promise<void>}
  */
 async function createTables() {
     // ========================================================================

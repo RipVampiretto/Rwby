@@ -1,8 +1,21 @@
+/**
+ * @fileoverview Repository per la gestione della configurazione gruppi
+ * @module database/repos/guild
+ *
+ * @description
+ * Fornisce funzioni per la gestione della configurazione dei gruppi.
+ * Ogni gruppo ha la propria configurazione salvata nella tabella guild_config.
+ *
+ * @requires ../connection
+ * @requires ../../middlewares/logger
+ */
+
 const { queryOne, query, queryAll } = require('../connection');
 const logger = require('../../middlewares/logger');
 
 /**
- * Valid column names for guild_config table (whitelist to prevent SQL injection)
+ * Nomi colonna validi per la tabella guild_config (whitelist anti SQL injection).
+ * @constant {Set<string>}
  */
 const GUILD_CONFIG_COLUMNS = new Set([
     // Staff Coordination
@@ -73,7 +86,8 @@ const GUILD_CONFIG_COLUMNS = new Set([
 ]);
 
 /**
- * Default config values for new guilds (all disabled)
+ * Valori di default per nuovi gruppi (tutto disabilitato).
+ * @constant {Object}
  */
 const DEFAULT_CONFIG = {
     edit_monitor_enabled: false,
@@ -96,15 +110,17 @@ const DEFAULT_CONFIG = {
 };
 
 /**
- * Get guild config - ALWAYS reads from database (no cache)
- * @param {number|string} guildId - Guild ID
- * @returns {Promise<object>} Config object
+ * Ottiene la configurazione di un gruppo.
+ * Legge SEMPRE dal database (nessuna cache).
+ *
+ * @param {number|string} guildId - ID del gruppo
+ * @returns {Promise<Object>} Oggetto configurazione
  */
 async function getGuildConfig(guildId) {
     try {
         let config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
         if (!config) {
-            // Create new config if doesn't exist
+            // Crea nuova config se non esiste
             await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
             config = await queryOne('SELECT * FROM guild_config WHERE guild_id = $1', [guildId]);
         }
@@ -116,12 +132,15 @@ async function getGuildConfig(guildId) {
 }
 
 /**
- * Update guild config (with SQL injection protection)
- * @param {number} guildId - Guild ID
- * @param {object} updates - Object with column:value pairs to update
+ * Aggiorna la configurazione di un gruppo.
+ * Include protezione contro SQL injection tramite whitelist colonne.
+ *
+ * @param {number} guildId - ID del gruppo
+ * @param {Object} updates - Oggetto con coppie colonna:valore da aggiornare
+ * @returns {Promise<void>}
  */
 async function updateGuildConfig(guildId, updates) {
-    // Filter only valid column names (SQL injection protection)
+    // Filtra solo nomi colonna validi (protezione SQL injection)
     const validKeys = Object.keys(updates).filter(k => GUILD_CONFIG_COLUMNS.has(k));
 
     if (validKeys.length === 0) {
@@ -129,16 +148,16 @@ async function updateGuildConfig(guildId, updates) {
         return;
     }
 
-    // Log if some keys were filtered out
+    // Log se alcune chiavi sono state filtrate
     const invalidKeys = Object.keys(updates).filter(k => !GUILD_CONFIG_COLUMNS.has(k));
     if (invalidKeys.length > 0) {
         logger.warn(`[database] updateGuildConfig ignored invalid columns: ${invalidKeys.join(', ')}`);
     }
 
-    // Ensure guild exists first
+    // Assicura che il gruppo esista
     await query('INSERT INTO guild_config (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', [guildId]);
 
-    // Boolean column names (need 0/1 -> true/false conversion)
+    // Colonne booleane (necessitano conversione 0/1 -> true/false)
     const BOOLEAN_COLUMNS = new Set([
         'edit_monitor_enabled',
         'keyword_enabled',
@@ -165,15 +184,15 @@ async function updateGuildConfig(guildId, updates) {
         'mention_filter_notify'
     ]);
 
-    // Build parameterized query
+    // Costruisce query parametrizzata
     const setClauses = validKeys.map((k, i) => `${k} = $${i + 1}`);
     const values = validKeys.map(k => {
         let val = updates[k];
-        // Convert 0/1 to boolean for BOOLEAN columns
+        // Converti 0/1 a boolean per colonne BOOLEAN
         if (BOOLEAN_COLUMNS.has(k)) {
             val = val === 1 || val === true || val === '1' || val === 'true';
         }
-        // Convert arrays/objects to JSON for JSONB columns
+        // Converti array/oggetti a JSON per colonne JSONB
         if (typeof val === 'object' && val !== null) {
             return JSON.stringify(val);
         }
@@ -192,12 +211,16 @@ async function updateGuildConfig(guildId, updates) {
 }
 
 /**
- * Ensure guild exists and update name
- * @param {object} chat - Telegram chat object
+ * Assicura che un gruppo esista e aggiorna il nome.
+ *
+ * @param {Object} chat - Oggetto chat Telegram
+ * @param {number} chat.id - ID chat
+ * @param {string} chat.title - Titolo chat
+ * @returns {Promise<boolean>} True se è stato appena creato
  */
 async function upsertGuild(chat) {
     const { id, title } = chat;
-    if (!title) return false; // Should have title if group/supergroup
+    if (!title) return false; // Deve avere un titolo se è gruppo/supergruppo
 
     const result = await queryOne(
         `
@@ -210,12 +233,14 @@ async function upsertGuild(chat) {
         [id, title]
     );
 
-    // If created_at equals updated_at, it means it was just inserted
-    // (since update would change updated_at to now, while created_at remains old)
+    // Se created_at == updated_at, significa che è stato appena inserito
     return result && result.created_at.getTime() === result.updated_at.getTime();
 }
 
-// Alias for backwards compatibility (both names now point to same function)
+/**
+ * Alias per retrocompatibilità.
+ * @see getGuildConfig
+ */
 const fetchGuildConfig = getGuildConfig;
 
 module.exports = {

@@ -1,8 +1,35 @@
+/**
+ * @fileoverview Interfaccia utente per la configurazione del modulo Media Filter
+ * @module features/media-filter/ui
+ *
+ * @description
+ * Gestisce la generazione delle interfacce inline per la configurazione
+ * del filtro media NSFW. Include:
+ *
+ * - Menu principale con stato, azione e toggle tipi media
+ * - Sottomenu categorie con tutte le categorie bloccabili
+ * - Gestione pulsanti dinamici in base allo stato
+ *
+ * @requires ../../utils/error-handlers - Per safeEdit
+ * @requires ../../i18n - Per le traduzioni
+ * @requires ./logic - Per le categorie NSFW
+ */
+
 const { safeEdit } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 const i18n = require('../../i18n');
 const { NSFW_CATEGORIES, getDefaultBlockedCategories } = require('./logic');
 
+/**
+ * Mostra l'interfaccia principale di configurazione del modulo Media Filter.
+ * Visualizza stato, azione corrente, toggle per tipi media e accesso alle categorie.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY della richiesta
+ * @param {Object} db - Istanza del database
+ * @param {boolean} [isEdit=false] - Se true, modifica il messaggio esistente
+ * @param {boolean} [fromSettings=false] - Se true, mostra pulsante "Indietro" verso settings
+ * @returns {Promise<void>}
+ */
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
@@ -16,16 +43,16 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         const config = await db.fetchGuildConfig(guildId);
         const enabled = config.media_enabled ? t('common.on') : t('common.off');
 
-        // Only DELETE or REPORT - no BAN
+        // Solo DELETE o REPORT - niente BAN
         const action = config.media_action === 'report_only' ? t('common.actions.report') : t('common.actions.delete');
 
-        // Toggles
+        // Toggle per tipi media
         const p = config.media_check_photos ? '✅' : '❌';
         const v = config.media_check_videos ? '✅' : '❌';
         const g = config.media_check_gifs ? '✅' : '❌';
         const s = config.media_check_stickers ? '✅' : '❌';
 
-        // Count blocked categories
+        // Conta categorie bloccate
         let blockedCategories = config.media_blocked_categories;
         if (!blockedCategories || !Array.isArray(blockedCategories)) {
             try {
@@ -45,7 +72,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             if (typeof config.log_events === 'string') {
                 try {
                     logEvents = JSON.parse(config.log_events);
-                } catch (e) {}
+                } catch (e) { }
             } else if (typeof config.log_events === 'object') {
                 logEvents = config.log_events;
             }
@@ -54,13 +81,13 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
 
         let text = `${t('media.title')}\n\n` + `${t('media.description')}\n\n` + `${t('media.status')}: ${enabled}`;
 
-        // Show details only when enabled
+        // Mostra dettagli solo quando abilitato
         if (config.media_enabled) {
             text += `\n${t('media.action')}: ${action}`;
             text += `\n${t('media.check_types')}: 📷${p} 📹${v} 🎬${g} 🪙${s}`;
             text += `\n🚫 ${t('media.blocked_categories')}: ${blockedCount}`;
 
-            // Add warning if action is report_only and no staff group
+            // Avviso se action è report_only ma non c'è gruppo staff
             if (config.media_action === 'report_only' && !config.staff_group_id) {
                 text += `\n${t('common.warnings.no_staff_group')}`;
             }
@@ -70,11 +97,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
             ? { text: t('common.back'), callback_data: 'settings_main' }
             : { text: t('common.close'), callback_data: 'nsf_close' };
 
-        // Build keyboard dynamically
+        // Costruisci tastiera dinamicamente
         const rows = [];
         rows.push([{ text: `${t('media.buttons.monitor')}: ${enabled}`, callback_data: 'nsf_toggle' }]);
 
-        // Show options only when enabled
+        // Mostra opzioni solo quando abilitato
         if (config.media_enabled) {
             rows.push([{ text: `${t('media.buttons.action')}: ${action}`, callback_data: 'nsf_act' }]);
             rows.push([
@@ -102,12 +129,23 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         logger.error(`[media-monitor] sendConfigUI error: ${e.message}`);
         try {
             await ctx.answerCallbackQuery(`Error: ${e.message.substring(0, 50)}`);
-        } catch (e2) {}
+        } catch (e2) { }
     }
 }
 
 /**
- * Send the categories configuration submenu
+ * Mostra il sottomenu di configurazione delle categorie NSFW.
+ * Permette di abilitare/disabilitare le singole categorie di contenuti bloccati.
+ *
+ * Ogni categoria mostra:
+ * - 🔒 se sempre bloccata (es. minors)
+ * - ✅ se attualmente bloccata
+ * - Nessuna icona se consentita
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY della richiesta
+ * @param {Object} db - Istanza del database
+ * @param {boolean} [fromSettings=false] - Se true, il pulsante "Indietro" torna a settings
+ * @returns {Promise<void>}
  */
 async function sendCategoriesUI(ctx, db, fromSettings = false) {
     const guildId = ctx.chat.id;
@@ -116,7 +154,7 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
 
     const config = await db.fetchGuildConfig(guildId);
 
-    // Get blocked categories
+    // Recupera categorie bloccate
     let blockedCategories = config.media_blocked_categories;
     if (!blockedCategories || !Array.isArray(blockedCategories)) {
         try {
@@ -127,14 +165,14 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
         }
     }
 
-    // Build text
+    // Costruisci testo
     let text = `${t('media.categories_ui.title')}\n\n`;
     text += `${t('media.categories_ui.subtitle')}\n\n`;
     text += `${t('media.categories_ui.legend_title')}\n`;
     text += `${t('media.categories_ui.legend_blocked')}\n`;
     text += `${t('media.categories_ui.legend_always')}\n`;
 
-    // Build keyboard - one row per category
+    // Costruisci tastiera - una riga per categoria
     const keyboard = { inline_keyboard: [] };
 
     for (const [catId, catInfo] of Object.entries(NSFW_CATEGORIES)) {
@@ -144,7 +182,7 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
         const isAlwaysBlocked = catInfo.alwaysBlocked === true;
         const canToggle = catInfo.blockable !== false && !isAlwaysBlocked;
 
-        // Get localized name
+        // Nome localizzato della categoria
         const catName = t(`media.categories.${catId}.name`);
 
         let statusIcon;
@@ -165,7 +203,7 @@ async function sendCategoriesUI(ctx, db, fromSettings = false) {
         }
     }
 
-    // Back button
+    // Pulsante indietro
     keyboard.inline_keyboard.push([
         { text: t('media.categories_ui.back'), callback_data: fromSettings ? 'nsf_back_settings' : 'nsf_back' }
     ]);

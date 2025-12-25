@@ -1,7 +1,17 @@
 /**
- * Check if the user is an administrator
- * @param {object} ctx - Telegram context
- * @returns {Promise<boolean>}
+ * @fileoverview Utility e costanti per il modulo Action Log
+ * @module features/action-log/utils
+ *
+ * @description
+ * Contiene mappe di riferimento per i nomi dei moduli e gli emoji
+ * associati a ciascun tipo di evento di log.
+ */
+
+/**
+ * Verifica se l'utente è un amministratore del gruppo.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<boolean>} True se l'utente è admin o creator
  */
 async function isAdmin(ctx) {
     try {
@@ -12,7 +22,10 @@ async function isAdmin(ctx) {
     }
 }
 
-// Module name map
+/**
+ * Mappa dei nomi leggibili dei moduli per ogni tipo di evento.
+ * @constant {Object.<string, string>}
+ */
 const MODULE_MAP = {
     lang_delete: 'Language Monitor',
     lang_ban: 'Language Monitor',
@@ -27,7 +40,6 @@ const MODULE_MAP = {
     staff_delete: 'Staff Coordination',
     staff_dismiss: 'Staff Coordination',
     vote_ban: 'Vote Ban',
-    vote_ban: 'Vote Ban',
     gban_ban: 'Global Ban',
     mention_delete: 'Mention Filter',
     mention_ban: 'Mention Filter',
@@ -36,7 +48,10 @@ const MODULE_MAP = {
     modal_report: 'Pattern Monitor'
 };
 
-// Emoji map
+/**
+ * Mappa degli emoji per ogni tipo di evento.
+ * @constant {Object.<string, string>}
+ */
 const EMOJI_MAP = {
     lang_delete: '🌐',
     lang_ban: '🌐',
@@ -50,7 +65,6 @@ const EMOJI_MAP = {
     staff_ban: '👮',
     staff_delete: '👮',
     staff_dismiss: '👮',
-    vote_ban: '⚖️',
     vote_ban: '⚖️',
     gban_ban: '🌍',
     mention_delete: '🗑️',

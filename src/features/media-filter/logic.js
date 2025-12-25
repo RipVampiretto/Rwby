@@ -1,3 +1,31 @@
+/**
+ * @fileoverview Logica core per l'analisi NSFW di contenuti multimediali
+ * @module features/media-filter/logic
+ *
+ * @description
+ * Contiene tutta la logica di elaborazione per il rilevamento di contenuti NSFW.
+ * Utilizza un modello Vision LLM locale (LM Studio) per analizzare immagini
+ * e frame estratti dai video.
+ *
+ * Funzionalità principali:
+ * - Download file da Telegram (Cloud API o Local API Server)
+ * - Analisi immagini via Vision LLM
+ * - Estrazione e analisi frame da video/GIF con FFmpeg
+ * - Classificazione in categorie NSFW configurabili
+ * - Salvataggio conversazioni in formato LM Studio (opzionale, per debug)
+ *
+ * Limiti di sicurezza:
+ * - File max: 20MB (Cloud API) o 2000MB (Local API)
+ * - Video max: 5 minuti
+ * - Frame estratti: 10-50 in base alla durata
+ *
+ * @requires fs - File system per gestione file temporanei
+ * @requires path - Gestione percorsi file
+ * @requires fluent-ffmpeg - Estrazione frame da video
+ * @requires ./actions - Esecuzione azioni di moderazione
+ * @requires ../../config/env - Configurazione LM Studio
+ */
+
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -12,24 +40,53 @@ const logger = require('../../middlewares/logger');
 const actions = require('./actions');
 const envConfig = require('../../config/env');
 
+/**
+ * Directory temporanea per i file scaricati e i frame estratti.
+ * Creata automaticamente se non esiste.
+ * @constant {string}
+ */
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'nsfw');
 
-// LM Studio conversation saving (optional - for debugging)
+/**
+ * Directory per il salvataggio delle conversazioni in formato LM Studio.
+ * Opzionale, usato solo per debug. Se null, il salvataggio è disabilitato.
+ * @constant {string|null}
+ */
 const LM_STUDIO_CONVERSATIONS_DIR = process.env.LM_STUDIO_CONVERSATIONS_DIR || null;
+
+/**
+ * Directory per i file utente in formato LM Studio.
+ * Opzionale, usato solo per debug. Se null, il salvataggio è disabilitato.
+ * @constant {string|null}
+ */
 const LM_STUDIO_USER_FILES_DIR = process.env.LM_STUDIO_USER_FILES_DIR || null;
 
+// Crea la directory temporanea se non esiste
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
 /**
- * Save conversation to LM Studio format
- * @param {string} chatId - Telegram chat ID
- * @param {string} systemPrompt - System prompt used
- * @param {string} userMessage - User message
- * @param {string} base64Image - Base64 encoded image
- * @param {string} responseText - LLM response text
- * @param {object} stats - Response statistics
+ * Salva una conversazione nel formato LM Studio per debugging.
+ * Crea file di conversazione e metadati compatibili con l'interfaccia LM Studio.
+ *
+ * Questa funzione è opzionale e viene eseguita solo se le variabili d'ambiente
+ * LM_STUDIO_CONVERSATIONS_DIR e LM_STUDIO_USER_FILES_DIR sono configurate.
+ *
+ * @param {string} chatId - ID della chat Telegram
+ * @param {string} systemPrompt - System prompt utilizzato per l'analisi
+ * @param {string} userMessage - Messaggio utente inviato al modello
+ * @param {string} base64Image - Immagine codificata in Base64
+ * @param {string} responseText - Risposta testuale del modello LLM
+ * @param {Object} stats - Statistiche della risposta
+ * @param {number} [stats.tokensPerSecond] - Token generati al secondo
+ * @param {number} [stats.timeToFirstTokenSec] - Tempo al primo token
+ * @param {number} [stats.totalTimeSec] - Tempo totale di generazione
+ * @param {number} [stats.promptTokensCount] - Numero di token nel prompt
+ * @param {number} [stats.predictedTokensCount] - Numero di token generati
+ * @param {number} [stats.totalTokensCount] - Numero totale di token
+ * @returns {void}
+ * @private
  */
 function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image, responseText, stats) {
     // Skip if LM Studio conversation saving is not configured
@@ -87,7 +144,7 @@ function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image
             if (parsed.primary_category) {
                 conversationName = `NSFW: ${parsed.primary_category}`;
             }
-        } catch (e) {}
+        } catch (e) { }
 
         const conversation = {
             name: conversationName,
@@ -189,6 +246,25 @@ function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image
     }
 }
 
+/**
+ * Elabora un messaggio contenente media per rilevare contenuti NSFW.
+ * Funzione principale che orchestra tutto il flusso di analisi.
+ *
+ * Flusso di elaborazione:
+ * 1. Determina il tipo di media (foto/video/gif/sticker)
+ * 2. Verifica i limiti di dimensione file e durata video
+ * 3. Scarica il file da Telegram (Cloud API o Local API)
+ * 4. Analizza il contenuto (immagine singola o frame da video)
+ * 5. Esegue l'azione configurata se NSFW è rilevato
+ * 6. Pulisce i file temporanei
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY con il messaggio media
+ * @param {Object} config - Configurazione del gruppo
+ * @param {boolean} config.media_enabled - Se il modulo è abilitato
+ * @param {string} config.media_action - Azione: 'delete' | 'report_only'
+ * @param {string[]} config.media_blocked_categories - Categorie bloccate
+ * @returns {Promise<void>}
+ */
 async function processMedia(ctx, config) {
     const chatId = ctx.chat.id;
     const userId = ctx.from?.id;
@@ -381,10 +457,20 @@ async function processMedia(ctx, config) {
         logger.debug(`[media-filter] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 
+/**
+ * Scarica un file da un URL e lo salva localmente.
+ * Supporta sia HTTP che HTTPS.
+ *
+ * @param {string} url - URL del file da scaricare
+ * @param {string} dest - Percorso locale di destinazione
+ * @returns {Promise<void>}
+ * @throws {Error} Se il download fallisce
+ * @private
+ */
 async function downloadFile(url, dest) {
     logger.debug(`[media-filter] ⬇️ downloadFile: Starting download to ${dest}`);
     const client = url.startsWith('http:') ? http : https;
@@ -402,12 +488,28 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[media-filter] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => {});
+                fs.unlink(dest, () => { });
                 reject(err);
             });
     });
 }
 
+/**
+ * Analizza una singola immagine per contenuti NSFW.
+ * Invia l'immagine al Vision LLM e valuta la risposta contro le categorie bloccate.
+ *
+ * Controlli effettuati:
+ * 1. Priorità assoluta per contenuti "minors" (CSAM)
+ * 2. Verifica se la categoria primaria è nella lista bloccata
+ *
+ * @param {string} imagePath - Percorso locale del file immagine
+ * @param {Object} config - Configurazione del gruppo
+ * @param {string[]} reasons - Array dove aggiungere i motivi di violazione (mutato)
+ * @param {string|null} [caption=null] - Caption del messaggio originale
+ * @param {string|null} [chatId=null] - ID della chat (per logging LM Studio)
+ * @returns {Promise<boolean>} True se l'immagine è NSFW, false altrimenti
+ * @private
+ */
 async function checkImage(imagePath, config, reasons, caption = null, chatId = null) {
     logger.debug(`[media-filter] 🖼️ checkImage: Reading file ${imagePath}`);
     const buffer = fs.readFileSync(imagePath);
@@ -467,6 +569,25 @@ async function checkImage(imagePath, config, reasons, caption = null, chatId = n
     return false;
 }
 
+/**
+ * Analizza un video/GIF per contenuti NSFW estraendo e analizzando frame.
+ *
+ * Strategia di estrazione frame:
+ * - Video brevi (<5s): ~2 frame/sec
+ * - Video medi (5-60s): ~0.5 frame/sec
+ * - Video lunghi (60-300s): ~0.2 frame/sec
+ * - Min 10, Max 50 frame totali
+ *
+ * L'analisi si ferma al primo frame che risulta NSFW.
+ *
+ * @param {string} videoPath - Percorso locale del file video
+ * @param {Object} config - Configurazione del gruppo
+ * @param {string[]} reasons - Array dove aggiungere i motivi di violazione (mutato)
+ * @param {string|null} [caption=null] - Caption del messaggio originale
+ * @param {string|null} [chatId=null] - ID della chat (per logging LM Studio)
+ * @returns {Promise<boolean>} True se il video contiene NSFW, false altrimenti
+ * @private
+ */
 async function checkVideo(videoPath, config, reasons, caption = null, chatId = null) {
     logger.info(`[media-filter] 🎬 checkVideo: Analyzing ${videoPath}`);
 
@@ -574,11 +695,18 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 }
 
+/**
+ * Ottiene la durata di un video usando ffprobe.
+ *
+ * @param {string} filePath - Percorso del file video
+ * @returns {Promise<number>} Durata in secondi, 0 se errore
+ * @private
+ */
 function getVideoDuration(filePath) {
     return new Promise(resolve => {
         logger.debug(`[media-filter] 🎬 ffprobe: Getting duration for ${filePath}`);
@@ -596,6 +724,17 @@ function getVideoDuration(filePath) {
     });
 }
 
+/**
+ * Estrae un singolo frame da un video a un timestamp specifico.
+ * Utilizza ffmpeg per l'estrazione.
+ *
+ * @param {string} videoPath - Percorso del file video sorgente
+ * @param {number} timestamp - Timestamp in secondi da cui estrarre
+ * @param {string} outputPath - Percorso di output per l'immagine
+ * @returns {Promise<void>}
+ * @throws {Error} Se l'estrazione fallisce
+ * @private
+ */
 function extractFrame(videoPath, timestamp, outputPath) {
     return new Promise((resolve, reject) => {
         logger.debug(`[media-filter] 🎬 ffmpeg: Extracting frame at ${timestamp}s from ${videoPath}`);
@@ -616,7 +755,19 @@ function extractFrame(videoPath, timestamp, outputPath) {
 }
 
 /**
- * All available media analysis categories with descriptions
+ * Definizione di tutte le categorie di analisi NSFW disponibili.
+ * Ogni categoria ha un nome, descrizione e flag che indica se può essere bloccata.
+ *
+ * @typedef {Object} NSFWCategory
+ * @property {string} name - Nome visualizzato della categoria
+ * @property {string} description - Descrizione del tipo di contenuto
+ * @property {boolean} blockable - Se la categoria può essere abilitata/disabilitata
+ * @property {boolean} [alwaysBlocked] - Se true, la categoria è sempre bloccata (es. minors)
+ */
+
+/**
+ * Mappa di tutte le categorie NSFW supportate dal sistema.
+ * @constant {Object.<string, NSFWCategory>}
  */
 const NSFW_CATEGORIES = {
     safe: { name: 'Safe', description: 'Normal, appropriate content', blockable: false },
@@ -649,12 +800,31 @@ const NSFW_CATEGORIES = {
 };
 
 /**
- * Get default blocked categories
+ * Restituisce le categorie bloccate di default.
+ * Include tutte le categorie ad alto rischio.
+ *
+ * @returns {string[]} Array di ID delle categorie bloccate di default
  */
 function getDefaultBlockedCategories() {
     return ['real_nudity', 'real_sex', 'hentai', 'real_gore', 'drawn_gore', 'minors', 'scam_visual'];
 }
 
+/**
+ * Chiama il Vision LLM (LM Studio) per analizzare un'immagine.
+ * Invia l'immagine in Base64 e riceve una classificazione JSON.
+ *
+ * La risposta include:
+ * - scores: punteggi per ogni categoria (0.0 - 1.0)
+ * - primary_category: categoria principale rilevata
+ * - uncertainty: livello di incertezza (low/medium/high)
+ * - reason: spiegazione testuale
+ *
+ * @param {string} base64Image - Immagine codificata in Base64
+ * @param {string|null} [caption=null] - Caption opzionale del messaggio
+ * @param {string|null} [chatId=null] - ID della chat per logging
+ * @returns {Promise<LLMAnalysisResult>} Risultato dell'analisi
+ * @private
+ */
 async function callVisionLLM(base64Image, caption = null, chatId = null) {
     const url = envConfig.LM_STUDIO.url;
     logger.debug(`[media-filter] 🤖 callVisionLLM: Connecting to ${url}`);
@@ -965,6 +1135,13 @@ FINAL NOTES
     }
 }
 
+/**
+ * Testa la connessione al server LM Studio.
+ * Risponde all'utente con un messaggio di successo o errore.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY per la risposta
+ * @returns {Promise<void>}
+ */
 async function testConnection(ctx) {
     try {
         const url = envConfig.LM_STUDIO.url;
@@ -979,10 +1156,19 @@ async function testConnection(ctx) {
 }
 
 /**
- * Analyze media WITHOUT executing any action (for Smart Report System)
- * @param {object} ctx - Telegram context with message containing media
- * @param {object} config - Guild config
- * @returns {Promise<{isNsfw: boolean, category: string, reason: string}>}
+ * Analizza un media SENZA eseguire azioni di moderazione.
+ * Utilizzato dal sistema di batching album per analizzare
+ * singoli elementi prima di decidere l'azione complessiva.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY con messaggio media
+ * @param {Object} config - Configurazione del gruppo
+ * @returns {Promise<MediaAnalysisResult>} Risultato dell'analisi
+ *
+ * @typedef {Object} MediaAnalysisResult
+ * @property {boolean} isNsfw - Se il contenuto è NSFW
+ * @property {string} [type] - Tipo di media (photo/video/gif)
+ * @property {string} [category] - Categoria rilevata
+ * @property {string|null} [reason] - Motivo della violazione
  */
 async function analyzeMediaOnly(ctx, config) {
     const message = ctx.message;
@@ -1075,7 +1261,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 

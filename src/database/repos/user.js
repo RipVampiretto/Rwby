@@ -1,17 +1,35 @@
+/**
+ * @fileoverview Repository per la gestione degli utenti
+ * @module database/repos/user
+ *
+ * @description
+ * Fornisce funzioni per la gestione degli utenti nel database.
+ * Gestisce cache utenti, ban globali e preferenze lingua.
+ */
+
 const { queryOne, query } = require('../connection');
 
 /**
- * Get user from cache
- * @param {number} userId - The user ID to retrieve
- * @returns {Promise<object|null>}
+ * Ottiene un utente dalla cache.
+ *
+ * @param {number} userId - ID dell'utente
+ * @returns {Promise<Object|null>} Utente o null se non trovato
  */
 async function getUser(userId) {
     return await queryOne('SELECT * FROM users WHERE user_id = $1', [userId]);
 }
 
 /**
- * Update or insert user info (called on every message to keep cache fresh)
- * @param {object} userInfo - User information object
+ * Aggiorna o inserisce le informazioni di un utente.
+ * Chiamata ad ogni messaggio per mantenere la cache aggiornata.
+ *
+ * @param {Object} userInfo - Informazioni utente da Telegram
+ * @param {number} userInfo.id - ID utente
+ * @param {string} [userInfo.username] - Username
+ * @param {string} [userInfo.first_name] - Nome
+ * @param {string} [userInfo.last_name] - Cognome
+ * @param {string} [userInfo.language_code] - Codice lingua
+ * @returns {Promise<void>}
  */
 async function upsertUser(userInfo) {
     const { id, username, first_name, last_name, language_code } = userInfo;
@@ -31,17 +49,20 @@ async function upsertUser(userInfo) {
 }
 
 /**
- * Mark user as globally banned
- * @param {number} userId - The user ID
- * @param {boolean} isBanned - Ban status
+ * Imposta lo stato di ban globale di un utente.
+ *
+ * @param {number} userId - ID utente
+ * @param {boolean} isBanned - Stato ban
+ * @returns {Promise<void>}
  */
 async function setUserGlobalBan(userId, isBanned) {
     await query('UPDATE users SET is_banned_global = $1 WHERE user_id = $2', [isBanned, userId]);
 }
 
 /**
- * Get all globally banned user IDs
- * @returns {Promise<Array<number>>} Array of user IDs
+ * Ottiene tutti gli ID degli utenti bannati globalmente.
+ *
+ * @returns {Promise<number[]>} Array di ID utenti
  */
 async function getGloballyBannedUsers() {
     const result = await query('SELECT user_id FROM users WHERE is_banned_global = TRUE');
@@ -49,9 +70,10 @@ async function getGloballyBannedUsers() {
 }
 
 /**
- * Check if a user is globally banned
- * @param {number} userId - The user ID
- * @returns {Promise<boolean>}
+ * Verifica se un utente è bannato globalmente.
+ *
+ * @param {number} userId - ID utente
+ * @returns {Promise<boolean>} True se bannato
  */
 async function isUserGloballyBanned(userId) {
     const user = await queryOne('SELECT is_banned_global FROM users WHERE user_id = $1', [userId]);
@@ -59,9 +81,10 @@ async function isUserGloballyBanned(userId) {
 }
 
 /**
- * Get user's preferred language
- * @param {number} userId - The user ID
- * @returns {Promise<string|null>}
+ * Ottiene la lingua preferita di un utente.
+ *
+ * @param {number} userId - ID utente
+ * @returns {Promise<string|null>} Codice lingua o null
  */
 async function getUserLanguage(userId) {
     const user = await queryOne('SELECT preferred_language FROM users WHERE user_id = $1', [userId]);
@@ -69,9 +92,11 @@ async function getUserLanguage(userId) {
 }
 
 /**
- * Set user's preferred language
- * @param {number} userId - The user ID
- * @param {string} language - Language code (e.g., 'en', 'it')
+ * Imposta la lingua preferita di un utente.
+ *
+ * @param {number} userId - ID utente
+ * @param {string} language - Codice lingua (es. 'en', 'it')
+ * @returns {Promise<void>}
  */
 async function setUserLanguage(userId, language) {
     await query(

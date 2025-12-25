@@ -1,6 +1,25 @@
+/**
+ * @fileoverview Interfaccia utente per il modulo Action Log
+ * @module features/action-log/ui
+ *
+ * @description
+ * Genera l'interfaccia inline per la configurazione del sistema di logging.
+ * Mostra una matrice di toggle per abilitare/disabilitare singoli tipi di evento.
+ */
+
 const logger = require('../../middlewares/logger');
 const i18n = require('../../i18n');
 
+/**
+ * Mostra l'interfaccia di configurazione del sistema di log.
+ * Visualizza una matrice con tutti i moduli e le relative azioni loggabili.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} db - Istanza del database
+ * @param {boolean} [isEdit=false] - Se modificare il messaggio esistente
+ * @param {boolean} [fromSettings=false] - Se chiamato dal menu settings
+ * @returns {Promise<void>}
+ */
 async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
@@ -11,19 +30,25 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         `[action-log] sendConfigUI - log_events raw: ${JSON.stringify(config.log_events)}, type: ${typeof config.log_events}`
     );
 
+    // Parse degli eventi abilitati
     let logEvents = {};
     if (config.log_events) {
-        // Handle both string (legacy) and object (PostgreSQL JSONB) formats
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
-        if (Array.isArray(logEvents)) logEvents = {}; // Reset old array format
+        // Reset formato legacy (array)
+        if (Array.isArray(logEvents)) logEvents = {};
     }
 
+    /**
+     * Helper per generare l'icona di stato
+     * @param {string} key - Chiave dell'evento
+     * @returns {string} ✅ o ❌
+     */
     const has = key => (logEvents[key] ? '✅' : '❌');
 
     const channelInfo = config.log_channel_id ? t('logger.channel_set') : t('logger.channel_not_set');
@@ -37,11 +62,11 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         ? { text: t('common.back'), callback_data: 'settings_main' }
         : { text: t('common.close'), callback_data: 'log_close' };
 
-    // Matrix layout: each row = module with delete/ban toggles
+    // Layout a matrice: ogni riga = modulo con toggle delete/ban
     const keyboard = {
         inline_keyboard: [
             [{ text: t('logger.set_channel'), callback_data: 'log_set_channel' }],
-            // Header row
+            // Riga intestazione
             [
                 { text: t('logger.header_module'), callback_data: 'log_noop' },
                 { text: t('logger.header_delete'), callback_data: 'log_noop' },
@@ -109,7 +134,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         try {
             await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
         } catch (e) {
-            // Ignore "message is not modified" - it's normal when content hasn't changed
+            // Ignora "message is not modified" - normale quando il contenuto non cambia
             if (!e.message.includes('message is not modified')) {
                 logger.error(`[action-log] sendConfigUI error: ${e.message}`);
             }

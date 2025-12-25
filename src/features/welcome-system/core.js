@@ -1,3 +1,36 @@
+/**
+ * @fileoverview Logica core del sistema Welcome - Captcha e gestione membri
+ * @module features/welcome-system/core
+ *
+ * @description
+ * Gestisce tutto il flusso di verifica dei nuovi membri:
+ *
+ * **Flusso standard:**
+ * 1. Nuovo membro entra nel gruppo
+ * 2. Se captcha abilitato → restringe l'utente e mostra challenge
+ * 3. L'utente risolve il captcha (varie modalità)
+ * 4. Se regolamento abilitato → mostra pulsante accettazione
+ * 5. Utente viene sbloccato e riceve messaggio di benvenuto
+ *
+ * **Modalità Captcha disponibili:**
+ * - `button` - Semplice click su pulsante
+ * - `math` - Risolvere operazione matematica (+, -, *)
+ * - `emoji` - Selezionare emoji corrispondente al nome
+ * - `color` - Selezionare colore corrispondente
+ * - `reverse` - Trovare parola invertita
+ * - `logic` - Completare sequenza logica/numerica
+ * - `char` - Contare occorrenze di una lettera
+ *
+ * **Timeout:**
+ * Se l'utente non completa il captcha entro il tempo limite,
+ * viene kickato (ban + unban immediato).
+ *
+ * @requires grammy
+ * @requires ../../database/repos/guild
+ * @requires ./utils
+ * @requires ../super-admin
+ */
+
 const { getGuildConfig } = require('../../database/repos/guild');
 const logger = require('../../middlewares/logger');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
@@ -5,7 +38,13 @@ const { InlineKeyboard } = require('grammy');
 const i18n = require('../../i18n');
 const superAdmin = require('../super-admin');
 
-// Track pending captchas: userId:chatId -> { timeoutHandle, messageId }
+/**
+ * Mappa dei captcha in attesa.
+ * Chiave: `userId:chatId`
+ * Valore: `{ timeoutHandle, messageId }`
+ * @type {Map<string, {timeoutHandle: NodeJS.Timeout, messageId: number}>}
+ * @private
+ */
 const PENDING_CAPTCHAS = new Map();
 
 // --- DATA LISTS ---
@@ -108,19 +147,41 @@ const WORD_LIST = [
     'ARIA'
 ];
 
-// --- HELPERS ---
+// --- HELPER FUNCTIONS ---
+
+/**
+ * Mescola un array in ordine casuale (Fisher-Yates semplificato).
+ * @param {Array} array - Array da mescolare
+ * @returns {Array} Array mescolato
+ * @private
+ */
 function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
 }
 
+/**
+ * Genera un intero casuale in un range inclusivo.
+ * @param {number} min - Valore minimo
+ * @param {number} max - Valore massimo
+ * @returns {number} Intero casuale tra min e max
+ * @private
+ */
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 /**
- * Handle new chat members
+ * Invia un evento di log al canale configurato.
+ * Supporta logging granulare per tipo di evento.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {'JOIN'|'SUCCESS'|'TIMEOUT'|'FAIL'} type - Tipo di evento
+ * @param {Object|null} details - Dettagli aggiuntivi
+ * @param {Object} config - Configurazione del gruppo
+ * @param {Object|null} [userOverride=null] - Utente da usare invece di ctx.from
+ * @returns {Promise<void>}
+ * @private
  */
-// Helper for Logging (uses granular log_events flags)
 async function logWelcomeEvent(ctx, type, details, config, userOverride = null) {
     const logChannelId = config.log_channel_id;
     if (!logChannelId) return;
@@ -131,7 +192,7 @@ async function logWelcomeEvent(ctx, type, details, config, userOverride = null) 
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -187,7 +248,11 @@ async function logWelcomeEvent(ctx, type, details, config, userOverride = null) 
 }
 
 /**
- * Handle new chat members
+ * Gestisce l'ingresso di nuovi membri nel gruppo.
+ * Determina se attivare il captcha o inviare direttamente il benvenuto.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function handleNewMember(ctx) {
     let newMembers = [];
@@ -240,6 +305,16 @@ async function handleNewMember(ctx) {
     }
 }
 
+/**
+ * Elabora l'ingresso di un singolo utente.
+ * Restringe l'utente, genera il captcha appropriato e imposta il timeout.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} user - Oggetto utente Telegram
+ * @param {Object} config - Configurazione del gruppo
+ * @returns {Promise<void>}
+ * @private
+ */
 async function processUserJoin(ctx, user, config) {
     logWelcomeEvent(ctx, 'JOIN', null, config, user);
 
@@ -414,7 +489,7 @@ async function processUserJoin(ctx, user, config) {
 
                 logger.debug(`[Welcome] User ${user.id} kicked (banned+unbanned) for timeout.`);
 
-                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => {});
+                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
 
                 // Send temporary kick notification
                 const kickText = t('welcome.captcha_messages.fail_message', {
@@ -425,7 +500,7 @@ async function processUserJoin(ctx, user, config) {
 
                 // Auto-delete kick notification
                 setTimeout(() => {
-                    ctx.api.deleteMessage(ctx.chat.id, kickMsg.message_id).catch(() => {});
+                    ctx.api.deleteMessage(ctx.chat.id, kickMsg.message_id).catch(() => { });
                 }, 10000); // 10 seconds
             } catch (e) {
                 logger.error(`[Welcome] Kick failed: ${e.message}`);
@@ -439,6 +514,16 @@ async function processUserJoin(ctx, user, config) {
     }
 }
 
+/**
+ * Genera i pulsanti per il captcha.
+ * Dispone le opzioni in una griglia 2x2 mescolata.
+ *
+ * @param {import('grammy').InlineKeyboard} keyboard - Tastiera inline grammY
+ * @param {number} userId - ID dell'utente target
+ * @param {string|number} ans - Risposta corretta
+ * @param {Array} options - Array di opzioni (4 elementi)
+ * @private
+ */
 function generateButtons(keyboard, userId, ans, options) {
     const shuffled = shuffle(options);
     shuffled.forEach((opt, i) => {
@@ -448,7 +533,16 @@ function generateButtons(keyboard, userId, ans, options) {
 }
 
 /**
- * Handle Captcha Callbacks
+ * Gestisce i callback dei captcha (risposte utente).
+ * Verifica la risposta e procede con regolamento o sblocco.
+ *
+ * Formati callback supportati:
+ * - `wc:b:USERID` - Bottone semplice
+ * - `wc:x:USERID:ANS:CLICKED` - Risposta a scelta multipla
+ * - `wc:accept_rules:USERID` - Accettazione regolamento
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function handleCaptchaCallback(ctx) {
     const data = ctx.callbackQuery.data;
@@ -523,7 +617,7 @@ async function handleCaptchaCallback(ctx) {
                 });
             } catch (e) {
                 // If edit fails, try sending new
-                await ctx.deleteMessage().catch(() => {});
+                await ctx.deleteMessage().catch(() => { });
                 await ctx.reply(text, {
                     parse_mode: 'HTML',
                     reply_markup: {
@@ -541,6 +635,15 @@ async function handleCaptchaCallback(ctx) {
     }
 }
 
+/**
+ * Completa la verifica dell'utente.
+ * Sblocca i permessi e invia il messaggio di benvenuto personalizzato.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {number} userId - ID dell'utente da sbloccare
+ * @returns {Promise<void>}
+ * @private
+ */
 async function completeVerification(ctx, userId) {
     const config = await getGuildConfig(ctx.chat.id);
     logWelcomeEvent(ctx, 'SUCCESS', null, config);
@@ -574,6 +677,17 @@ async function completeVerification(ctx, userId) {
     }
 }
 
+/**
+ * Invia il messaggio di benvenuto personalizzato.
+ * Supporta wildcards, pulsanti e auto-eliminazione.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} config - Configurazione del gruppo
+ * @param {Object|null} [userOverride=null] - Utente da usare invece di ctx.from
+ * @param {number|null} [messageToEditId=null] - ID messaggio da modificare (per transizione da captcha)
+ * @returns {Promise<void>}
+ * @private
+ */
 async function sendWelcome(ctx, config, userOverride = null, messageToEditId = null) {
     if (!config.welcome_msg_enabled) return;
     if (!config.welcome_message) return;
@@ -603,7 +717,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
                 logger.debug(`[Welcome] Edit failed: ${e.message}. Deleting and sending new.`);
-                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -625,7 +739,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
         // Auto-delete (timer is in minutes)
         if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
             setTimeout(() => {
-                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
             }, config.welcome_autodelete_timer * 60000); // minutes to ms
         }
     } catch (e) {
@@ -636,7 +750,11 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
 }
 
 /**
- * Handle member leaving - clean up pending captcha if exists
+ * Gestisce l'uscita di un membro dal gruppo.
+ * Se l'utente aveva un captcha in sospeso, lo cancella e elimina il messaggio.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
  */
 async function handleMemberLeft(ctx) {
     if (!ctx.chatMember) return;

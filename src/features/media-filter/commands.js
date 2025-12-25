@@ -1,11 +1,40 @@
+/**
+ * @fileoverview Handler comandi e callback per il modulo Media Filter
+ * @module features/media-filter/commands
+ *
+ * @description
+ * Gestisce tutti gli handler per:
+ * - Ricezione media (foto, video, GIF, sticker, documenti)
+ * - Callback delle interfacce UI (toggle, azioni, categorie)
+ *
+ * Flusso di elaborazione media:
+ * 1. Verifica che sia un gruppo (skip chat private)
+ * 2. Verifica che l'utente non sia admin
+ * 3. Verifica che il modulo sia abilitato
+ * 4. Verifica che il tipo di media sia abilitato
+ * 5. Se album → buffer per elaborazione batch
+ * 6. Se singolo → elaborazione immediata
+ *
+ * @requires ./logic - Per l'elaborazione media
+ * @requires ./ui - Per le interfacce di configurazione
+ * @requires ./album - Per la gestione album
+ */
+
 const logic = require('./logic');
 const ui = require('./ui');
 const album = require('./album');
 const { isAdmin, isFromSettingsMenu } = require('../../utils/error-handlers');
 const logger = require('../../middlewares/logger');
 
+/**
+ * Registra tutti gli handler del modulo sul bot grammY.
+ *
+ * @param {import('grammy').Bot} bot - Istanza del bot grammY
+ * @param {Object} db - Istanza del database PostgreSQL
+ * @returns {void}
+ */
 function registerCommands(bot, db) {
-    // Handler: photos, videos, animations, stickers
+    // Handler: foto, video, animazioni, sticker
     bot.on(
         ['message:photo', 'message:video', 'message:animation', 'message:document', 'message:sticker'],
         async (ctx, next) => {
@@ -15,25 +44,26 @@ function registerCommands(bot, db) {
 
             logger.debug(`[media-filter] 📥 Media received - Chat: ${chatId}, User: ${userId}, MsgId: ${msgId}`);
 
+            // Skip chat private
             if (ctx.chat.type === 'private') {
                 logger.debug(`[media-filter] ⏭️ Skipping: private chat`);
                 return next();
             }
 
-            // Skip admins
+            // Skip admin
             if (await isAdmin(ctx, 'nsfw-monitor')) {
                 logger.debug(`[media-filter] ⏭️ Skipping: user ${userId} is admin`);
                 return next();
             }
 
-            // Config check
+            // Verifica configurazione
             const config = await db.getGuildConfig(ctx.chat.id);
             if (!config.media_enabled) {
                 logger.debug(`[media-filter] ⏭️ Skipping: NSFW monitor disabled for chat ${chatId}`);
                 return next();
             }
 
-            // Check types enabled
+            // Determina tipo di media
             const isVideo =
                 ctx.message.video || (ctx.message.document && ctx.message.document.mime_type?.startsWith('video'));
             const isGif =
@@ -44,12 +74,13 @@ function registerCommands(bot, db) {
             const mediaType = isVideo ? 'VIDEO' : isGif ? 'GIF' : isPhoto ? 'PHOTO' : isSticker ? 'STICKER' : 'UNKNOWN';
             logger.info(`[media-filter] 🎬 Media type detected: ${mediaType} - Chat: ${chatId}, User: ${userId}`);
 
-            // Skip animated stickers (they're Lottie files, not images)
+            // Skip sticker animati (sono file Lottie, non analizzabili)
             if (isSticker && ctx.message.sticker.is_animated) {
                 logger.debug(`[media-filter] ⏭️ Skipping: animated sticker (not analyzable)`);
                 return next();
             }
 
+            // Verifica se il tipo di media è abilitato per l'analisi
             if (isVideo && !config.media_check_videos) {
                 logger.debug(`[media-filter] ⏭️ Skipping: video check disabled`);
                 return next();
@@ -62,7 +93,6 @@ function registerCommands(bot, db) {
                 logger.debug(`[media-filter] ⏭️ Skipping: photo check disabled`);
                 return next();
             }
-            // Stickers have their own check
             if (isSticker && !config.media_check_stickers) {
                 logger.debug(`[media-filter] ⏭️ Skipping: sticker check disabled`);
                 return next();
@@ -72,13 +102,13 @@ function registerCommands(bot, db) {
                 `[media-filter] ✅ Proceeding with analysis for ${mediaType} - Chat: ${chatId}, User: ${userId}`
             );
 
-            // Check if this is part of an album
+            // Verifica se fa parte di un album
             if (album.isAlbumItem(ctx)) {
-                // Buffer album items for batch processing
+                // Buffer elementi album per elaborazione batch
                 album.bufferAlbumItem(ctx, config);
                 logger.debug(`[media-filter] 📦 Media is part of album ${ctx.message.media_group_id}`);
             } else {
-                // Single media - process normally
+                // Media singolo - elabora normalmente (non-blocking)
                 logic
                     .processMedia(ctx, config)
                     .catch(err => logger.error(`[media-filter] ❌ Process error: ${err.message}\n${err.stack}`));
@@ -88,7 +118,7 @@ function registerCommands(bot, db) {
         }
     );
 
-    // UI Handlers
+    // Handler callback UI
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
         if (!data.startsWith('nsf_')) return next();
@@ -96,31 +126,32 @@ function registerCommands(bot, db) {
         const config = await db.getGuildConfig(ctx.chat.id);
         const fromSettings = isFromSettingsMenu(ctx);
 
+        // Chiudi menu
         if (data === 'nsf_close') return ctx.deleteMessage();
 
-        // No-op for non-clickable buttons
+        // No-op per pulsanti non cliccabili (categorie sempre bloccate)
         if (data === 'nsf_noop') {
             const i18n = require('../../i18n');
             return ctx.answerCallbackQuery(i18n.t(ctx.lang || 'en', 'nsfw.categories_ui.noop'));
         }
 
-        // Categories submenu
+        // Sottomenu categorie
         if (data === 'nsf_categories') {
             await ui.sendCategoriesUI(ctx, db, fromSettings);
             return;
         }
 
-        // Back from categories
+        // Torna dal sottomenu categorie
         if (data === 'nsf_back' || data === 'nsf_back_settings') {
             await ui.sendConfigUI(ctx, db, true, data === 'nsf_back_settings');
             return;
         }
 
-        // Toggle category
+        // Toggle singola categoria
         if (data.startsWith('nsf_cat_')) {
             const categoryId = data.replace('nsf_cat_', '');
 
-            // Get current blocked categories
+            // Recupera categorie bloccate correnti
             let blockedCategories = config.media_blocked_categories;
             if (!blockedCategories || !Array.isArray(blockedCategories)) {
                 try {
@@ -133,7 +164,7 @@ function registerCommands(bot, db) {
                 }
             }
 
-            // Toggle the category
+            // Toggle la categoria
             const index = blockedCategories.indexOf(categoryId);
             if (index === -1) {
                 blockedCategories.push(categoryId);
@@ -141,43 +172,50 @@ function registerCommands(bot, db) {
                 blockedCategories.splice(index, 1);
             }
 
-            // Save
+            // Salva
             await db.updateGuildConfig(ctx.chat.id, { media_blocked_categories: blockedCategories });
 
-            // Refresh categories UI
+            // Aggiorna UI categorie
             await ui.sendCategoriesUI(ctx, db, fromSettings);
             return;
         }
 
+        // Toggle abilitazione modulo
         if (data === 'nsf_toggle') {
             await db.updateGuildConfig(ctx.chat.id, { media_enabled: config.media_enabled ? 0 : 1 });
-        } else if (data === 'nsf_test') {
+        }
+        // Test connessione LM Studio
+        else if (data === 'nsf_test') {
             await logic.testConnection(ctx);
             return;
-        } else if (data === 'nsf_act') {
-            // Only delete or report - no ban
+        }
+        // Cicla azione (delete -> report_only -> delete)
+        else if (data === 'nsf_act') {
             const acts = ['delete', 'report_only'];
             let cur = config.media_action || 'delete';
             if (!acts.includes(cur)) cur = 'delete';
             const nextAct = acts[(acts.indexOf(cur) + 1) % acts.length];
             await db.updateGuildConfig(ctx.chat.id, { media_action: nextAct });
-        } else if (data.startsWith('nsf_tog_')) {
-            const type = data.split('_')[2]; // photo, video, gif, sticker
+        }
+        // Toggle tipo media (photo, video, gif, sticker)
+        else if (data.startsWith('nsf_tog_')) {
+            const type = data.split('_')[2];
             const key = `media_check_${type}s`;
             if (config[key] !== undefined) {
                 await db.updateGuildConfig(ctx.chat.id, { [key]: config[key] ? 0 : 1 });
             }
-        } else if (data.startsWith('nsf_log_')) {
-            // Log toggle for media_delete
+        }
+        // Toggle log eventi
+        else if (data.startsWith('nsf_log_')) {
             const logKey = 'media_delete';
 
-            // Get current log events
+            // Recupera log events correnti
             let logEvents = {};
             if (config.log_events) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) {}
+                    } catch (e) { }
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
@@ -188,6 +226,7 @@ function registerCommands(bot, db) {
             await db.updateGuildConfig(ctx.chat.id, { log_events: logEvents });
         }
 
+        // Aggiorna UI principale
         await ui.sendConfigUI(ctx, db, true, fromSettings);
     });
 }

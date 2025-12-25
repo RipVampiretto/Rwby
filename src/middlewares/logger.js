@@ -1,13 +1,34 @@
+/**
+ * @fileoverview Logger centralizzato basato su Winston
+ * @module middlewares/logger
+ *
+ * @description
+ * Sistema di logging con output su console e file.
+ * Utilizza il fuso orario italiano (Europe/Rome) per i timestamp.
+ *
+ * **File di log generati:**
+ * - `combined.log` - Tutti i log (10MB x 5 file)
+ * - `error.log` - Solo errori (5MB x 3 file)
+ * - `info.log` - Info e superiori (10MB x 5 file)
+ * - `debug.log` - Debug e superiori (10MB x 3 file)
+ * - `warn.log` - Warning e superiori (5MB x 3 file)
+ *
+ * @requires winston
+ */
+
 const winston = require('winston');
 const path = require('path');
 
-/* ==========================
-   Configuration
-========================== */
-
+/**
+ * Directory per i file di log.
+ * @constant {string}
+ */
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
-// Custom format for Italy timezone
+/**
+ * Formato personalizzato per timestamp con fuso orario italiano.
+ * @private
+ */
 const italyTimestamp = winston.format(info => {
     info.timestamp = new Intl.DateTimeFormat('it-IT', {
         timeZone: 'Europe/Rome',
@@ -23,7 +44,10 @@ const italyTimestamp = winston.format(info => {
     return info;
 });
 
-// Console format with colors
+/**
+ * Formato console con colori.
+ * @private
+ */
 const consoleFormat = winston.format.combine(
     italyTimestamp(),
     winston.format.colorize(),
@@ -32,7 +56,10 @@ const consoleFormat = winston.format.combine(
     })
 );
 
-// File format (no colors)
+/**
+ * Formato file (senza colori).
+ * @private
+ */
 const fileFormat = winston.format.combine(
     italyTimestamp(),
     winston.format.printf(({ level, message, timestamp }) => {
@@ -40,19 +67,19 @@ const fileFormat = winston.format.combine(
     })
 );
 
-/* ==========================
-   Winston Logger Instance
-========================== */
-
+/**
+ * Istanza del logger Winston.
+ * @private
+ */
 const logger = winston.createLogger({
     level: 'debug',
     transports: [
-        // Console transport (colorized)
+        // Console (colorizzata)
         new winston.transports.Console({
             format: consoleFormat
         }),
 
-        // Combined log file
+        // File combinato
         new winston.transports.File({
             filename: path.join(LOG_DIR, 'combined.log'),
             format: fileFormat,
@@ -61,7 +88,7 @@ const logger = winston.createLogger({
             tailable: true
         }),
 
-        // Error-only log file
+        // File solo errori
         new winston.transports.File({
             filename: path.join(LOG_DIR, 'error.log'),
             level: 'error',
@@ -71,7 +98,7 @@ const logger = winston.createLogger({
             tailable: true
         }),
 
-        // Info-level log file
+        // File info
         new winston.transports.File({
             filename: path.join(LOG_DIR, 'info.log'),
             level: 'info',
@@ -81,7 +108,7 @@ const logger = winston.createLogger({
             tailable: true
         }),
 
-        // Debug-level log file
+        // File debug
         new winston.transports.File({
             filename: path.join(LOG_DIR, 'debug.log'),
             level: 'debug',
@@ -91,7 +118,7 @@ const logger = winston.createLogger({
             tailable: true
         }),
 
-        // Warn-level log file
+        // File warning
         new winston.transports.File({
             filename: path.join(LOG_DIR, 'warn.log'),
             level: 'warn',
@@ -103,23 +130,35 @@ const logger = winston.createLogger({
     ]
 });
 
-/* ==========================
-   Public API (same interface)
-========================== */
-
 module.exports = {
+    /**
+     * Logga un messaggio a livello DEBUG.
+     * @param {string} message - Messaggio da loggare
+     */
     debug(message) {
         logger.debug(message);
     },
 
+    /**
+     * Logga un messaggio a livello INFO.
+     * @param {string} message - Messaggio da loggare
+     */
     info(message) {
         logger.info(message);
     },
 
+    /**
+     * Logga un messaggio a livello WARN.
+     * @param {string} message - Messaggio da loggare
+     */
     warn(message) {
         logger.warn(message);
     },
 
+    /**
+     * Logga un messaggio a livello ERROR.
+     * @param {string} message - Messaggio da loggare
+     */
     error(message) {
         logger.error(message);
     }

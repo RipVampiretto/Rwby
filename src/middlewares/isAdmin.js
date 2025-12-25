@@ -1,13 +1,29 @@
+/**
+ * @fileoverview Middleware per verifica status admin
+ * @module middlewares/isAdmin
+ *
+ * @description
+ * Middleware grammY che verifica se l'utente è un admin o creator del gruppo.
+ * Se l'utente non è admin, la richiesta viene bloccata senza risposta.
+ *
+ * @requires ./logger
+ */
+
 const logger = require('./logger');
 
 /**
- * Middleware to check if the user is an admin or creator of the chat.
- * Applicable mainly for groups/channels.
+ * Middleware per verificare se l'utente è admin.
+ * Blocca silenziosamente le richieste da non-admin nei gruppi.
+ * Permette sempre l'accesso nelle chat private.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Function} next - Funzione next middleware
+ * @returns {Promise<void>}
  */
 async function isAdmin(ctx, next) {
     if (!ctx.from || !ctx.chat) return next();
 
-    // Always allow in private chats
+    // Permetti sempre nelle chat private
     if (ctx.chat.type === 'private') {
         return next();
     }
@@ -17,15 +33,12 @@ async function isAdmin(ctx, next) {
         if (['creator', 'administrator'].includes(member.status)) {
             return next();
         } else {
-            // Optional: Reply or just ignore
-            // await ctx.reply("⛔️ Questa azione è riservata agli amministratori.");
-            // For now, we just stop propagation without reply to avoid spamming
+            // Blocca silenziosamente senza risposta per evitare spam
             return;
         }
     } catch (e) {
         logger.error(`Error in isAdmin middleware: ${e.message}`);
-        // Fail safe: allow or block? Better block if unsure for sensitive ops,
-        // but for general use maybe just log.
+        // Fail safe: blocca in caso di errore
         return;
     }
 }
