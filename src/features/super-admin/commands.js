@@ -287,7 +287,19 @@ function registerCommands(bot, db) {
         if (!action || action === 'list') {
             const modals = await spamPatterns.listModals(lang || null);
             if (modals.length === 0) return ctx.reply('📋 Nessun modal.');
-            return ctx.reply(`📋 Trovati ${modals.length} modals (vedi logs o usa dettagli)`);
+
+            let msg = '📋 <b>MODALS</b>\n\n';
+            for (const m of modals) {
+                const hiddenIcon = m.hidden ? '👁️‍🗨️' : '👁️';
+                const enabledIcon = m.enabled ? '✅' : '❌';
+                msg += `${enabledIcon} ${hiddenIcon} <code>${m.language}/${m.category}</code>\n`;
+            }
+            msg += '\n<b>Azioni:</b>\n';
+            msg += '<code>/gmodal add [lang] [cat]</code> - Crea modal\n';
+            msg += '<code>/gmodal addpattern [lang] [cat] [testo]</code>\n';
+            msg += '<code>/gmodal hide [lang] [cat]</code> - Toggle visibilità UI\n';
+            msg += '<code>/gmodal toggle [lang] [cat]</code> - Toggle attivo/disattivo';
+            return ctx.reply(msg, { parse_mode: 'HTML' });
         }
 
         if (action === 'add') {
@@ -307,6 +319,30 @@ function registerCommands(bot, db) {
             const pattern = args.slice(3).join(' ');
             await spamPatterns.addPatternsToModal(lang.toLowerCase(), category.toLowerCase(), [pattern]);
             return ctx.reply('✅ Pattern aggiunto.');
+        }
+
+        if (action === 'hide') {
+            if (!lang || !category) {
+                return ctx.reply('❓ Uso: <code>/gmodal hide [lang] [category]</code>', { parse_mode: 'HTML' });
+            }
+            const newState = await spamPatterns.toggleModalHidden(lang.toLowerCase(), category.toLowerCase());
+            if (newState === null) {
+                return ctx.reply('❌ Modal non trovato.');
+            }
+            const icon = newState ? '👁️‍🗨️ Nascosto' : '👁️ Visibile';
+            return ctx.reply(`${icon}: <code>${lang}/${category}</code>`, { parse_mode: 'HTML' });
+        }
+
+        if (action === 'toggle') {
+            if (!lang || !category) {
+                return ctx.reply('❓ Uso: <code>/gmodal toggle [lang] [category]</code>', { parse_mode: 'HTML' });
+            }
+            const newState = await spamPatterns.toggleModal(lang.toLowerCase(), category.toLowerCase());
+            if (newState === null) {
+                return ctx.reply('❌ Modal non trovato.');
+            }
+            const icon = newState ? '✅ Attivo' : '❌ Disattivo';
+            return ctx.reply(`${icon}: <code>${lang}/${category}</code>`, { parse_mode: 'HTML' });
         }
     });
 

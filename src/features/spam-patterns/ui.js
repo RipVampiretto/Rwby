@@ -12,8 +12,9 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     const enabled = config.spam_patterns_enabled ? t('common.on') : t('common.off');
     const action = i18n.formatAction(guildId, config.spam_patterns_action || 'report_only');
 
-    // Count active modals (total enabled categories)
-    const modals = await logic.getAllModals();
+    // Count active modals (total enabled categories) - exclude hidden
+    const allModals = await logic.getAllModals();
+    const modals = allModals.filter(m => !m.hidden);
     const categories = [...new Set(modals.map(m => m.category))];
     let activeCount = 0;
 
@@ -65,7 +66,9 @@ async function sendModalListUI(ctx, db, isEdit = false) {
     const lang = await i18n.getLanguage(guildId);
     const t = (key, params) => i18n.t(lang, key, params);
 
-    const modals = await logic.getAllModals();
+    const allModals = await logic.getAllModals();
+    // Filter out hidden modals for UI display
+    const modals = allModals.filter(m => !m.hidden);
 
     // Group by category
     const categories = [...new Set(modals.map(m => m.category))];
