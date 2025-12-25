@@ -123,7 +123,7 @@ function registerCommands(bot, db) {
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events || {};
                 }
-            } catch (e) { }
+            } catch (e) {}
 
             if (Array.isArray(logEvents)) logEvents = {};
 
@@ -148,7 +148,8 @@ function getHtmlText(message) {
 
     if (!entities.length) return text;
 
-    const escape = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const escape = str =>
+        str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     const points = new Set([0, text.length]);
     entities.forEach(e => {
@@ -164,21 +165,39 @@ function getHtmlText(message) {
         const end = sortedPoints[i + 1];
         const segmentText = escape(text.slice(start, end));
 
-        const activeEntities = entities.filter(e => e.offset <= start && (e.offset + e.length) >= end);
+        const activeEntities = entities.filter(e => e.offset <= start && e.offset + e.length >= end);
         activeEntities.sort((a, b) => a.length - b.length);
 
         let wrapped = segmentText;
         for (const entity of activeEntities) {
             switch (entity.type) {
-                case 'bold': wrapped = `<b>${wrapped}</b>`; break;
-                case 'italic': wrapped = `<i>${wrapped}</i>`; break;
-                case 'code': wrapped = `<code>${wrapped}</code>`; break;
-                case 'pre': wrapped = `<pre>${wrapped}</pre>`; break;
-                case 'strikethrough': wrapped = `<s>${wrapped}</s>`; break;
-                case 'underline': wrapped = `<u>${wrapped}</u>`; break;
-                case 'spoiler': wrapped = `<tg-spoiler>${wrapped}</tg-spoiler>`; break;
-                case 'text_link': wrapped = `<a href="${escape(entity.url)}">${wrapped}</a>`; break;
-                case 'text_mention': wrapped = `<a href="tg://user?id=${entity.user.id}">${wrapped}</a>`; break;
+                case 'bold':
+                    wrapped = `<b>${wrapped}</b>`;
+                    break;
+                case 'italic':
+                    wrapped = `<i>${wrapped}</i>`;
+                    break;
+                case 'code':
+                    wrapped = `<code>${wrapped}</code>`;
+                    break;
+                case 'pre':
+                    wrapped = `<pre>${wrapped}</pre>`;
+                    break;
+                case 'strikethrough':
+                    wrapped = `<s>${wrapped}</s>`;
+                    break;
+                case 'underline':
+                    wrapped = `<u>${wrapped}</u>`;
+                    break;
+                case 'spoiler':
+                    wrapped = `<tg-spoiler>${wrapped}</tg-spoiler>`;
+                    break;
+                case 'text_link':
+                    wrapped = `<a href="${escape(entity.url)}">${wrapped}</a>`;
+                    break;
+                case 'text_mention':
+                    wrapped = `<a href="tg://user?id=${entity.user.id}">${wrapped}</a>`;
+                    break;
             }
         }
         result += wrapped;

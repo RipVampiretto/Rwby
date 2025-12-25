@@ -17,7 +17,9 @@ function registerCommands(bot, db) {
         // /notes add <id> <text>
         if (args[0] === 'add') {
             if (args.length < 3) {
-                return ctx.reply('❌ Uso: <code>/notes add &lt;user_id&gt; &lt;testo&gt;</code>', { parse_mode: 'HTML' });
+                return ctx.reply('❌ Uso: <code>/notes add &lt;user_id&gt; &lt;testo&gt;</code>', {
+                    parse_mode: 'HTML'
+                });
             }
 
             const targetId = parseInt(args[1]);

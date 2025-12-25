@@ -64,8 +64,10 @@ async function isUserInChat(ctx, userId) {
         const member = await ctx.api.getChatMember(ctx.chat.id, userId);
         // member, administrator, creator = in chat
         // left, kicked, restricted (with is_member=false) = not in chat
-        return ['member', 'administrator', 'creator'].includes(member.status) ||
-            (member.status === 'restricted' && member.is_member);
+        return (
+            ['member', 'administrator', 'creator'].includes(member.status) ||
+            (member.status === 'restricted' && member.is_member)
+        );
     } catch (e) {
         // User not found or other error - treat as not in chat
         logger.debug(`[mention-filter] getChatMember error for ${userId}: ${e.message}`);
@@ -159,14 +161,15 @@ Classify as scam or safe. Respond ONLY with the JSON object.`;
 
         const result = JSON.parse(jsonMatch[0]);
 
-        logger.info(`[mention-filter] AI classification: ${result.classification} (${Math.round(result.confidence * 100)}%) - ${result.reason}`);
+        logger.info(
+            `[mention-filter] AI classification: ${result.classification} (${Math.round(result.confidence * 100)}%) - ${result.reason}`
+        );
 
         return {
             isScam: result.classification === 'scam',
             confidence: result.confidence || 0.5,
             reason: result.reason || 'No reason provided'
         };
-
     } catch (e) {
         if (e.name === 'AbortError') {
             logger.warn(`[mention-filter] AI request timed out after ${timeout}ms`);
@@ -260,7 +263,9 @@ async function scanMessage(ctx, config) {
 
             // Log for monitoring even if classified as safe
             if (aiResult.confidence > 0) {
-                logger.debug(`[mention-filter] External @${mention.username} classified as safe (conf: ${aiResult.confidence})`);
+                logger.debug(
+                    `[mention-filter] External @${mention.username} classified as safe (conf: ${aiResult.confidence})`
+                );
             }
         }
     }

@@ -14,9 +14,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
     // Parse log events
     const notify = config.mention_filter_notify ? t('common.on') : t('common.off');
 
-    let text = `${t('mention.title')}\n\n` +
-        `${t('mention.description')}\n\n` +
-        `${t('mention.status')}: ${enabled}`;
+    let text = `${t('mention.title')}\n\n` + `${t('mention.description')}\n\n` + `${t('mention.status')}: ${enabled}`;
 
     // Show details only when enabled
     if (config.mention_filter_enabled) {

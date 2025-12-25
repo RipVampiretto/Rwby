@@ -220,7 +220,7 @@ async function notifyParliament(newUsers, banCount, guildCount) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const processedCount = Math.min(newUsers.length, 100);

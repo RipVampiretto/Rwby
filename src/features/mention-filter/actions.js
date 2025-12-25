@@ -30,19 +30,18 @@ async function executeAction(ctx, config, verdict) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
     }
 
-    const userName = user.username
-        ? `@${user.username}`
-        : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
+    const userName = user.username ? `@${user.username}` : `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
 
-    const reasonText = type === 'gbanned'
-        ? t('mention.reason_gbanned', { user: username })
-        : t('mention.reason_scam', { percent: Math.round(aiResult.confidence * 100), reason: aiResult.reason });
+    const reasonText =
+        type === 'gbanned'
+            ? t('mention.reason_gbanned', { user: username })
+            : t('mention.reason_scam', { percent: Math.round(aiResult.confidence * 100), reason: aiResult.reason });
 
     // Log to group's log channel via ActionLog BEFORE action (to allow forwarding)
     if (config.mention_filter_notify && actionLog.getLogEvent()) {
@@ -73,15 +72,16 @@ async function executeAction(ctx, config, verdict) {
 
         // Send warning to user (auto-delete after 1 minute)
         try {
-            const warningText = type === 'gbanned'
-                ? t('mention.warning_gbanned', { user: userName, mentioned: `@${username}` })
-                : t('mention.warning_scam', { user: userName });
+            const warningText =
+                type === 'gbanned'
+                    ? t('mention.warning_gbanned', { user: userName, mentioned: `@${username}` })
+                    : t('mention.warning_scam', { user: userName });
 
             const warning = await ctx.reply(warningText, { parse_mode: 'HTML' });
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000); // 1 minute
         } catch (e) {
             logger.debug(`[mention-filter] Could not send warning: ${e.message}`);
@@ -107,8 +107,14 @@ async function executeAction(ctx, config, verdict) {
                 reply_markup: {
                     inline_keyboard: [
                         [
-                            { text: t('mention.staff_alert.btn_delete'), callback_data: `mnt_staff_del:${ctx.chat.id}:${ctx.message.message_id}` },
-                            { text: t('mention.staff_alert.btn_ignore'), callback_data: `mnt_staff_ignore:${ctx.chat.id}` }
+                            {
+                                text: t('mention.staff_alert.btn_delete'),
+                                callback_data: `mnt_staff_del:${ctx.chat.id}:${ctx.message.message_id}`
+                            },
+                            {
+                                text: t('mention.staff_alert.btn_ignore'),
+                                callback_data: `mnt_staff_ignore:${ctx.chat.id}`
+                            }
                         ]
                     ]
                 }

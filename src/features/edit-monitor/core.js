@@ -81,7 +81,7 @@ async function executeAction(ctx, config, reason, original, current) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -123,9 +123,9 @@ async function executeAction(ctx, config, reason, original, current) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
+        } catch (e) {}
 
         // Log if enabled
         if (logEvents['edit_delete'] && actionLog.getLogEvent()) {

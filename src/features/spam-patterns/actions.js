@@ -16,7 +16,7 @@ async function executeAction(ctx, action, category, pattern, similarity) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -46,9 +46,9 @@ async function executeAction(ctx, action, category, pattern, similarity) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
+        } catch (e) {}
 
         // 3. Send local log if enabled
         if (logEvents['modal_delete'] && actionLog.getLogEvent()) {
@@ -75,7 +75,6 @@ async function executeAction(ctx, action, category, pattern, similarity) {
                 similarity: Math.round(similarity * 100)
             });
         }
-
     } else if (action === 'report_only') {
         // === MODAL_REPORT FLOW ===
         // 1. Send local log if enabled

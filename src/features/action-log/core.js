@@ -36,11 +36,13 @@ async function logEvent(params) {
             } else {
                 logEvents = parsed;
             }
-        } catch (e) { }
+        } catch (e) {}
     }
 
     if (!logEvents[eventType]) {
-        logger.info(`[action-log] Event ${eventType} blocked by config. Config keys: ${Object.keys(logEvents).join(', ')}`);
+        logger.info(
+            `[action-log] Event ${eventType} blocked by config. Config keys: ${Object.keys(logEvents).join(', ')}`
+        );
         return;
     }
 
@@ -56,7 +58,7 @@ async function logEvent(params) {
     let botInfo = { first_name: 'Bot', username: 'bot', id: 0 };
     try {
         botInfo = await _botInstance.api.getMe();
-    } catch (e) { }
+    } catch (e) {}
 
     const botLink = botInfo.username
         ? `<a href="https://t.me/${botInfo.username}">${botInfo.first_name}</a>`
@@ -91,15 +93,20 @@ async function logEvent(params) {
                         targetChatId = config.staff_group_id;
                         messageThreadId = topics.logs;
                     }
-                } catch (e) { }
+                } catch (e) {}
             }
 
             // Forward message if requested
             if (params.messageIdToForward && params.chatIdToForwardFrom) {
                 try {
-                    await _botInstance.api.forwardMessage(targetChatId, params.chatIdToForwardFrom, params.messageIdToForward, {
-                        message_thread_id: messageThreadId
-                    });
+                    await _botInstance.api.forwardMessage(
+                        targetChatId,
+                        params.chatIdToForwardFrom,
+                        params.messageIdToForward,
+                        {
+                            message_thread_id: messageThreadId
+                        }
+                    );
                 } catch (e) {
                     logger.debug(`[action-log] Failed to forward message: ${e.message}`);
                 }
@@ -114,7 +121,6 @@ async function logEvent(params) {
             logger.error(`[action-log] Failed to send local log: ${e.message}`);
         }
     }
-
 }
 
 module.exports = {

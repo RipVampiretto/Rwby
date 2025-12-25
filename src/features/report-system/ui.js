@@ -56,10 +56,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         }[reportMode] || t('report.modes.vote');
 
     // Build text
-    let text =
-        `${t('report.title')}\n\n` +
-        `${t('report.description')}\n\n` +
-        `${t('report.status')}: ${enabled}`;
+    let text = `${t('report.title')}\n\n` + `${t('report.description')}\n\n` + `${t('report.status')}: ${enabled}`;
 
     // Show details only when enabled
     if (config.report_enabled) {
@@ -81,7 +78,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -96,9 +93,7 @@ async function sendConfigUI(ctx, db, isEdit = false, fromSettings = false) {
         : { text: t('common.close'), callback_data: 'vb_close' };
 
     // Build keyboard
-    const rows = [
-        [{ text: `${t('report.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }]
-    ];
+    const rows = [[{ text: `${t('report.buttons.system')}: ${enabled}`, callback_data: 'vb_toggle' }]];
 
     // Show options only when enabled
     if (config.report_enabled) {

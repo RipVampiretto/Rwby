@@ -74,8 +74,8 @@ async function isModalEnabledForGuild(guildId, modalId) {
 function normalizeText(text) {
     return text
         .toLowerCase()
-        .replace(/[^\w\s]/g, ' ')  // Replace punctuation with spaces
-        .replace(/\s+/g, ' ')       // Normalize multiple spaces
+        .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
+        .replace(/\s+/g, ' ') // Normalize multiple spaces
         .trim();
 }
 

@@ -29,7 +29,7 @@ async function sendTierDetail(ctx, tierNum) {
 
     try {
         await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-    } catch (e) { }
+    } catch (e) {}
 }
 
 async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
@@ -55,7 +55,7 @@ async function sendFluxCalculation(ctx, isEdit = false, backCallback = null) {
     if (isEdit) {
         try {
             await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-        } catch (e) { }
+        } catch (e) {}
     } else {
         await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
     }
@@ -158,7 +158,7 @@ async function sendGlobalFluxOverview(ctx, db) {
     if (ctx.callbackQuery) {
         try {
             await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: keyboard });
-        } catch (e) { }
+        } catch (e) {}
     } else {
         await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
     }

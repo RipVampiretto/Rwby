@@ -30,7 +30,7 @@ async function forwardToParliament(bot, db, params) {
                 } else {
                     topicId = topics.bans;
                 }
-            } catch (e) { }
+            } catch (e) {}
         }
 
         // Build keyboard based on type
@@ -42,7 +42,7 @@ async function forwardToParliament(bot, db, params) {
             let domainHost = '';
             try {
                 domainHost = new URL(domain || '').hostname;
-            } catch (e) { }
+            } catch (e) {}
 
             keyboard.inline_keyboard = [
                 [
@@ -102,9 +102,10 @@ async function forwardToParliament(bot, db, params) {
                 `${t('common.logs.global_ban_question')}`;
         } else if (params.type === 'mention_scam' || params.type === 'mention_gbanned') {
             // Mention filter detection
-            const title = params.type === 'mention_gbanned'
-                ? '🚫 <b>GBANNED USER MENTIONED</b>'
-                : '👤 <b>SUSPICIOUS MENTION DETECTED</b>';
+            const title =
+                params.type === 'mention_gbanned'
+                    ? '🚫 <b>GBANNED USER MENTIONED</b>'
+                    : '👤 <b>SUSPICIOUS MENTION DETECTED</b>';
             text =
                 `${title}\n\n` +
                 `${t('common.logs.group')}: ${params.guildName}\n` +
@@ -162,7 +163,7 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.reports || topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         const keyboard = customKeyboard ? { inline_keyboard: customKeyboard } : null;
@@ -225,7 +226,7 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.image_spam || topics.bans;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         // Build media group
@@ -301,31 +302,24 @@ async function sendGlobalLog(bot, db, event) {
                 else if (event.eventType === 'image_spam_check') threadId = topics.image_spam;
                 else if (event.eventType === 'link_check') threadId = topics.link_checks;
                 else threadId = topics.logs;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         // Build message based on event type
         let text = '';
 
         if (event.eventType === 'user_join') {
-            text = `📥 <b>Nuovo Membro</b>\n\n` +
-                `👤 ${event.target}\n` +
-                `🏠 ${event.details}`;
+            text = `📥 <b>Nuovo Membro</b>\n\n` + `👤 ${event.target}\n` + `🏠 ${event.details}`;
         } else if (event.eventType === 'user_leave') {
-            text = `📤 <b>Membro Uscito</b>\n\n` +
-                `👤 ${event.target}\n` +
-                `🏠 ${event.details}`;
+            text = `📤 <b>Membro Uscito</b>\n\n` + `👤 ${event.target}\n` + `🏠 ${event.details}`;
         } else if (event.eventType === 'bot_join') {
-            text = `🤖 <b>Bot Aggiunto</b>\n\n` +
-                `🏠 ${event.details}\n` +
-                `🆔 <code>${event.guildId}</code>`;
+            text = `🤖 <b>Bot Aggiunto</b>\n\n` + `🏠 ${event.details}\n` + `🆔 <code>${event.guildId}</code>`;
         } else if (event.eventType === 'bot_leave') {
-            text = `👋 <b>Bot Rimosso</b>\n\n` +
-                `🏠 ${event.details}\n` +
-                `🆔 <code>${event.guildId}</code>`;
+            text = `👋 <b>Bot Rimosso</b>\n\n` + `🏠 ${event.details}\n` + `🆔 <code>${event.guildId}</code>`;
         } else {
             // Generic format for other events
-            text = `📋 <b>${event.eventType.toUpperCase()}</b>\n\n` +
+            text =
+                `📋 <b>${event.eventType.toUpperCase()}</b>\n\n` +
                 `👤 ${event.target}\n` +
                 `🏠 ${event.details || 'N/A'}\n` +
                 `📝 ${event.reason}`;
@@ -401,7 +395,7 @@ async function executeGlobalBan(ctx, db, bot, userId) {
                         `Global Ban by ${ctx.from.first_name}`
                     );
                 }
-            } catch (e) { }
+            } catch (e) {}
         }
 
         await ctx.reply(`🌍 Global Ban propagato a ${count} gruppi.`);
@@ -419,7 +413,7 @@ async function cleanupPendingDeletions(db, bot) {
         for (const p of pending) {
             try {
                 await bot.api.deleteMessage(p.chat_id, p.message_id);
-            } catch (e) { }
+            } catch (e) {}
             await db.query('DELETE FROM pending_deletions WHERE id = $1', [p.id]);
         }
     } catch (e) {
@@ -513,7 +507,7 @@ async function notifyNewGroup(bot, db, guildId, guildName) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 threadId = topics.add_group;
-            } catch (e) { }
+            } catch (e) {}
         }
 
         if (!threadId) return;
@@ -528,7 +522,6 @@ async function notifyNewGroup(bot, db, guildId, guildName) {
             message_thread_id: threadId,
             parse_mode: 'HTML'
         });
-
     } catch (e) {
         logger.error(`[super-admin] notifyNewGroup error: ${e.message}`);
     }

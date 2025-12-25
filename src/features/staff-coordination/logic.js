@@ -67,7 +67,7 @@ async function reviewQueue(bot, db, params) {
             const topics =
                 typeof config.staff_topics === 'string' ? JSON.parse(config.staff_topics) : config.staff_topics;
             threadId = topics.reports;
-        } catch (e) { }
+        } catch (e) {}
     }
 
     const { source, user, reason, messageId, content } = params;

@@ -29,7 +29,7 @@ async function finalizeVote(ctx, db, vote, status, admin) {
                 .map(fmt)
                 .join(', ') || t('voteban.log.nobody');
         details = `\n\n✅ ${t('voteban.log.in_favor')}: ${yes}\n🛡️ ${t('voteban.log.against')}: ${no}`;
-    } catch (e) { }
+    } catch (e) {}
 
     if (status === 'passed' || status === 'forced_ban') {
         try {
@@ -43,8 +43,8 @@ async function finalizeVote(ctx, db, vote, status, admin) {
             // Delete after 1 minute
             setTimeout(() => {
                 try {
-                    ctx.deleteMessage().catch(() => { });
-                } catch (e) { }
+                    ctx.deleteMessage().catch(() => {});
+                } catch (e) {}
             }, 60000);
 
             await ctx.banChatMember(vote.target_user_id);
@@ -73,8 +73,8 @@ async function finalizeVote(ctx, db, vote, status, admin) {
         // Delete after 1 minute
         setTimeout(() => {
             try {
-                ctx.deleteMessage().catch(() => { });
-            } catch (e) { }
+                ctx.deleteMessage().catch(() => {});
+            } catch (e) {}
         }, 60000);
     }
 
@@ -137,14 +137,14 @@ async function processExpiredVotes(bot, db) {
                         .map(fmt)
                         .join(', ') || t('voteban.log.nobody');
                 details = `\n\n✅ ${t('voteban.log.in_favor')}: ${yes}\n🛡️ ${t('voteban.log.against')}: ${no}`;
-            } catch (e) { }
+            } catch (e) {}
 
             // Get Guild Name manually since we don't have ctx
             let guildName = 'Unknown Group';
             try {
                 const chat = await bot.api.getChat(vote.chat_id);
                 guildName = chat.title;
-            } catch (e) { }
+            } catch (e) {}
 
             // Log outcome
             if (actionLog.getLogEvent()) {
@@ -179,10 +179,10 @@ async function processExpiredVotes(bot, db) {
                 // Delete after 1 minute
                 setTimeout(() => {
                     try {
-                        bot.api.deleteMessage(vote.chat_id, vote.poll_message_id).catch(() => { });
-                    } catch (e) { }
+                        bot.api.deleteMessage(vote.chat_id, vote.poll_message_id).catch(() => {});
+                    } catch (e) {}
                 }, 60000);
-            } catch (e) { }
+            } catch (e) {}
             continue;
         }
 
