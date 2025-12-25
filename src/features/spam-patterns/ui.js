@@ -50,7 +50,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     // Show details only when enabled
     if (config.spam_patterns_enabled) {
         text += `\n${t('modals.action')}: ${action}`;
-        text += `\n📋 ${t('modals.notify_local') || 'Notifica locale'}: ${notifyStatus}`;
+        text += `\n${t('modals.notify_local') || 'Notifica locale'}: ${notifyStatus}`;
 
         if (!config.staff_group_id && (config.spam_patterns_action || 'report_only') === 'report_only') {
             text += `\n${t('common.warnings.no_staff_group')}`;
@@ -64,7 +64,7 @@ async function sendConfigUI(ctx, db, isEdit = false) {
     // Show options only when enabled
     if (config.spam_patterns_enabled) {
         rows.push([{ text: `${t('modals.buttons.action')}: ${action}`, callback_data: 'mdl_act' }]);
-        rows.push([{ text: `📋 ${t('modals.buttons.notify') || 'Notifica'}: ${notifyStatus}`, callback_data: 'mdl_notify' }]);
+        rows.push([{ text: `${t('modals.buttons.notify') || 'Log'}: ${notifyStatus}`, callback_data: 'mdl_notify' }]);
         rows.push([
             { text: `${t('modals.buttons.manage')} (${activeCount}/${categories.length})`, callback_data: 'mdl_list' }
         ]);

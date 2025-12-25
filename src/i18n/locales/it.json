@@ -132,7 +132,7 @@
             "btn_no": "❌ No ({count})"
         },
         "buttons": {
-            "system": "📋 Segnalazioni",
+            "system": "📋 Filtro",
             "threshold": "📊 Soglia",
             "duration": "⏱️ Durata",
             "report_mode": "🔄 Modalità",
@@ -200,13 +200,13 @@
         "reason_link": "Inserimento link sospetto",
         "reason_similarity": "Modifica radicale del messaggio",
         "buttons": {
-            "monitor": "✏️ Monitor",
-            "action": "👮 Azione",
+            "monitor": "✏️ Filtro",
+            "action": "⚡ Azione",
             "grace": "⏱️ Grazia"
         }
     },
     "modals": {
-        "title": "📋 <b>PATTERN</b>",
+        "title": "🎭 <b>PATTERN</b>",
         "description": "Riconosce automaticamente messaggi sospetti usando pattern predefiniti.",
         "info_title": "Come funziona",
         "info_global": "Categorie attive: {count}/{total}",
@@ -220,13 +220,13 @@
         },
         "notify_local": "Log",
         "buttons": {
-            "system": "📋 Sistema",
-            "action": "👮 Azione",
+            "system": "🎭 Filtro",
+            "action": "⚡ Azione",
             "manage": "📝 Gestisci Pattern",
             "notify": "📋 Log"
         },
         "list": {
-            "title": "📋 PATTERN DISPONIBILI",
+            "title": "🎭 PATTERN DISPONIBILI",
             "empty": "Nessun pattern disponibile per le tue lingue.",
             "toggle_info": "Attiva/disattiva i pattern per questo gruppo:"
         },
@@ -239,8 +239,8 @@
         "notify": "Log",
         "warning": "{user}, il tuo messaggio è stato eliminato perché conteneva un link a un sito non consentito.",
         "buttons": {
-            "system": "🛡️ Stato",
-            "notify": "📢 Notifica"
+            "system": "🔗 Filtro",
+            "notify": "📋 Log"
         }
     },
     "language": {
@@ -253,7 +253,7 @@
         "log_reason": "Rilevata lingua {detected} (permesse: {allowed})",
         "ban_reason": "Ban Lingua: {detected} non permessa.",
         "buttons": {
-            "filter": "🛡️ Stato",
+            "filter": "🌐 Filtro",
             "action": "⚡ Azione"
         }
     },
@@ -264,8 +264,8 @@
         "notify": "Log",
         "warning": "{user}, il tuo messaggio è stato eliminato perché conteneva parole non consentite.",
         "buttons": {
-            "system": "🛡️ Stato",
-            "notify": "📢 Notifica"
+            "system": "🔤 Filtro",
+            "notify": "📋 Log"
         }
     },
     "mention": {
@@ -279,9 +279,9 @@
         "reason_gbanned": "Menzionato utente bannato globalmente: @{user}",
         "reason_scam": "Rilevamento Truffa AI ({percent}%): {reason}",
         "buttons": {
-            "system": "🛡️ Stato",
+            "system": "👤 Filtro",
             "action": "⚡ Azione",
-            "notify": "📢 Notifica"
+            "notify": "📋 Log"
         },
         "staff_alert": {
             "title": "👤 <b>MENZIONE SOSPETTA RILEVATA</b>",
@@ -307,11 +307,11 @@
         "warning": "{user}, il tuo media è stato eliminato perché non conforme alle regole del gruppo.",
         "warning_album": "{user}, {count} media sono stati eliminati perché non conformi alle regole del gruppo.",
         "buttons": {
-            "monitor": "🖼️ Monitor",
+            "monitor": "🖼️ Filtro",
             "action": "⚡ Azione",
             "threshold": "📊 Soglia",
             "categories": "🚫 Categorie",
-            "notify": "Log"
+            "notify": "📋 Log"
         },
         "categories_ui": {
             "title": "🚫 <b>CATEGORIE MEDIA</b>",
@@ -386,8 +386,8 @@
         "status": "Stato",
         "notify": "Log",
         "buttons": {
-            "system": "🛡️ Stato",
-            "notify": "📢 Notifica"
+            "system": "🚫 Filtro",
+            "notify": "📋 Log"
         }
     },
     "staff": {
@@ -503,8 +503,8 @@
         "buttons": {
             "captcha_toggle": "🛡️ Captcha: {status}",
             "msg_toggle": "📨 Msg: {status}",
-            "rules_toggle": "📜 Rules: {status}",
-            "logs_toggle": "🚨 Logs: {status}",
+            "rules_toggle": "📜 Regole: {status}",
+            "logs_toggle": "📋 Log: {status}",
             "set_rules": "📝 Imposta Link Regolamento",
             "timeout": "⏳ Timeout: {time}m",
             "autodelete": "⏱ AutoDel: {time}",
@@ -622,7 +622,7 @@
             "high": "ALTA"
         },
         "buttons": {
-            "monitor": "🛡️ Monitor",
+            "monitor": "🛡️ Filtro",
             "sensitivity": "🌡️ Sens",
             "action_flood": "⚡ Flood",
             "action_repeat": "🔁 Repeat"
@@ -662,9 +662,9 @@
         "action_label": "Azione",
         "precision": "Precisione",
         "buttons": {
-            "system": "🧬 Sys",
+            "system": "🧬 Filtro",
             "sync": "🌐 Sync",
-            "action": "👮 Azione",
+            "action": "⚡ Azione",
             "threshold": "🎯 Soglia"
         }
     },

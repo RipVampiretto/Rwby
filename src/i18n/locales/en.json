@@ -132,7 +132,7 @@
             "btn_no": "❌ No ({count})"
         },
         "buttons": {
-            "system": "📋 Reports",
+            "system": "📋 Filter",
             "threshold": "📊 Threshold",
             "duration": "⏱️ Duration",
             "report_mode": "🔄 Mode",
@@ -200,13 +200,13 @@
         "reason_link": "Suspicious link injection",
         "reason_similarity": "Radical message change",
         "buttons": {
-            "monitor": "✏️ Monitor",
-            "action": "👮 Action",
+            "monitor": "✏️ Filter",
+            "action": "⚡ Action",
             "grace": "⏱️ Grace"
         }
     },
     "modals": {
-        "title": "📋 <b>PATTERNS</b>",
+        "title": "🎭 <b>PATTERNS</b>",
         "description": "Automatically recognizes suspicious messages using predefined patterns.",
         "info_title": "How it works",
         "info_global": "Active categories: {count}/{total}",
@@ -220,13 +220,13 @@
         },
         "notify_local": "Log",
         "buttons": {
-            "system": "📋 System",
-            "action": "👮 Action",
+            "system": "🎭 Filter",
+            "action": "⚡ Action",
             "manage": "📝 Manage Patterns",
             "notify": "📋 Log"
         },
         "list": {
-            "title": "📋 AVAILABLE PATTERNS",
+            "title": "🎭 AVAILABLE PATTERNS",
             "empty": "No patterns available for your languages.",
             "toggle_info": "Enable/disable patterns for this group:"
         },
@@ -239,8 +239,8 @@
         "notify": "Log",
         "warning": "{user}, your message was deleted because it contained a link to a forbidden site.",
         "buttons": {
-            "system": "🛡️ Status",
-            "notify": "📢 Notification"
+            "system": "🔗 Filter",
+            "notify": "📋 Log"
         }
     },
     "language": {
@@ -253,7 +253,7 @@
         "log_reason": "Detected language {detected} (allowed: {allowed})",
         "ban_reason": "Language Ban: {detected} not allowed.",
         "buttons": {
-            "filter": "🛡️ Status",
+            "filter": "🌐 Filter",
             "action": "⚡ Action"
         }
     },
@@ -264,8 +264,8 @@
         "notify": "Log",
         "warning": "{user}, your message was deleted because it contained forbidden words.",
         "buttons": {
-            "system": "🛡️ Status",
-            "notify": "📢 Notification"
+            "system": "🔤 Filter",
+            "notify": "📋 Log"
         }
     },
     "mention": {
@@ -279,9 +279,9 @@
         "reason_gbanned": "Mentioned globally banned user: @{user}",
         "reason_scam": "AI Scam Detection ({percent}%): {reason}",
         "buttons": {
-            "system": "🛡️ Status",
+            "system": "👤 Filter",
             "action": "⚡ Action",
-            "notify": "📢 Notification"
+            "notify": "📋 Log"
         },
         "staff_alert": {
             "title": "👤 <b>SUSPICIOUS MENTION DETECTED</b>",
@@ -307,11 +307,11 @@
         "warning": "{user}, your media was deleted because it violates the group rules.",
         "warning_album": "{user}, {count} media were deleted because they violate the group rules.",
         "buttons": {
-            "monitor": "🖼️ Monitor",
+            "monitor": "🖼️ Filter",
             "action": "⚡ Action",
             "threshold": "📊 Threshold",
             "categories": "🚫 Categories",
-            "notify": "Log"
+            "notify": "📋 Log"
         },
         "categories_ui": {
             "title": "🚫 <b>MEDIA CATEGORIES</b>",
@@ -386,8 +386,8 @@
         "status": "Status",
         "notify": "Log",
         "buttons": {
-            "system": "🛡️ Status",
-            "notify": "📢 Notification"
+            "system": "🚫 Filter",
+            "notify": "📋 Log"
         }
     },
     "staff": {
@@ -621,7 +621,7 @@
             "high": "HIGH"
         },
         "buttons": {
-            "monitor": "🛡️ Monitor",
+            "monitor": "🛡️ Filter",
             "sensitivity": "🌡️ Sens",
             "action_flood": "⚡ Flood",
             "action_repeat": "🔁 Repeat"
@@ -661,9 +661,9 @@
         "action_label": "Action",
         "precision": "Precision",
         "buttons": {
-            "system": "🧬 Sys",
+            "system": "🧬 Filter",
             "sync": "🌐 Sync",
-            "action": "👮 Action",
+            "action": "⚡ Action",
             "threshold": "🎯 Threshold"
         }
     },
