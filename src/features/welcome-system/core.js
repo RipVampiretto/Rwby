@@ -192,7 +192,7 @@ async function logWelcomeEvent(ctx, type, details, config, userOverride = null) 
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -489,7 +489,7 @@ async function processUserJoin(ctx, user, config) {
 
                 logger.debug(`[Welcome] User ${user.id} kicked (banned+unbanned) for timeout.`);
 
-                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => {});
 
                 // Send temporary kick notification
                 const kickText = t('welcome.captcha_messages.fail_message', {
@@ -500,7 +500,7 @@ async function processUserJoin(ctx, user, config) {
 
                 // Auto-delete kick notification
                 setTimeout(() => {
-                    ctx.api.deleteMessage(ctx.chat.id, kickMsg.message_id).catch(() => { });
+                    ctx.api.deleteMessage(ctx.chat.id, kickMsg.message_id).catch(() => {});
                 }, 10000); // 10 seconds
             } catch (e) {
                 logger.error(`[Welcome] Kick failed: ${e.message}`);
@@ -617,7 +617,7 @@ async function handleCaptchaCallback(ctx) {
                 });
             } catch (e) {
                 // If edit fails, try sending new
-                await ctx.deleteMessage().catch(() => { });
+                await ctx.deleteMessage().catch(() => {});
                 await ctx.reply(text, {
                     parse_mode: 'HTML',
                     reply_markup: {
@@ -717,7 +717,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
                 logger.debug(`[Welcome] Edit failed: ${e.message}. Deleting and sending new.`);
-                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -739,7 +739,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
         // Auto-delete (timer is in minutes)
         if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
             setTimeout(() => {
-                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
             }, config.welcome_autodelete_timer * 60000); // minutes to ms
         }
     } catch (e) {

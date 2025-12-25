@@ -144,7 +144,7 @@ function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image
             if (parsed.primary_category) {
                 conversationName = `NSFW: ${parsed.primary_category}`;
             }
-        } catch (e) { }
+        } catch (e) {}
 
         const conversation = {
             name: conversationName,
@@ -457,7 +457,7 @@ async function processMedia(ctx, config) {
         logger.debug(`[media-filter] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) { }
+        } catch (e) {}
     }
 }
 
@@ -488,7 +488,7 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[media-filter] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => { });
+                fs.unlink(dest, () => {});
                 reject(err);
             });
     });
@@ -695,7 +695,7 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) { }
+            } catch (e) {}
         }
     }
 }
@@ -1261,7 +1261,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) { }
+        } catch (e) {}
     }
 }
 

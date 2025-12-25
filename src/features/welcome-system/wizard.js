@@ -135,7 +135,7 @@ async function handleMessage(ctx) {
                         reply: (text, extra) => ctx.reply(text, extra)
                     };
                     await ui.sendWelcomeMenu(mockCtx, false);
-                } catch (e2) { }
+                } catch (e2) {}
             }
         }
     };
@@ -146,7 +146,7 @@ async function handleMessage(ctx) {
         // Delete user cancel message
         try {
             await ctx.deleteMessage();
-        } catch (e) { }
+        } catch (e) {}
 
         await restoreMenu();
         return true;
@@ -158,12 +158,12 @@ async function handleMessage(ctx) {
         // Delete user message to keep chat clean
         try {
             await ctx.deleteMessage();
-        } catch (e) { }
+        } catch (e) {}
 
         if (!input) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const warning = await ctx.reply(i18n.t(lang, 'welcome.wizard.text_required'));
-            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => { }), 3000);
+            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => {}), 3000);
             return true;
         }
 
@@ -174,7 +174,7 @@ async function handleMessage(ctx) {
         if (!welcomeText) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const warning = await ctx.reply(i18n.t(lang, 'welcome.wizard.text_empty'));
-            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => { }), 3000);
+            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => {}), 3000);
             return true;
         }
 
@@ -223,7 +223,7 @@ async function handleMessage(ctx) {
         await restoreMenu();
         const lang = await i18n.getLanguage(ctx.chat.id);
         const success = await ctx.reply(i18n.t(lang, 'welcome.wizard.saved'));
-        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => { }), 3000);
+        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => {}), 3000);
         return true;
     }
 
@@ -231,12 +231,12 @@ async function handleMessage(ctx) {
         const input = ctx.message.text;
         try {
             await ctx.deleteMessage();
-        } catch (e) { }
+        } catch (e) {}
 
         if (!input || (!input.startsWith('http') && !input.startsWith('tg://'))) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const warning = await ctx.reply(i18n.t(lang, 'welcome.wizard.link_invalid'));
-            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => { }), 3000);
+            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => {}), 3000);
             return true;
         }
 
@@ -245,7 +245,7 @@ async function handleMessage(ctx) {
         await restoreMenu();
         const lang = await i18n.getLanguage(ctx.chat.id);
         const success = await ctx.reply(i18n.t(lang, 'welcome.wizard.rules_saved'));
-        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => { }), 3000);
+        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => {}), 3000);
         return true;
     }
 

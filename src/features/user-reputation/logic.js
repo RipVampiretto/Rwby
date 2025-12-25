@@ -12,10 +12,10 @@
  * @constant {Object.<string, number>}
  */
 const TIER_THRESHOLDS = {
-    TIER_0: 0,   // Ombra (Shadow)
+    TIER_0: 0, // Ombra (Shadow)
     TIER_1: 100, // Scudiero (Squire)
     TIER_2: 300, // Guardiano (Guardian)
-    TIER_3: 500  // Sentinella (Sentinel)
+    TIER_3: 500 // Sentinella (Sentinel)
 };
 
 /**

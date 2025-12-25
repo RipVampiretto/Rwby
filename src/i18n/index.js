@@ -195,7 +195,7 @@ function middleware() {
         // Attach other helpers
         ctx.i18n = {
             lang,
-            getLanguage: () => isPrivate ? getUserLanguage(userId) : getLanguage(guildId),
+            getLanguage: () => (isPrivate ? getUserLanguage(userId) : getLanguage(guildId)),
             setLanguage: langCode => setLanguage(guildId, langCode),
             available: AVAILABLE_LANGUAGES
         };

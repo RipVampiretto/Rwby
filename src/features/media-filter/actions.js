@@ -90,7 +90,7 @@ async function executeAction(ctx, action, reason, type) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -156,9 +156,9 @@ async function executeAction(ctx, action, reason, type) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
+        } catch (e) {}
 
         // Logga solo se abilitato
         if (logEvents['media_delete'] && actionLog.getLogEvent()) {
@@ -210,7 +210,7 @@ async function executeAlbumAction(violations, config) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -323,9 +323,9 @@ async function executeAlbumAction(violations, config) {
             setTimeout(async () => {
                 try {
                     await firstCtx.api.deleteMessage(firstCtx.chat.id, warning.message_id);
-                } catch (e) { }
+                } catch (e) {}
             }, 60000);
-        } catch (e) { }
+        } catch (e) {}
 
         // Logga solo se abilitato (singolo log per intero album)
         if (logEvents['media_delete'] && actionLog.getLogEvent()) {

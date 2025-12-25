@@ -90,7 +90,7 @@ async function logEvent(params) {
             } else {
                 logEvents = parsed;
             }
-        } catch (e) { }
+        } catch (e) {}
     }
 
     // Verifica se questo tipo di evento è abilitato
@@ -115,7 +115,7 @@ async function logEvent(params) {
     let botInfo = { first_name: 'Bot', username: 'bot', id: 0 };
     try {
         botInfo = await _botInstance.api.getMe();
-    } catch (e) { }
+    } catch (e) {}
 
     // Costruisce i link HTML
     const botLink = botInfo.username
@@ -154,7 +154,7 @@ async function logEvent(params) {
                         targetChatId = config.staff_group_id;
                         messageThreadId = topics.logs;
                     }
-                } catch (e) { }
+                } catch (e) {}
             }
 
             // Inoltra il messaggio originale se richiesto

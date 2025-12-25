@@ -135,7 +135,7 @@ function register(bot) {
 
                         try {
                             await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                        } catch (e) { }
+                        } catch (e) {}
 
                         const completeMsg = await ctx.reply(
                             `✅ Sincronizzazione completata: ${result.success} utenti bannati.`
@@ -144,7 +144,7 @@ function register(bot) {
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, completeMsg.message_id);
-                            } catch (e) { }
+                            } catch (e) {}
                         }, 10000);
                     } catch (e) {
                         logger.error(`[global-blacklist] Sync failed: ${e.message}`);
@@ -154,7 +154,7 @@ function register(bot) {
                 setTimeout(async () => {
                     try {
                         await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                    } catch (e) { }
+                    } catch (e) {}
                 }, 30000);
             }
 
