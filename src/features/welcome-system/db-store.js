@@ -13,17 +13,18 @@ const { query } = require('../../database/connection');
  * @param {string} answer - Risposta corretta (da salvare in chiaro o hash se preferito, qui salvo testo)
  * @param {number} timeoutMinutes - Minuti prima della scadenza
  * @param {Array} [options] - Opzioni generate (per button/math/etc)
+ * @param {number|null} [serviceMessageId] - ID messaggio di join di servizio
  * @returns {Promise<void>}
  */
-async function addPendingCaptcha(guildId, userId, messageId, answer, timeoutMinutes, options = []) {
+async function addPendingCaptcha(guildId, userId, messageId, answer, timeoutMinutes, options = [], serviceMessageId = null) {
     const expiresAt = new Date(Date.now() + timeoutMinutes * 60 * 1000);
     const optionsJson = JSON.stringify(options);
 
     await query(
-        `INSERT INTO pending_captchas (guild_id, user_id, message_id, correct_answer, options, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (id) DO NOTHING`, // ID is serial, unlikely conflict. Logic should prevent double insert per user usually
-        [guildId, userId, messageId, answer, optionsJson, expiresAt]
+        `INSERT INTO pending_captchas (guild_id, user_id, message_id, correct_answer, options, expires_at, service_message_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO NOTHING`,
+        [guildId, userId, messageId, answer, optionsJson, expiresAt, serviceMessageId]
     );
 }
 
@@ -77,10 +78,47 @@ async function removeCaptchaById(id) {
     );
 }
 
+/**
+ * Aggiunge un utente ai verificati recenti.
+ */
+async function addRecentlyVerified(guildId, userId, welcomeMsgId, serviceMsgId) {
+    await query(
+        `INSERT INTO recently_verified_users (guild_id, user_id, welcome_message_id, service_message_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, guild_id) DO UPDATE 
+         SET welcome_message_id = $3, service_message_id = $4, verified_at = NOW()`,
+        [guildId, userId, welcomeMsgId, serviceMsgId]
+    );
+}
+
+/**
+ * Recupera un utente verificato di recente.
+ */
+async function getRecentlyVerified(guildId, userId) {
+    const res = await query(
+        `SELECT * FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`,
+        [guildId, userId]
+    );
+    return res.rows[0] || null;
+}
+
+/**
+ * Rimuove un utente dai verificati recenti.
+ */
+async function removeRecentlyVerified(guildId, userId) {
+    await query(
+        `DELETE FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`,
+        [guildId, userId]
+    );
+}
+
 module.exports = {
     addPendingCaptcha,
     getPendingCaptcha,
     removePendingCaptcha,
     getExpiredCaptchas,
-    removeCaptchaById
+    removeCaptchaById,
+    addRecentlyVerified,
+    getRecentlyVerified,
+    removeRecentlyVerified
 };

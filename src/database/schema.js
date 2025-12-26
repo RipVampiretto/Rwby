@@ -412,7 +412,21 @@ async function createTables() {
             correct_answer TEXT,
             options JSONB,
             expires_at TIMESTAMPTZ,
-            created_at TIMESTAMPTZ DEFAULT NOW()
+            service_message_id BIGINT
+        )
+    `);
+
+    // ========================================================================
+    // RECENTLY VERIFIED USERS - Anti "Join & Run" protection
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS recently_verified_users (
+            user_id BIGINT,
+            guild_id BIGINT,
+            welcome_message_id BIGINT,
+            service_message_id BIGINT,
+            verified_at TIMESTAMPTZ DEFAULT NOW(),
+            PRIMARY KEY (user_id, guild_id)
         )
     `);
 
