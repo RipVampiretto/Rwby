@@ -88,10 +88,9 @@ bot.use(async (ctx, next) => {
         }
     }
 
-    // Log message
-    const user = ctx.from?.first_name || 'System';
+    // Log message with structured context
     const text = ctx.message?.text?.substring(0, 50) || 'Non-text update';
-    logger.info(`[${user}] ${text}`);
+    logger.info(text, ctx);
     await next();
 });
 
