@@ -55,7 +55,8 @@
                 "features": "📋 Features",
                 "info": "ℹ️ Information",
                 "my_flux": "📊 My Flux",
-                "tier_info": "ℹ️ Tier Info"
+                "tier_info": "ℹ️ Tier Info",
+                "channel": "📢 Official Channel"
             },
             "language": {
                 "title": "🌐 <b>LANGUAGE</b>",

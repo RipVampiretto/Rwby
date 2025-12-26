@@ -179,6 +179,30 @@ async function syncGlobalUserStats(db, userId) {
 }
 
 /**
+ * Inizializza il Flux di un utente a 0 quando entra in un gruppo.
+ * Se l'utente ha già un'entry, non fa nulla (preserva il flux esistente).
+ *
+ * @param {Object} db - Istanza del database
+ * @param {number} userId - ID dell'utente
+ * @param {number} guildId - ID del gruppo
+ * @returns {Promise<void>}
+ */
+async function initializeUserFlux(db, userId, guildId) {
+    try {
+        await db.query(
+            `
+            INSERT INTO user_trust_flux (user_id, guild_id, local_flux, last_activity)
+            VALUES ($1, $2, 0, NOW())
+            ON CONFLICT(user_id, guild_id) DO NOTHING
+            `,
+            [userId, guildId]
+        );
+    } catch (e) {
+        console.error(`[reputation] Failed to initialize flux for ${userId} in ${guildId}: ${e.message}`);
+    }
+}
+
+/**
  * Ottiene il nome del Tier (per compatibilità legacy).
  *
  * @param {number} tier - Numero del Tier (0-3)
@@ -196,5 +220,6 @@ module.exports = {
     getGlobalFlux,
     modifyFlux,
     syncGlobalUserStats,
+    initializeUserFlux,
     getTierName
 };

@@ -37,6 +37,8 @@ const { replaceWildcards, parseButtonConfig } = require('./utils');
 const { InlineKeyboard } = require('grammy');
 const i18n = require('../../i18n');
 const superAdmin = require('../super-admin');
+const { initializeUserFlux } = require('../user-reputation/logic');
+const db = require('../../database');
 
 /**
  * Mappa dei captcha in attesa.
@@ -317,6 +319,9 @@ async function handleNewMember(ctx) {
  */
 async function processUserJoin(ctx, user, config) {
     logWelcomeEvent(ctx, 'JOIN', null, config, user);
+
+    // Initialize user flux to 0 if not exists (track user from join moment)
+    await initializeUserFlux(db, user.id, ctx.chat.id);
 
     // Log join to global log (Parliament will receive it in join_logs topic)
     if (superAdmin.sendGlobalLog) {
