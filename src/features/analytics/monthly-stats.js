@@ -301,6 +301,8 @@ module.exports = {
     getPreviousMonth,
     getNextMonth,
     formatMonthYear,
+    getCurrentMonthYear,
     ACTIVE_USER_THRESHOLD,
     ACTIVE_GUILD_THRESHOLD
 };
+
