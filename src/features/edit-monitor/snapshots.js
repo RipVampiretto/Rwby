@@ -51,7 +51,7 @@ async function getSnapshot(messageId, chatId) {
 async function cleanupSnapshots() {
     if (!db) return;
     try {
-        await db.query("DELETE FROM message_snapshots WHERE created_at < NOW() - INTERVAL '1 day'");
+        await db.query("DELETE FROM message_snapshots WHERE created_at < NOW() - INTERVAL '30 days'");
     } catch (e) {
         handleCriticalError('anti-edit-abuse', 'cleanupSnapshots', e);
     }
