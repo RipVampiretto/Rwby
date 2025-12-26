@@ -42,7 +42,7 @@ async function sendMainMenu(ctx, isEdit = false) {
         if (isEdit) {
             try {
                 await ctx.editMessageText(text, { parse_mode: 'HTML' });
-            } catch (e) { }
+            } catch (e) {}
         } else {
             await ctx.reply(text, { parse_mode: 'HTML' });
         }
@@ -84,7 +84,7 @@ async function sendMainMenu(ctx, isEdit = false) {
             if (e.error_code === 429) {
                 try {
                     await ctx.answerCallbackQuery('⚠️ Slow down!');
-                } catch (ignore) { }
+                } catch (ignore) {}
             }
         }
     } else {
@@ -124,7 +124,7 @@ async function sendLanguageUI(ctx) {
         if (e.error_code === 429) {
             try {
                 await ctx.answerCallbackQuery('⚠️ Slow down!');
-            } catch (ignore) { }
+            } catch (ignore) {}
         }
     }
 }

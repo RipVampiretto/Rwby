@@ -16,7 +16,15 @@ const { query } = require('../../database/connection');
  * @param {number|null} [serviceMessageId] - ID messaggio di join di servizio
  * @returns {Promise<void>}
  */
-async function addPendingCaptcha(guildId, userId, messageId, answer, timeoutMinutes, options = [], serviceMessageId = null) {
+async function addPendingCaptcha(
+    guildId,
+    userId,
+    messageId,
+    answer,
+    timeoutMinutes,
+    options = [],
+    serviceMessageId = null
+) {
     const expiresAt = new Date(Date.now() + timeoutMinutes * 60 * 1000);
     const optionsJson = JSON.stringify(options);
 
@@ -35,10 +43,10 @@ async function addPendingCaptcha(guildId, userId, messageId, answer, timeoutMinu
  * @returns {Promise<Object|null>}
  */
 async function getPendingCaptcha(guildId, userId) {
-    const res = await query(
-        `SELECT * FROM pending_captchas WHERE guild_id = $1 AND user_id = $2 LIMIT 1`,
-        [guildId, userId]
-    );
+    const res = await query(`SELECT * FROM pending_captchas WHERE guild_id = $1 AND user_id = $2 LIMIT 1`, [
+        guildId,
+        userId
+    ]);
     return res.rows[0] || null;
 }
 
@@ -49,10 +57,7 @@ async function getPendingCaptcha(guildId, userId) {
  * @returns {Promise<void>}
  */
 async function removePendingCaptcha(guildId, userId) {
-    await query(
-        `DELETE FROM pending_captchas WHERE guild_id = $1 AND user_id = $2`,
-        [guildId, userId]
-    );
+    await query(`DELETE FROM pending_captchas WHERE guild_id = $1 AND user_id = $2`, [guildId, userId]);
 }
 
 /**
@@ -60,9 +65,7 @@ async function removePendingCaptcha(guildId, userId) {
  * @returns {Promise<Array>}
  */
 async function getExpiredCaptchas() {
-    const res = await query(
-        `SELECT * FROM pending_captchas WHERE expires_at < NOW()`
-    );
+    const res = await query(`SELECT * FROM pending_captchas WHERE expires_at < NOW()`);
     return res.rows;
 }
 
@@ -72,10 +75,7 @@ async function getExpiredCaptchas() {
  * @returns {Promise<void>}
  */
 async function removeCaptchaById(id) {
-    await query(
-        `DELETE FROM pending_captchas WHERE id = $1`,
-        [id]
-    );
+    await query(`DELETE FROM pending_captchas WHERE id = $1`, [id]);
 }
 
 /**
@@ -95,10 +95,10 @@ async function addRecentlyVerified(guildId, userId, welcomeMsgId, serviceMsgId) 
  * Recupera un utente verificato di recente.
  */
 async function getRecentlyVerified(guildId, userId) {
-    const res = await query(
-        `SELECT * FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`,
-        [guildId, userId]
-    );
+    const res = await query(`SELECT * FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`, [
+        guildId,
+        userId
+    ]);
     return res.rows[0] || null;
 }
 
@@ -106,10 +106,7 @@ async function getRecentlyVerified(guildId, userId) {
  * Rimuove un utente dai verificati recenti.
  */
 async function removeRecentlyVerified(guildId, userId) {
-    await query(
-        `DELETE FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`,
-        [guildId, userId]
-    );
+    await query(`DELETE FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`, [guildId, userId]);
 }
 
 module.exports = {

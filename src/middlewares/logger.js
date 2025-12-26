@@ -31,10 +31,10 @@ const LOG_DIR = path.join(process.cwd(), 'logs');
  * @constant {Object}
  */
 const COLUMN_WIDTHS = {
-    level: 5,      // DEBUG, INFO, WARN, ERROR
-    group: 20,     // Nome gruppo/modulo
-    chatId: 15,    // Chat ID
-    user: 16       // Nome utente
+    level: 5, // DEBUG, INFO, WARN, ERROR
+    group: 20, // Nome gruppo/modulo
+    chatId: 15, // Chat ID
+    user: 16 // Nome utente
 };
 
 /**
@@ -43,17 +43,15 @@ const COLUMN_WIDTHS = {
  */
 const EMPTY_SYMBOL = '—';
 
-
-
 /**
  * Colori ANSI per i livelli
  * @constant {Object}
  */
 const LEVEL_COLORS = {
-    debug: '\x1b[34m',   // Blu
-    info: '\x1b[32m',    // Verde
-    warn: '\x1b[33m',    // Giallo
-    error: '\x1b[31m'    // Rosso
+    debug: '\x1b[34m', // Blu
+    info: '\x1b[32m', // Verde
+    warn: '\x1b[33m', // Giallo
+    error: '\x1b[31m' // Rosso
 };
 const RESET_COLOR = '\x1b[0m';
 
@@ -286,10 +284,14 @@ module.exports = {
      */
     module(moduleName) {
         return {
-            debug: (msg, ctx) => module.exports.debug(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) }),
-            info: (msg, ctx) => module.exports.info(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) }),
-            warn: (msg, ctx) => module.exports.warn(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) }),
-            error: (msg, ctx) => module.exports.error(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) })
+            debug: (msg, ctx) =>
+                module.exports.debug(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) }),
+            info: (msg, ctx) =>
+                module.exports.info(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) }),
+            warn: (msg, ctx) =>
+                module.exports.warn(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) }),
+            error: (msg, ctx) =>
+                module.exports.error(msg, { ...extractContext(ctx), module: moduleName, ...(ctx?.chat ? {} : ctx) })
         };
     },
 
@@ -301,10 +303,10 @@ module.exports = {
     ctx(ctx) {
         const extracted = extractContext(ctx);
         return {
-            debug: (msg) => module.exports.debug(msg, extracted),
-            info: (msg) => module.exports.info(msg, extracted),
-            warn: (msg) => module.exports.warn(msg, extracted),
-            error: (msg) => module.exports.error(msg, extracted)
+            debug: msg => module.exports.debug(msg, extracted),
+            info: msg => module.exports.info(msg, extracted),
+            warn: msg => module.exports.warn(msg, extracted),
+            error: msg => module.exports.error(msg, extracted)
         };
     }
 };

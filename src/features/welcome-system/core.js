@@ -41,8 +41,6 @@ const { initializeUserFlux } = require('../user-reputation/logic');
 const db = require('../../database');
 const dbStore = require('./db-store');
 
-
-
 // --- DATA LISTS ---
 
 const EMOJI_LIST = [
@@ -188,7 +186,7 @@ async function logWelcomeEvent(ctx, type, details, config, userOverride = null) 
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -296,421 +294,414 @@ async function handleNewMember(ctx) {
     const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1; // Correct toggle check
     logger.debug(`[Welcome] Captcha Enabled: ${captchaEnabled} (Value: ${config.captcha_enabled})`);
 
-    if (ctx.message) {
-        // Delete service messages if needed later
-        // We just pass the ID, logic will handle if it should be saved
-        for (const member of humans) {
-            if (ctx.message) {
-                // Delete service messages if needed later
-                // We just pass the ID, logic will handle if it should be saved
-                await processUserJoin(ctx, member, config, ctx.message.message_id);
-            } else {
-                await processUserJoin(ctx, member, config);
-            }
+    for (const member of humans) {
+        if (ctx.message) {
+            // Delete service messages if needed later
+            // We just pass the ID, logic will handle if it should be saved
+            await processUserJoin(ctx, member, config, ctx.message.message_id);
+        } else {
+            await processUserJoin(ctx, member, config);
         }
     }
+}
 
-    /**
-     * Elabora l'ingresso di un singolo utente.
-     * Restringe l'utente, genera il captcha appropriato e imposta il timeout.
-     *
-     * @param {import('grammy').Context} ctx - Contesto grammY
-     * @param {Object} user - Oggetto utente Telegram
-     * @param {Object} config - Configurazione del gruppo
-     * @param {number|null} [serviceMessageId=null] - ID messaggio di servizio (join)
-     * @returns {Promise<void>}
-     * @private
-     */
-    async function processUserJoin(ctx, user, config, serviceMessageId = null) {
-        logWelcomeEvent(ctx, 'JOIN', null, config, user);
+/**
+ * Elabora l'ingresso di un singolo utente.
+ * Restringe l'utente, genera il captcha appropriato e imposta il timeout.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} user - Oggetto utente Telegram
+ * @param {Object} config - Configurazione del gruppo
+ * @param {number|null} [serviceMessageId=null] - ID messaggio di servizio (join)
+ * @returns {Promise<void>}
+ * @private
+ */
+async function processUserJoin(ctx, user, config, serviceMessageId = null) {
+    logWelcomeEvent(ctx, 'JOIN', null, config, user);
 
-        // Initialize user flux to 0 if not exists (track user from join moment)
-        await initializeUserFlux(db, user.id, ctx.chat.id);
+    // Initialize user flux to 0 if not exists (track user from join moment)
+    await initializeUserFlux(db, user.id, ctx.chat.id);
 
-        // Log join to global log (Parliament will receive it in join_logs topic)
-        if (superAdmin.sendGlobalLog) {
-            await superAdmin.sendGlobalLog({
-                eventType: 'user_join',
-                guildId: ctx.chat.id,
-                executor: 'System',
-                target: `${user.first_name} [${user.id}]`,
-                reason: 'New member joined',
-                details: ctx.chat.title
-            });
-        }
-
-        const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1;
-
-        if (!captchaEnabled) {
-            await sendWelcome(ctx, config, user);
-            return;
-        }
-
-        logger.info(`[Welcome] New member ${user.id} in ${ctx.chat.id}. Sending Captcha.`);
-
-        // 1. Restrict User
-        try {
-            logger.debug(`[Welcome] Attempting to restrict user ${user.id}...`);
-            await ctx.restrictChatMember(user.id, {
-                can_send_messages: false,
-                can_send_media_messages: false,
-                can_send_other_messages: false,
-                can_add_web_page_previews: false
-            });
-            logger.debug(`[Welcome] User ${user.id} restricted successfully.`);
-        } catch (e) {
-            logger.error(`[Welcome] Failed to restrict ${user.id}: ${e.message}`);
-        }
-
-        // 2. Prepare Captcha
-        const guildId = ctx.chat.id;
-        const lang = await i18n.getLanguage(guildId);
-        const t = (key, params) => i18n.t(lang, key, params);
-        const modes = (config.captcha_mode || 'button').split(',');
-        const mode = modes[Math.floor(Math.random() * modes.length)];
-        const timeoutMins = config.captcha_timeout || 5;
-        let text = '';
-        const keyboard = new InlineKeyboard();
-
-        try {
-            if (mode === 'math') {
-                const ops = ['+', '-', '*'];
-                const op = ops[Math.floor(Math.random() * ops.length)];
-                let a, b, ans;
-
-                if (op === '*') {
-                    a = getRandomInt(2, 6);
-                    b = getRandomInt(2, 6);
-                    ans = a * b;
-                } else if (op === '-') {
-                    a = getRandomInt(5, 14);
-                    b = getRandomInt(1, a);
-                    ans = a - b;
-                } else {
-                    a = getRandomInt(1, 10);
-                    b = getRandomInt(1, 10);
-                    ans = a + b;
-                }
-
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.solve_captcha')}\n\n${t('welcome.captcha_messages.math_question', { a, op: op === '*' ? 'x' : op, b })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-
-                const options = new Set([ans]);
-                while (options.size < 4) {
-                    let fake;
-                    if (op === '*') fake = ans + getRandomInt(1, 6) * (Math.random() < 0.5 ? -1 : 1);
-                    else fake = ans + getRandomInt(1, 5) * (Math.random() < 0.5 ? -1 : 1);
-                    if (fake >= 0) options.add(fake);
-                }
-                generateButtons(keyboard, user.id, ans, Array.from(options));
-            } else if (mode === 'char') {
-                const word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
-                const char = word.charAt(Math.floor(Math.random() * word.length));
-                const ans = word.split(char).length - 1;
-
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_verification')}\n\n${t('welcome.captcha_messages.char_question', { char, word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-
-                const options = new Set([ans]);
-                while (options.size < 4) {
-                    const fake = getRandomInt(1, 5);
-                    if (fake !== ans) options.add(fake);
-                }
-                generateButtons(keyboard, user.id, ans, Array.from(options));
-            } else if (mode === 'emoji') {
-                const correctItem = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
-                const ans = correctItem.emoji;
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.click_emoji')}\n\n${t('welcome.captcha_messages.emoji_question', { emoji: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-
-                const options = new Set([ans]);
-                while (options.size < 4) {
-                    const fake = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)].emoji;
-                    if (fake !== ans) options.add(fake);
-                }
-                generateButtons(keyboard, user.id, ans, Array.from(options));
-            } else if (mode === 'color') {
-                const correctItem = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
-                const ans = correctItem.emoji;
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.select_color')}\n\n${t('welcome.captcha_messages.color_question', { color: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-
-                const options = new Set([ans]);
-                while (options.size < 4) {
-                    const fake = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)].emoji;
-                    if (fake !== ans) options.add(fake);
-                }
-                generateButtons(keyboard, user.id, ans, Array.from(options));
-            } else if (mode === 'reverse') {
-                const word = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
-                const ans = word.split('').reverse().join('');
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.show_attention')}\n\n${t('welcome.captcha_messages.reverse_question', { word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-
-                const options = new Set([ans]);
-                while (options.size < 4) {
-                    const otherWord = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
-                    const fake = otherWord.split('').reverse().join('');
-                    if (fake !== ans) options.add(fake);
-                }
-                generateButtons(keyboard, user.id, ans, Array.from(options));
-            } else if (mode === 'logic') {
-                const puzzle = LOGIC_SEQUENCES[Math.floor(Math.random() * LOGIC_SEQUENCES.length)];
-                const ans = puzzle.ans;
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_sequence')}\n\n${t('welcome.captcha_messages.logic_question', { sequence: puzzle.seq })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-
-                const options = new Set([ans]);
-                const isNum = !isNaN(ans);
-                while (options.size < 4) {
-                    let fake;
-                    if (isNum) {
-                        const ansNum = parseInt(ans);
-                        fake = (ansNum + getRandomInt(-5, 5)).toString();
-                    } else {
-                        const code = ans.charCodeAt(0);
-                        fake = String.fromCharCode(code + getRandomInt(-3, 3));
-                    }
-                    if (fake !== ans && (isNum ? parseInt(fake) >= 0 : true)) options.add(fake);
-                }
-                generateButtons(keyboard, user.id, ans, Array.from(options));
-            } else {
-                // Button mode (Default)
-                text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.confirm_human')}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
-                keyboard.text('✅ Non sono un robot', `wc:b:${user.id}`);
-            }
-
-
-            const msg = await ctx.reply(text, {
-                reply_markup: keyboard,
-                parse_mode: 'HTML'
-            });
-
-
-            // SAVE TO DB
-            await dbStore.addPendingCaptcha(guildId, user.id, msg.message_id, ans || 'CHECK', timeoutMins, [], serviceMessageId);
-            logger.debug(`[Welcome] Captcha for ${user.id} saved to DB.`);
-        } catch (e) {
-            logger.error(`[Welcome] Failed to send captcha: ${e.message}`);
-        }
-    }
-
-    /**
-     * Genera i pulsanti per il captcha.
-     * Dispone le opzioni in una griglia 2x2 mescolata.
-     *
-     * @param {import('grammy').InlineKeyboard} keyboard - Tastiera inline grammY
-     * @param {number} userId - ID dell'utente target
-     * @param {string|number} ans - Risposta corretta
-     * @param {Array} options - Array di opzioni (4 elementi)
-     * @private
-     */
-    function generateButtons(keyboard, userId, ans, options) {
-        const shuffled = shuffle(options);
-        shuffled.forEach((opt, i) => {
-            keyboard.text(opt.toString(), `wc:x:${userId}:${ans}:${opt}`);
-            if (i === 1) keyboard.row();
+    // Log join to global log (Parliament will receive it in join_logs topic)
+    if (superAdmin.sendGlobalLog) {
+        await superAdmin.sendGlobalLog({
+            eventType: 'user_join',
+            guildId: ctx.chat.id,
+            executor: 'System',
+            target: `${user.first_name} [${user.id}]`,
+            reason: 'New member joined',
+            details: ctx.chat.title
         });
     }
 
-    /**
-     * Gestisce i callback dei captcha (risposte utente).
-     * Verifica la risposta e procede con regolamento o sblocco.
-     *
-     * Formati callback supportati:
-     * - `wc:b:USERID` - Bottone semplice
-     * - `wc:x:USERID:ANS:CLICKED` - Risposta a scelta multipla
-     * - `wc:accept_rules:USERID` - Accettazione regolamento
-     *
-     * @param {import('grammy').Context} ctx - Contesto grammY
-     * @returns {Promise<void>}
-     */
-    async function handleCaptchaCallback(ctx) {
-        const data = ctx.callbackQuery.data;
-        if (!data.startsWith('wc:')) return;
-        if (data.startsWith('wc_')) return;
+    const captchaEnabled = config.captcha_enabled === true || config.captcha_enabled === 1;
 
-        if (data.startsWith('wc:accept_rules:')) {
-            // Rules acceptance
-            // wc:accept_rules:USERID
-            const targetUserId = parseInt(data.split(':')[2]);
-            if (ctx.from.id !== targetUserId) return ctx.answerCallbackQuery('Non per te.');
+    if (!captchaEnabled) {
+        await sendWelcome(ctx, config, user);
+        return;
+    }
 
-            await completeVerification(ctx, targetUserId);
-            return;
+    logger.info(`[Welcome] New member ${user.id} in ${ctx.chat.id}. Sending Captcha.`);
+
+    // 1. Restrict User
+    try {
+        logger.debug(`[Welcome] Attempting to restrict user ${user.id}...`);
+        await ctx.restrictChatMember(user.id, {
+            can_send_messages: false,
+            can_send_media_messages: false,
+            can_send_other_messages: false,
+            can_add_web_page_previews: false
+        });
+        logger.debug(`[Welcome] User ${user.id} restricted successfully.`);
+    } catch (e) {
+        logger.error(`[Welcome] Failed to restrict ${user.id}: ${e.message}`);
+    }
+
+    // 2. Prepare Captcha
+    const guildId = ctx.chat.id;
+    const lang = await i18n.getLanguage(guildId);
+    const t = (key, params) => i18n.t(lang, key, params);
+    const modes = (config.captcha_mode || 'button').split(',');
+    const mode = modes[Math.floor(Math.random() * modes.length)];
+    const timeoutMins = config.captcha_timeout || 5;
+    let text = '';
+    const keyboard = new InlineKeyboard();
+
+    try {
+        if (mode === 'math') {
+            const ops = ['+', '-', '*'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let a, b, ans;
+
+            if (op === '*') {
+                a = getRandomInt(2, 6);
+                b = getRandomInt(2, 6);
+                ans = a * b;
+            } else if (op === '-') {
+                a = getRandomInt(5, 14);
+                b = getRandomInt(1, a);
+                ans = a - b;
+            } else {
+                a = getRandomInt(1, 10);
+                b = getRandomInt(1, 10);
+                ans = a + b;
+            }
+
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.solve_captcha')}\n\n${t('welcome.captcha_messages.math_question', { a, op: op === '*' ? 'x' : op, b })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+
+            const options = new Set([ans]);
+            while (options.size < 4) {
+                let fake;
+                if (op === '*') fake = ans + getRandomInt(1, 6) * (Math.random() < 0.5 ? -1 : 1);
+                else fake = ans + getRandomInt(1, 5) * (Math.random() < 0.5 ? -1 : 1);
+                if (fake >= 0) options.add(fake);
+            }
+            generateButtons(keyboard, user.id, ans, Array.from(options));
+        } else if (mode === 'char') {
+            const word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+            const char = word.charAt(Math.floor(Math.random() * word.length));
+            const ans = word.split(char).length - 1;
+
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_verification')}\n\n${t('welcome.captcha_messages.char_question', { char, word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+
+            const options = new Set([ans]);
+            while (options.size < 4) {
+                const fake = getRandomInt(1, 5);
+                if (fake !== ans) options.add(fake);
+            }
+            generateButtons(keyboard, user.id, ans, Array.from(options));
+        } else if (mode === 'emoji') {
+            const correctItem = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
+            const ans = correctItem.emoji;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.click_emoji')}\n\n${t('welcome.captcha_messages.emoji_question', { emoji: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+
+            const options = new Set([ans]);
+            while (options.size < 4) {
+                const fake = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)].emoji;
+                if (fake !== ans) options.add(fake);
+            }
+            generateButtons(keyboard, user.id, ans, Array.from(options));
+        } else if (mode === 'color') {
+            const correctItem = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
+            const ans = correctItem.emoji;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.select_color')}\n\n${t('welcome.captcha_messages.color_question', { color: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+
+            const options = new Set([ans]);
+            while (options.size < 4) {
+                const fake = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)].emoji;
+                if (fake !== ans) options.add(fake);
+            }
+            generateButtons(keyboard, user.id, ans, Array.from(options));
+        } else if (mode === 'reverse') {
+            const word = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
+            const ans = word.split('').reverse().join('');
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.show_attention')}\n\n${t('welcome.captcha_messages.reverse_question', { word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+
+            const options = new Set([ans]);
+            while (options.size < 4) {
+                const otherWord = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
+                const fake = otherWord.split('').reverse().join('');
+                if (fake !== ans) options.add(fake);
+            }
+            generateButtons(keyboard, user.id, ans, Array.from(options));
+        } else if (mode === 'logic') {
+            const puzzle = LOGIC_SEQUENCES[Math.floor(Math.random() * LOGIC_SEQUENCES.length)];
+            const ans = puzzle.ans;
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_sequence')}\n\n${t('welcome.captcha_messages.logic_question', { sequence: puzzle.seq })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+
+            const options = new Set([ans]);
+            const isNum = !isNaN(ans);
+            while (options.size < 4) {
+                let fake;
+                if (isNum) {
+                    const ansNum = parseInt(ans);
+                    fake = (ansNum + getRandomInt(-5, 5)).toString();
+                } else {
+                    const code = ans.charCodeAt(0);
+                    fake = String.fromCharCode(code + getRandomInt(-3, 3));
+                }
+                if (fake !== ans && (isNum ? parseInt(fake) >= 0 : true)) options.add(fake);
+            }
+            generateButtons(keyboard, user.id, ans, Array.from(options));
+        } else {
+            // Button mode (Default)
+            text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.confirm_human')}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
+            keyboard.text('✅ Non sono un robot', `wc:b:${user.id}`);
         }
 
-        const parts = data.split(':');
-        // wc:MODE:USERID[:ANS:CLICKED]
-        const mode = parts[1]; // 'b' or 'x'
-        const targetUserId = parseInt(parts[2]);
+        const msg = await ctx.reply(text, {
+            reply_markup: keyboard,
+            parse_mode: 'HTML'
+        });
 
-        if (ctx.from.id !== targetUserId) {
+        // SAVE TO DB
+        await dbStore.addPendingCaptcha(
+            guildId,
+            user.id,
+            msg.message_id,
+            ans || 'CHECK',
+            timeoutMins,
+            [],
+            serviceMessageId
+        );
+        logger.debug(`[Welcome] Captcha for ${user.id} saved to DB.`);
+    } catch (e) {
+        logger.error(`[Welcome] Failed to send captcha: ${e.message}`);
+    }
+}
+
+/**
+ * Genera i pulsanti per il captcha.
+ * Dispone le opzioni in una griglia 2x2 mescolata.
+ *
+ * @param {import('grammy').InlineKeyboard} keyboard - Tastiera inline grammY
+ * @param {number} userId - ID dell'utente target
+ * @param {string|number} ans - Risposta corretta
+ * @param {Array} options - Array di opzioni (4 elementi)
+ * @private
+ */
+function generateButtons(keyboard, userId, ans, options) {
+    const shuffled = shuffle(options);
+    shuffled.forEach((opt, i) => {
+        keyboard.text(opt.toString(), `wc:x:${userId}:${ans}:${opt}`);
+        if (i === 1) keyboard.row();
+    });
+}
+
+/**
+ * Gestisce i callback dei captcha (risposte utente).
+ * Verifica la risposta e procede con regolamento o sblocco.
+ *
+ * Formati callback supportati:
+ * - `wc:b:USERID` - Bottone semplice
+ * - `wc:x:USERID:ANS:CLICKED` - Risposta a scelta multipla
+ * - `wc:accept_rules:USERID` - Accettazione regolamento
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
+ */
+async function handleCaptchaCallback(ctx) {
+    const data = ctx.callbackQuery.data;
+    if (!data.startsWith('wc:')) return;
+    if (data.startsWith('wc_')) return;
+
+    if (data.startsWith('wc:accept_rules:')) {
+        // Rules acceptance
+        // wc:accept_rules:USERID
+        const targetUserId = parseInt(data.split(':')[2]);
+        if (ctx.from.id !== targetUserId) return ctx.answerCallbackQuery('Non per te.');
+
+        await completeVerification(ctx, targetUserId);
+        return;
+    }
+
+    const parts = data.split(':');
+    // wc:MODE:USERID[:ANS:CLICKED]
+    const mode = parts[1]; // 'b' or 'x'
+    const targetUserId = parseInt(parts[2]);
+
+    if (ctx.from.id !== targetUserId) {
+        return ctx.answerCallbackQuery({
+            text: '⚠️ Questo captcha non è per te!',
+            show_alert: true
+        });
+    }
+
+    let success = false;
+    const config = await getGuildConfig(ctx.chat.id);
+
+    if (mode === 'b') {
+        success = true;
+    } else {
+        const correct = parts[3];
+        const clicked = parts[4];
+        if (correct === clicked) {
+            success = true;
+        } else {
+            logWelcomeEvent(ctx, 'FAIL', null, config);
             return ctx.answerCallbackQuery({
-                text: '⚠️ Questo captcha non è per te!',
+                text: '❌ Risposta errata. Riprova.',
                 show_alert: true
             });
         }
+    }
 
-        let success = false;
-        const config = await getGuildConfig(ctx.chat.id);
+    if (success) {
+        await dbStore.removePendingCaptcha(ctx.chat.id, ctx.from.id);
 
-        if (mode === 'b') {
-            success = true;
-        } else {
-            const correct = parts[3];
-            const clicked = parts[4];
-            if (correct === clicked) {
-                success = true;
-            } else {
-                logWelcomeEvent(ctx, 'FAIL', null, config);
-                return ctx.answerCallbackQuery({
-                    text: '❌ Risposta errata. Riprova.',
-                    show_alert: true
+        // Check Rules - only show if rules_enabled AND rules_link is set
+        const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
+        if (rulesEnabled && config.rules_link) {
+            const guildId = ctx.chat.id;
+            const lang = await i18n.getLanguage(guildId);
+            const t = (key, params) => i18n.t(lang, key, params);
+            const rulesLink = config.rules_link;
+            const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
+            try {
+                await ctx.editMessageText(text, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
+                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
+                        ]
+                    }
+                });
+            } catch (e) {
+                // If edit fails, try sending new
+                await ctx.deleteMessage().catch(() => {});
+                await ctx.reply(text, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
+                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
+                        ]
+                    }
                 });
             }
+            return;
         }
 
-        if (success) {
-            await dbStore.removePendingCaptcha(ctx.chat.id, ctx.from.id);
+        await completeVerification(ctx, ctx.from.id);
+    }
+}
 
-            // Check Rules - only show if rules_enabled AND rules_link is set
-            const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
-            if (rulesEnabled && config.rules_link) {
-                const guildId = ctx.chat.id;
-                const lang = await i18n.getLanguage(guildId);
-                const t = (key, params) => i18n.t(lang, key, params);
-                const rulesLink = config.rules_link;
-                const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
-                try {
-                    await ctx.editMessageText(text, {
-                        parse_mode: 'HTML',
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
-                                [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
-                            ]
-                        }
-                    });
-                } catch (e) {
-                    // If edit fails, try sending new
-                    await ctx.deleteMessage().catch(() => { });
-                    await ctx.reply(text, {
-                        parse_mode: 'HTML',
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
-                                [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
-                            ]
-                        }
-                    });
-                }
-                return;
+/**
+ * Completa la verifica dell'utente.
+ * Sblocca i permessi e invia il messaggio di benvenuto personalizzato.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {number} userId - ID dell'utente da sbloccare
+ * @returns {Promise<void>}
+ * @private
+ */
+async function completeVerification(ctx, userId) {
+    const config = await getGuildConfig(ctx.chat.id);
+    logWelcomeEvent(ctx, 'SUCCESS', null, config);
+
+    // Get Pending info to know service_message_id
+    const pending = await dbStore.getPendingCaptcha(ctx.chat.id, userId);
+    const serviceMsgId = pending ? pending.service_message_id : null;
+
+    try {
+        await ctx.restrictChatMember(userId, {
+            can_send_messages: true,
+            can_send_media_messages: true,
+            can_send_other_messages: true,
+            can_add_web_page_previews: true,
+            can_invite_users: true,
+            can_pin_messages: false,
+            can_change_info: false
+        });
+    } catch (e) {
+        logger.error(`[Welcome] Unrestrict failed: ${e.message}`);
+    }
+
+    // If welcome message is enabled, try to edit the existing message
+    let sentWelcomeId = null;
+    if (config.welcome_msg_enabled && config.welcome_message) {
+        sentWelcomeId = await sendWelcome(ctx, config, null, ctx.callbackQuery?.message?.message_id);
+    } else {
+        // If welcome message is disabled, simply delete the captcha/rules message
+        if (ctx.callbackQuery?.message?.message_id) {
+            try {
+                await ctx.api.deleteMessage(ctx.chat.id, ctx.callbackQuery.message.message_id);
+            } catch (e) {
+                logger.debug(`[Welcome] Failed to delete captcha message: ${e.message}`);
             }
-
-            await completeVerification(ctx, ctx.from.id);
         }
     }
 
-    /**
-     * Completa la verifica dell'utente.
-     * Sblocca i permessi e invia il messaggio di benvenuto personalizzato.
-     *
-     * @param {import('grammy').Context} ctx - Contesto grammY
-     * @param {number} userId - ID dell'utente da sbloccare
-     * @returns {Promise<void>}
-     * @private
-     */
-    async function completeVerification(ctx, userId) {
-        const config = await getGuildConfig(ctx.chat.id);
-        logWelcomeEvent(ctx, 'SUCCESS', null, config);
+    // Add to Recently Verified (for anti-join-run)
+    // We save welcome message ID and service message ID
+    await dbStore.addRecentlyVerified(ctx.chat.id, userId, sentWelcomeId, serviceMsgId);
 
-        // Get Pending info to know service_message_id
-        const pending = await dbStore.getPendingCaptcha(ctx.chat.id, userId);
-        const serviceMsgId = pending ? pending.service_message_id : null;
+    // Remove from pending
+    await dbStore.removePendingCaptcha(ctx.chat.id, userId);
+}
 
-        try {
-            await ctx.restrictChatMember(userId, {
-                can_send_messages: true,
-                can_send_media_messages: true,
-                can_send_other_messages: true,
-                can_add_web_page_previews: true,
-                can_invite_users: true,
-                can_pin_messages: false,
-                can_change_info: false
-            });
-        } catch (e) {
-            logger.error(`[Welcome] Unrestrict failed: ${e.message}`);
-        }
+/**
+ * Invia il messaggio di benvenuto personalizzato.
+ * Supporta wildcards, pulsanti e auto-eliminazione.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @param {Object} config - Configurazione del gruppo
+ * @param {Object|null} [userOverride=null] - Utente da usare invece di ctx.from
+ * @param {number|null} [messageToEditId=null] - ID messaggio da modificare (per transizione da captcha)
+ * @returns {Promise<number|null>} ID of sent message
+ * @private
+ */
+async function sendWelcome(ctx, config, userOverride = null, messageToEditId = null) {
+    if (!config.welcome_msg_enabled) return null;
+    if (!config.welcome_message) return null;
 
-        // If welcome message is enabled, try to edit the existing message
-        let sentWelcomeId = null;
-        if (config.welcome_msg_enabled && config.welcome_message) {
-            sentWelcomeId = await sendWelcome(ctx, config, null, ctx.callbackQuery?.message?.message_id);
-        } else {
-            // If welcome message is disabled, simply delete the captcha/rules message
-            if (ctx.callbackQuery?.message?.message_id) {
-                try {
-                    await ctx.api.deleteMessage(ctx.chat.id, ctx.callbackQuery.message.message_id);
-                } catch (e) {
-                    logger.debug(`[Welcome] Failed to delete captcha message: ${e.message}`);
-                }
-            }
-        }
+    const user = userOverride || ctx.from;
+    const welcomeText = replaceWildcards(config.welcome_message, user, ctx.chat);
+    const finalText = welcomeText.replace(/<br>/g, '\n');
+    const buttons = parseButtonConfig(config.welcome_buttons);
+    const markup = buttons.length ? { inline_keyboard: buttons } : undefined;
 
-        // Add to Recently Verified (for anti-join-run)
-        // We save welcome message ID and service message ID
-        await dbStore.addRecentlyVerified(ctx.chat.id, userId, sentWelcomeId, serviceMsgId);
+    let sentMessageId;
 
-        // Remove from pending
-        await dbStore.removePendingCaptcha(ctx.chat.id, userId);
-    }
+    logger.debug(`[Welcome] sendWelcome called. messageToEditId: ${messageToEditId}`);
 
-    /**
-     * Invia il messaggio di benvenuto personalizzato.
-     * Supporta wildcards, pulsanti e auto-eliminazione.
-     *
-     * @param {import('grammy').Context} ctx - Contesto grammY
-     * @param {Object} config - Configurazione del gruppo
-     * @param {Object|null} [userOverride=null] - Utente da usare invece di ctx.from
-     * @param {number|null} [messageToEditId=null] - ID messaggio da modificare (per transizione da captcha)
-     * @returns {Promise<number|null>} ID of sent message
-     * @private
-     */
-    async function sendWelcome(ctx, config, userOverride = null, messageToEditId = null) {
-        if (!config.welcome_msg_enabled) return null;
-        if (!config.welcome_message) return null;
-
-        const user = userOverride || ctx.from;
-        const welcomeText = replaceWildcards(config.welcome_message, user, ctx.chat);
-        const finalText = welcomeText.replace(/<br>/g, '\n');
-        const buttons = parseButtonConfig(config.welcome_buttons);
-        const markup = buttons.length ? { inline_keyboard: buttons } : undefined;
-
-        let sentMessageId;
-
-        logger.debug(`[Welcome] sendWelcome called. messageToEditId: ${messageToEditId}`);
-
-        try {
-            if (messageToEditId) {
-                try {
-                    // Try to edit existing message
-                    logger.debug(`[Welcome] Attempting to edit message ${messageToEditId}`);
-                    const edited = await ctx.api.editMessageText(ctx.chat.id, messageToEditId, finalText, {
-                        parse_mode: 'HTML',
-                        reply_markup: markup,
-                        link_preview_options: { is_disabled: true }
-                    });
-                    sentMessageId = edited.message_id;
-                    logger.debug(`[Welcome] Message edited successfully`);
-                } catch (e) {
-                    // If edit fails (e.g. content type mismatch), delete and send new
-                    logger.debug(`[Welcome] Edit failed: ${e.message}. Deleting and sending new.`);
-                    await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
-                    const sent = await ctx.reply(finalText, {
-                        parse_mode: 'HTML',
-                        reply_markup: markup,
-                        link_preview_options: { is_disabled: true }
-                    });
-                    sentMessageId = sent.message_id;
-                }
-            } else {
-                // Send new message
-                logger.debug(`[Welcome] No messageToEditId, sending new message`);
+    try {
+        if (messageToEditId) {
+            try {
+                // Try to edit existing message
+                logger.debug(`[Welcome] Attempting to edit message ${messageToEditId}`);
+                const edited = await ctx.api.editMessageText(ctx.chat.id, messageToEditId, finalText, {
+                    parse_mode: 'HTML',
+                    reply_markup: markup,
+                    link_preview_options: { is_disabled: true }
+                });
+                sentMessageId = edited.message_id;
+                logger.debug(`[Welcome] Message edited successfully`);
+            } catch (e) {
+                // If edit fails (e.g. content type mismatch), delete and send new
+                logger.debug(`[Welcome] Edit failed: ${e.message}. Deleting and sending new.`);
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -718,138 +709,148 @@ async function handleNewMember(ctx) {
                 });
                 sentMessageId = sent.message_id;
             }
-
-            // Auto-delete (timer is in minutes)
-            if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
-                setTimeout(() => {
-                    ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
-                }, config.welcome_autodelete_timer * 60000); // minutes to ms
-            }
-        } catch (e) {
-            logger.error(`[Welcome] Send custom welcome failed: ${e.message}`);
-            // Fallback for parsing errors... might be complex to handle with edit vs reply.
-            // Simplest is to just log error if it fails after the fallback above.
+        } else {
+            // Send new message
+            logger.debug(`[Welcome] No messageToEditId, sending new message`);
+            const sent = await ctx.reply(finalText, {
+                parse_mode: 'HTML',
+                reply_markup: markup,
+                link_preview_options: { is_disabled: true }
+            });
+            sentMessageId = sent.message_id;
         }
-        return sentMessageId;
+
+        // Auto-delete (timer is in minutes)
+        if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
+            setTimeout(() => {
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
+            }, config.welcome_autodelete_timer * 60000); // minutes to ms
+        }
+    } catch (e) {
+        logger.error(`[Welcome] Send custom welcome failed: ${e.message}`);
+        // Fallback for parsing errors... might be complex to handle with edit vs reply.
+        // Simplest is to just log error if it fails after the fallback above.
     }
+    return sentMessageId;
+}
 
-    /**
-     * Gestisce l'uscita di un membro dal gruppo.
-     * Se l'utente aveva un captcha in sospeso, lo cancella e elimina il messaggio.
-     *
-     * @param {import('grammy').Context} ctx - Contesto grammY
-     * @returns {Promise<void>}
-     */
-    async function handleMemberLeft(ctx) {
-        if (!ctx.chatMember) return;
+/**
+ * Gestisce l'uscita di un membro dal gruppo.
+ * Se l'utente aveva un captcha in sospeso, lo cancella e elimina il messaggio.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
+ */
+async function handleMemberLeft(ctx) {
+    if (!ctx.chatMember) return;
 
-        const newStatus = ctx.chatMember.new_chat_member.status;
-        const oldStatus = ctx.chatMember.old_chat_member.status;
+    const newStatus = ctx.chatMember.new_chat_member.status;
+    const oldStatus = ctx.chatMember.old_chat_member.status;
 
-        // Only trigger on leave (left/kicked from member/restricted)
-        const isLeave =
-            (newStatus === 'left' || newStatus === 'kicked') && (oldStatus === 'member' || oldStatus === 'restricted');
+    // Only trigger on leave (left/kicked from member/restricted)
+    const isLeave =
+        (newStatus === 'left' || newStatus === 'kicked') && (oldStatus === 'member' || oldStatus === 'restricted');
 
-        if (!isLeave) return;
+    if (!isLeave) return;
 
-        const user = ctx.chatMember.new_chat_member.user;
+    const user = ctx.chatMember.new_chat_member.user;
 
-        // Check Recently Verified "Join & Run"
-        try {
-            const recent = await dbStore.getRecentlyVerified(ctx.chat.id, user.id);
-            if (recent) {
-                const now = new Date();
-                const verifiedAt = new Date(recent.verified_at);
-                const diffMins = (now - verifiedAt) / 60000;
+    // Check Recently Verified "Join & Run"
+    try {
+        const recent = await dbStore.getRecentlyVerified(ctx.chat.id, user.id);
+        if (recent) {
+            const now = new Date();
+            const verifiedAt = new Date(recent.verified_at);
+            const diffMins = (now - verifiedAt) / 60000;
 
-                if (diffMins < 5) {
-                    // User verified less than 5 mins ago and left!
-                    logger.info(`[Welcome] User ${user.id} left within 5 mins of verification. Cleaning up.`);
+            if (diffMins < 5) {
+                // User verified less than 5 mins ago and left!
+                logger.info(`[Welcome] User ${user.id} left within 5 mins of verification. Cleaning up.`);
 
-                    // Delete Welcome Message
-                    if (recent.welcome_message_id) {
-                        await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => { });
-                    }
-
-                    // Delete Service Message
-                    if (recent.service_message_id) {
-                        await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => { });
-                    }
+                // Delete Welcome Message
+                if (recent.welcome_message_id) {
+                    await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => {});
                 }
 
-                // Clean up recent record
-                await dbStore.removeRecentlyVerified(ctx.chat.id, user.id);
-            }
-        } catch (e) {
-            logger.error(`[Welcome] Failed clean up join-run: ${e.message}`);
-        }
-
-        // Remove from DB if exists (Pending Captcha)
-        try {
-            const pending = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
-            if (pending) {
-                await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
-                if (pending.service_message_id) {
-                    await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => { });
-                }
-                await dbStore.removePendingCaptcha(ctx.chat.id, user.id);
-                logger.info(`[Welcome] Deleted pending captcha (DB) for user ${user.id} who left.`);
-            }
-        } catch (e) {
-            logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
-        }
-    }
-
-    /**
-     * Controlla i captcha scaduti ed esegue il kick.
-     * Da chiamare periodicamente (es. ogni minuto).
-     *
-     * @param {import('grammy').Bot} bot - Istanza del bot
-     */
-    async function checkExpiredCaptchas(bot) {
-        try {
-            const expired = await dbStore.getExpiredCaptchas();
-            if (!expired.length) return;
-
-            logger.debug(`[Welcome] Found ${expired.length} expired captchas.`);
-
-            for (const record of expired) {
-                const { id, guild_id, user_id, message_id, service_message_id } = record;
-
-                // Perform Kick
-                try {
-                    await bot.api.banChatMember(guild_id, user_id);
-                    // Wait briefly then unban to just kick
-                    await new Promise(r => setTimeout(r, 500));
-                    await bot.api.unbanChatMember(guild_id, user_id);
-
-                    // Delete Captcha Message
-                    await bot.api.deleteMessage(guild_id, message_id).catch(() => { });
-
-                    // Delete Service Message
-                    if (service_message_id) {
-                        await bot.api.deleteMessage(guild_id, service_message_id).catch(() => { });
-                    }
-
-                    // Remove from DB
-                    await dbStore.removeCaptchaById(id);
-
-                    logger.info(`[Welcome] Kicked user ${user_id} in guild ${guild_id} (captcha expired).`);
-                } catch (e) {
-                    logger.error(`[Welcome] Failed to expire captcha for user ${user_id} in ${guild_id}: ${e.message}`);
-                    // If user is gone or bot has no rights, still remove from DB to avoid infinite loop
-                    // but maybe we should check specific error codes. For now safe to remove.
-                    await dbStore.removeCaptchaById(id);
+                // Delete Service Message
+                if (recent.service_message_id) {
+                    await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => {});
                 }
             }
-        } catch (e) {
-            logger.error(`[Welcome] Error in checkExpiredCaptchas: ${e.message}`);
+
+            // Clean up recent record
+            await dbStore.removeRecentlyVerified(ctx.chat.id, user.id);
         }
+    } catch (e) {
+        logger.error(`[Welcome] Failed clean up join-run: ${e.message}`);
     }
 
-    module.exports = {
-        handleNewMember,
-        handleCaptchaCallback,
-        checkExpiredCaptchas,
-        handleMemberLeft
-    };
+    // Remove from DB if exists (Pending Captcha)
+    try {
+        const pending = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
+        if (pending) {
+            await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => {});
+            if (pending.service_message_id) {
+                await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => {});
+            }
+            await dbStore.removePendingCaptcha(ctx.chat.id, user.id);
+            logger.info(`[Welcome] Deleted pending captcha (DB) for user ${user.id} who left.`);
+        }
+    } catch (e) {
+        logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
+    }
+}
+
+/**
+ * Controlla i captcha scaduti ed esegue il kick.
+ * Da chiamare periodicamente (es. ogni minuto).
+ *
+ * @param {import('grammy').Bot} bot - Istanza del bot
+ */
+async function checkExpiredCaptchas(bot) {
+    try {
+        const expired = await dbStore.getExpiredCaptchas();
+        if (!expired.length) return;
+
+        logger.debug(`[Welcome] Found ${expired.length} expired captchas.`);
+
+        for (const record of expired) {
+            const { id, guild_id, user_id, message_id, service_message_id } = record;
+
+            // Perform Kick
+            try {
+                await bot.api.banChatMember(guild_id, user_id);
+                // Wait briefly then unban to just kick
+                await new Promise(r => setTimeout(r, 500));
+                await bot.api.unbanChatMember(guild_id, user_id);
+
+                // Delete Captcha Message
+                await bot.api.deleteMessage(guild_id, message_id).catch(() => {});
+
+                // Delete Service Message
+                if (service_message_id) {
+                    await bot.api.deleteMessage(guild_id, service_message_id).catch(() => {});
+                }
+
+                // Remove from DB
+                await dbStore.removeCaptchaById(id);
+
+                logger.info(`[Welcome] Kicked user ${user_id} in guild ${guild_id} (captcha expired).`);
+            } catch (e) {
+                logger.error(`[Welcome] Failed to expire captcha for user ${user_id} in ${guild_id}: ${e.message}`);
+                // If user is gone or bot has no rights, still remove from DB to avoid infinite loop
+                // but maybe we should check specific error codes. For now safe to remove.
+                await dbStore.removeCaptchaById(id);
+            }
+        }
+    } catch (e) {
+        logger.error(`[Welcome] Error in checkExpiredCaptchas: ${e.message}`);
+    }
+}
+
+module.exports = {
+    handleNewMember,
+    handleCaptchaCallback,
+    checkExpiredCaptchas,
+    handleMemberLeft
+};

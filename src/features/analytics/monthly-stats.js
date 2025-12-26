@@ -305,4 +305,3 @@ module.exports = {
     ACTIVE_USER_THRESHOLD,
     ACTIVE_GUILD_THRESHOLD
 };
-
