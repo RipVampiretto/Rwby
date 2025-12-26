@@ -336,7 +336,6 @@ const sendInfoMenu = async (ctx) => {
 📦 <b>${t('common.start.info.version')}:</b> ${packageJson.version}
 👨‍💻 <b>${t('common.start.info.developer')}:</b> <a href="tg://user?id=1768337867">ЯIPVΛMPIЯΣƬƬӨ</a>
 📅 <b>${t('common.start.info.updated')}:</b> 25/12/2025
-📢 <b>${t('common.start.info.log_channel')}:</b> @RwbyLogs
 
 ${t('common.start.info.description')}`;
 
