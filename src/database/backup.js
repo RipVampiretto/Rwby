@@ -11,6 +11,10 @@ const RETENTION = {
     weekly: parseInt(process.env.BACKUP_RETENTION_WEEKS) || 4 // Keep 4 weekly backups
 };
 
+// Scheduler interval references (for graceful shutdown)
+let schedulerIntervals = [];
+let initialBackupTimeout = null;
+
 // Ensure backup directory exists
 function ensureBackupDir() {
     const dirs = ['hourly', 'daily', 'weekly'].map(d => path.join(BACKUP_DIR, d));
@@ -112,47 +116,56 @@ function cleanupOldBackups(type) {
 function startScheduler() {
     logger.info('[backup] Starting backup scheduler');
 
+    // Clear any existing intervals
+    stopScheduler();
+
     // Hourly backup - every hour
-    setInterval(
-        async () => {
-            try {
-                await runBackup('hourly');
-                cleanupOldBackups('hourly');
-            } catch (e) {
-                logger.error(`[backup] Hourly backup error: ${e.message}`);
-            }
-        },
-        60 * 60 * 1000
+    schedulerIntervals.push(
+        setInterval(
+            async () => {
+                try {
+                    await runBackup('hourly');
+                    cleanupOldBackups('hourly');
+                } catch (e) {
+                    logger.error(`[backup] Hourly backup error: ${e.message}`);
+                }
+            },
+            60 * 60 * 1000
+        )
     ); // 1 hour
 
     // Daily backup - every 24 hours
-    setInterval(
-        async () => {
-            try {
-                await runBackup('daily');
-                cleanupOldBackups('daily');
-            } catch (e) {
-                logger.error(`[backup] Daily backup error: ${e.message}`);
-            }
-        },
-        24 * 60 * 60 * 1000
+    schedulerIntervals.push(
+        setInterval(
+            async () => {
+                try {
+                    await runBackup('daily');
+                    cleanupOldBackups('daily');
+                } catch (e) {
+                    logger.error(`[backup] Daily backup error: ${e.message}`);
+                }
+            },
+            24 * 60 * 60 * 1000
+        )
     ); // 24 hours
 
     // Weekly backup - every 7 days
-    setInterval(
-        async () => {
-            try {
-                await runBackup('weekly');
-                cleanupOldBackups('weekly');
-            } catch (e) {
-                logger.error(`[backup] Weekly backup error: ${e.message}`);
-            }
-        },
-        7 * 24 * 60 * 60 * 1000
+    schedulerIntervals.push(
+        setInterval(
+            async () => {
+                try {
+                    await runBackup('weekly');
+                    cleanupOldBackups('weekly');
+                } catch (e) {
+                    logger.error(`[backup] Weekly backup error: ${e.message}`);
+                }
+            },
+            7 * 24 * 60 * 60 * 1000
+        )
     ); // 7 days
 
     // Run initial hourly backup on start
-    setTimeout(async () => {
+    initialBackupTimeout = setTimeout(async () => {
         try {
             await runBackup('hourly');
             logger.info('[backup] Initial backup completed');
@@ -160,6 +173,25 @@ function startScheduler() {
             logger.warn(`[backup] Initial backup skipped: ${e.message}`);
         }
     }, 5000); // Wait 5 seconds after start
+}
+
+/**
+ * Stop backup scheduler (for graceful shutdown)
+ */
+function stopScheduler() {
+    // Clear all intervals
+    for (const interval of schedulerIntervals) {
+        clearInterval(interval);
+    }
+    schedulerIntervals = [];
+
+    // Clear initial backup timeout if pending
+    if (initialBackupTimeout) {
+        clearTimeout(initialBackupTimeout);
+        initialBackupTimeout = null;
+    }
+
+    logger.info('[backup] Scheduler stopped');
 }
 
 /**
@@ -224,6 +256,7 @@ module.exports = {
     runBackup,
     cleanupOldBackups,
     startScheduler,
+    stopScheduler,
     restoreBackup,
     listBackups
 };

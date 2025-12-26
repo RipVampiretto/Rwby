@@ -35,6 +35,7 @@ async function init() {
 
 module.exports = {
     init,
+    close: connection.close,
     getPool: connection.getPool,
     /** Wrapper compatibilità per codice legacy */
     getDb: connection.getDb,

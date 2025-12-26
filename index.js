@@ -458,3 +458,76 @@ start().catch(err => {
     process.exit(1);
 });
 
+// ============================================================================
+// GRACEFUL SHUTDOWN
+// ============================================================================
+/**
+ * Flag per evitare shutdown multipli
+ * @type {boolean}
+ */
+let isShuttingDown = false;
+
+/**
+ * Gestisce lo shutdown pulito del bot.
+ * Chiude ordinatamente tutte le connessioni e risorse.
+ * 
+ * @param {string} signal - Il segnale che ha triggerato lo shutdown
+ * @returns {Promise<void>}
+ */
+async function gracefulShutdown(signal) {
+    if (isShuttingDown) {
+        logger.warn(`[shutdown] Already shutting down, ignoring ${signal}`);
+        return;
+    }
+    isShuttingDown = true;
+
+    logger.info(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+
+    const shutdownTimeout = setTimeout(() => {
+        logger.error('[shutdown] Shutdown timeout exceeded (30s). Forcing exit.');
+        process.exit(1);
+    }, 30000);
+
+    try {
+        // 1. Stop accepting new updates
+        logger.info('[shutdown] Stopping bot polling...');
+        await bot.stop();
+        logger.info('[shutdown] ✓ Bot stopped');
+
+        // 2. Stop backup scheduler
+        logger.info('[shutdown] Stopping backup scheduler...');
+        backup.stopScheduler();
+        logger.info('[shutdown] ✓ Backup scheduler stopped');
+
+        // 3. Close database connections
+        logger.info('[shutdown] Closing database connections...');
+        await db.close();
+        logger.info('[shutdown] ✓ Database closed');
+
+        clearTimeout(shutdownTimeout);
+        logger.info('👋 Graceful shutdown completed. Goodbye!');
+        process.exit(0);
+    } catch (err) {
+        clearTimeout(shutdownTimeout);
+        logger.error(`[shutdown] Error during shutdown: ${err.message}`);
+        process.exit(1);
+    }
+}
+
+// Handle termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    logger.error(`[FATAL] Uncaught Exception: ${err.message}`);
+    logger.error(err.stack);
+    gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error(`[FATAL] Unhandled Rejection at: ${promise}`);
+    logger.error(`Reason: ${reason}`);
+    // Non forzare lo shutdown per unhandled rejection, solo log
+});
+
