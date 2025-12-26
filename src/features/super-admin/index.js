@@ -36,6 +36,7 @@ let db = null;
  * @private
  */
 let _botInstance = null;
+const featureGating = require('../feature-gating');
 
 /**
  * Inizializza il modulo con il database.
@@ -44,6 +45,7 @@ let _botInstance = null;
  */
 function init(database) {
     db = database;
+    featureGating.init(database);
 }
 
 /**

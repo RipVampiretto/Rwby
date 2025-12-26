@@ -352,6 +352,198 @@ function registerCommands(bot, db) {
         }
     });
 
+    // Command: /gfeature - Manage global feature flags
+    bot.command('gfeature', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+        const gating = require('../feature-gating');
+        const args = ctx.message.text.split(' ').slice(1);
+        const action = args[0]?.toLowerCase();
+
+        // List all features
+        if (!action || action === 'list') {
+            const features = await gating.getAllFeatureFlags();
+            let msg = '🎛️ <b>FEATURE FLAGS GLOBALI</b>\n\n';
+            for (const f of features) {
+                const status = f.enabledByDefault ? '✅' : '❌';
+                msg += `${status} ${f.emoji} <code>${f.name}</code>\n`;
+            }
+            msg += '\n<b>Comandi:</b>\n';
+            msg += '<code>/gfeature toggle [feature]</code> - Toggle globale\n';
+            msg += '<code>/gfeature allow [guild_id] [feature]</code> - Abilita per gruppo\n';
+            msg += '<code>/gfeature block [guild_id] [feature]</code> - Blocca per gruppo\n';
+            msg += '<code>/gfeature unblock [guild_id] [feature]</code> - Rimuovi override\n';
+            msg += '<code>/gfeature status [guild_id]</code> - Stato gruppo';
+            return ctx.reply(msg, { parse_mode: 'HTML' });
+        }
+
+        // Toggle global default
+        if (action === 'toggle') {
+            const featureName = args[1]?.toLowerCase();
+            if (!featureName) {
+                return ctx.reply('❓ Uso: <code>/gfeature toggle [feature_name]</code>', { parse_mode: 'HTML' });
+            }
+            const features = await gating.getAllFeatureFlags();
+            const feature = features.find(f => f.name === featureName);
+            if (!feature) {
+                return ctx.reply(`❌ Feature non trovata: <code>${featureName}</code>`, { parse_mode: 'HTML' });
+            }
+            const newState = !feature.enabledByDefault;
+            await gating.setFeatureDefault(featureName, newState);
+            const icon = newState ? '✅ Attivata' : '❌ Disattivata';
+            return ctx.reply(`${icon} globalmente: <code>${featureName}</code>`, { parse_mode: 'HTML' });
+        }
+
+        // Block feature for specific guild
+        if (action === 'block') {
+            const guildId = args[1];
+            const featureName = args[2]?.toLowerCase();
+            const reason = args.slice(3).join(' ') || 'No reason';
+
+            if (!guildId || !featureName) {
+                return ctx.reply('❓ Uso: <code>/gfeature block [guild_id] [feature] [reason]</code>', {
+                    parse_mode: 'HTML'
+                });
+            }
+
+            await gating.setGuildFeatureAccess(parseInt(guildId), featureName, false, reason, ctx.from.id);
+            return ctx.reply(
+                `🚫 Feature <code>${featureName}</code> bloccata per gruppo <code>${guildId}</code>\n` +
+                    `📝 Motivo: ${reason}`,
+                { parse_mode: 'HTML' }
+            );
+        }
+
+        // Allow feature for specific guild (even if globally disabled)
+        if (action === 'allow') {
+            const guildId = args[1];
+            const featureName = args[2]?.toLowerCase();
+            const reason = args.slice(3).join(' ') || 'Manual allow';
+
+            if (!guildId || !featureName) {
+                return ctx.reply('❓ Uso: <code>/gfeature allow [guild_id] [feature] [reason]</code>', {
+                    parse_mode: 'HTML'
+                });
+            }
+
+            await gating.setGuildFeatureAccess(parseInt(guildId), featureName, true, reason, ctx.from.id);
+            return ctx.reply(
+                `✅ Feature <code>${featureName}</code> abilitata per gruppo <code>${guildId}</code>\n` +
+                    `📝 Motivo: ${reason}`,
+                { parse_mode: 'HTML' }
+            );
+        }
+
+        // Unblock feature for specific guild
+        if (action === 'unblock') {
+            const guildId = args[1];
+            const featureName = args[2]?.toLowerCase();
+
+            if (!guildId || !featureName) {
+                return ctx.reply('❓ Uso: <code>/gfeature unblock [guild_id] [feature]</code>', { parse_mode: 'HTML' });
+            }
+
+            await gating.removeGuildFeatureAccess(parseInt(guildId), featureName);
+            return ctx.reply(`✅ Override rimosso per <code>${featureName}</code> in gruppo <code>${guildId}</code>`, {
+                parse_mode: 'HTML'
+            });
+        }
+
+        // Check guild status
+        if (action === 'status') {
+            const guildId = args[1];
+            if (!guildId) {
+                return ctx.reply('❓ Uso: <code>/gfeature status [guild_id]</code>', { parse_mode: 'HTML' });
+            }
+
+            const overrides = await gating.getGuildFeatureOverrides(parseInt(guildId));
+            const blacklisted = await gating.isGuildBlacklisted(parseInt(guildId));
+
+            let msg = `📊 <b>STATUS GRUPPO</b> <code>${guildId}</code>\n\n`;
+
+            if (blacklisted) {
+                msg += `⛔ <b>BLACKLISTED</b>\n`;
+                msg += `📝 Motivo: ${blacklisted.reason}\n`;
+                msg += `📅 Dal: ${new Date(blacklisted.blacklisted_at).toLocaleDateString('it-IT')}\n\n`;
+            }
+
+            if (overrides.length === 0) {
+                msg += 'Nessun override specifico.';
+            } else {
+                msg += '<b>Override:</b>\n';
+                for (const o of overrides) {
+                    const status = o.is_allowed ? '✅' : '🚫';
+                    msg += `${status} <code>${o.feature_name}</code>`;
+                    if (o.reason) msg += ` - ${o.reason}`;
+                    msg += '\n';
+                }
+            }
+            return ctx.reply(msg, { parse_mode: 'HTML' });
+        }
+
+        return ctx.reply('❓ Azione non valida. Usa /gfeature list per vedere le opzioni.');
+    });
+
+    // Command: /gblacklist - Manage group blacklist (renamed to avoid conflict with word blacklist)
+    bot.command('guildblacklist', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+        const gating = require('../feature-gating');
+        const args = ctx.message.text.split(' ').slice(1);
+        const action = args[0]?.toLowerCase();
+
+        // List blacklisted groups
+        if (!action || action === 'list') {
+            const guilds = await gating.getBlacklistedGuilds();
+            if (guilds.length === 0) {
+                return ctx.reply('✅ Nessun gruppo in blacklist.');
+            }
+            let msg = '⛔ <b>GRUPPI IN BLACKLIST</b>\n\n';
+            for (const g of guilds) {
+                const name = g.guild_name || 'Unknown';
+                const expires = g.expires_at ? new Date(g.expires_at).toLocaleDateString('it-IT') : 'Mai';
+                msg += `• <code>${g.guild_id}</code> (${name})\n`;
+                msg += `  📝 ${g.reason}\n`;
+                msg += `  ⏰ Scade: ${expires}\n\n`;
+            }
+            return ctx.reply(msg, { parse_mode: 'HTML' });
+        }
+
+        // Add to blacklist
+        if (action === 'add') {
+            const guildId = args[1];
+            const days = !isNaN(args[args.length - 1]) ? parseInt(args[args.length - 1]) : null;
+            const reasonParts = days ? args.slice(2, -1) : args.slice(2);
+            const reason = reasonParts.join(' ') || 'No reason';
+
+            if (!guildId) {
+                return ctx.reply('❓ Uso: <code>/guildblacklist add [guild_id] [reason] [days]</code>', {
+                    parse_mode: 'HTML'
+                });
+            }
+
+            await gating.blacklistGuild(parseInt(guildId), reason, ctx.from.id, days);
+            const expiresText = days ? `${days} giorni` : 'permanente';
+            return ctx.reply(
+                `⛔ Gruppo <code>${guildId}</code> aggiunto alla blacklist\n` +
+                    `📝 Motivo: ${reason}\n` +
+                    `⏰ Durata: ${expiresText}`,
+                { parse_mode: 'HTML' }
+            );
+        }
+
+        // Remove from blacklist
+        if (action === 'remove') {
+            const guildId = args[1];
+            if (!guildId) {
+                return ctx.reply('❓ Uso: <code>/guildblacklist remove [guild_id]</code>', { parse_mode: 'HTML' });
+            }
+
+            await gating.unblacklistGuild(parseInt(guildId));
+            return ctx.reply(`✅ Gruppo <code>${guildId}</code> rimosso dalla blacklist.`, { parse_mode: 'HTML' });
+        }
+
+        return ctx.reply('❓ Uso: <code>/guildblacklist [list|add|remove]</code>', { parse_mode: 'HTML' });
+    });
+
     // Callback handlers
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;

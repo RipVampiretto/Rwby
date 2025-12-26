@@ -361,6 +361,46 @@ async function createTables() {
     `);
 
     // ========================================================================
+    // GLOBAL FEATURE FLAGS - Default feature state for all groups
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS global_feature_flags (
+            feature_name TEXT PRIMARY KEY,
+            enabled_by_default BOOLEAN DEFAULT TRUE,
+            description TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // ========================================================================
+    // GUILD FEATURE ACCESS - Per-group feature overrides
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS guild_feature_access (
+            guild_id BIGINT,
+            feature_name TEXT,
+            is_allowed BOOLEAN DEFAULT TRUE,
+            reason TEXT,
+            set_by BIGINT,
+            set_at TIMESTAMPTZ DEFAULT NOW(),
+            PRIMARY KEY (guild_id, feature_name)
+        )
+    `);
+
+    // ========================================================================
+    // GUILD BLACKLIST - Completely blocked groups
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS guild_blacklist (
+            guild_id BIGINT PRIMARY KEY,
+            reason TEXT,
+            blacklisted_by BIGINT,
+            blacklisted_at TIMESTAMPTZ DEFAULT NOW(),
+            expires_at TIMESTAMPTZ
+        )
+    `);
+
+    // ========================================================================
     // INDEXES
     // ========================================================================
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_user ON user_trust_flux(user_id)`);
