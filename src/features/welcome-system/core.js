@@ -39,15 +39,9 @@ const i18n = require('../../i18n');
 const superAdmin = require('../super-admin');
 const { initializeUserFlux } = require('../user-reputation/logic');
 const db = require('../../database');
+const dbStore = require('./db-store');
 
-/**
- * Mappa dei captcha in attesa.
- * Chiave: `userId:chatId`
- * Valore: `{ timeoutHandle, messageId }`
- * @type {Map<string, {timeoutHandle: NodeJS.Timeout, messageId: number}>}
- * @private
- */
-const PENDING_CAPTCHAS = new Map();
+
 
 // --- DATA LISTS ---
 
@@ -470,51 +464,15 @@ async function processUserJoin(ctx, user, config) {
             keyboard.text('✅ Non sono un robot', `wc:b:${user.id}`);
         }
 
+
         const msg = await ctx.reply(text, {
             reply_markup: keyboard,
             parse_mode: 'HTML'
         });
 
-        // SET TIMEOUT
-        const ms = timeoutMins * 60 * 1000;
-        const key = `${user.id}:${ctx.chat.id}`;
-        if (PENDING_CAPTCHAS.has(key)) {
-            clearTimeout(PENDING_CAPTCHAS.get(key).timeoutHandle);
-            PENDING_CAPTCHAS.delete(key);
-        }
-
-        const timeoutHandle = setTimeout(async () => {
-            logger.info(`[Welcome] Kicking ${user.id} for timeout.`);
-            logWelcomeEvent(ctx, 'TIMEOUT', { timeout: timeoutMins }, config, user); // Pass user object
-            try {
-                // Kick = Ban + Unban
-                // We add a small delay to ensure Telegram processes the state change correctly
-                await ctx.banChatMember(user.id);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await ctx.unbanChatMember(user.id);
-
-                logger.debug(`[Welcome] User ${user.id} kicked (banned+unbanned) for timeout.`);
-
-                await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
-
-                // Send temporary kick notification
-                const kickText = t('welcome.captcha_messages.fail_message', {
-                    name: user.first_name,
-                    minutes: timeoutMins
-                });
-                const kickMsg = await ctx.reply(kickText, { parse_mode: 'HTML' });
-
-                // Auto-delete kick notification
-                setTimeout(() => {
-                    ctx.api.deleteMessage(ctx.chat.id, kickMsg.message_id).catch(() => { });
-                }, 10000); // 10 seconds
-            } catch (e) {
-                logger.error(`[Welcome] Kick failed: ${e.message}`);
-            }
-            PENDING_CAPTCHAS.delete(key);
-        }, ms);
-
-        PENDING_CAPTCHAS.set(key, { timeoutHandle, messageId: msg.message_id });
+        // SAVE TO DB
+        await dbStore.addPendingCaptcha(guildId, user.id, msg.message_id, ans || 'CHECK', timeoutMins, []);
+        logger.debug(`[Welcome] Captcha for ${user.id} saved to DB.`);
     } catch (e) {
         logger.error(`[Welcome] Failed to send captcha: ${e.message}`);
     }
@@ -597,11 +555,7 @@ async function handleCaptchaCallback(ctx) {
     }
 
     if (success) {
-        const key = `${ctx.from.id}:${ctx.chat.id}`;
-        if (PENDING_CAPTCHAS.has(key)) {
-            clearTimeout(PENDING_CAPTCHAS.get(key).timeoutHandle);
-            PENDING_CAPTCHAS.delete(key);
-        }
+        await dbStore.removePendingCaptcha(ctx.chat.id, ctx.from.id);
 
         // Check Rules - only show if rules_enabled AND rules_link is set
         const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
@@ -775,28 +729,65 @@ async function handleMemberLeft(ctx) {
     if (!isLeave) return;
 
     const user = ctx.chatMember.new_chat_member.user;
-    const key = `${user.id}:${ctx.chat.id}`;
 
-    if (PENDING_CAPTCHAS.has(key)) {
-        const pending = PENDING_CAPTCHAS.get(key);
-
-        // Clear the timeout
-        clearTimeout(pending.timeoutHandle);
-
-        // Delete the captcha message
-        try {
-            await ctx.api.deleteMessage(ctx.chat.id, pending.messageId);
-            logger.info(`[Welcome] Deleted pending captcha for user ${user.id} who left the group.`);
-        } catch (e) {
-            logger.debug(`[Welcome] Failed to delete captcha message for leaving user: ${e.message}`);
+    // Remove from DB if exists
+    try {
+        const pending = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
+        if (pending) {
+            await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
+            await dbStore.removePendingCaptcha(ctx.chat.id, user.id);
+            logger.info(`[Welcome] Deleted pending captcha (DB) for user ${user.id} who left.`);
         }
+    } catch (e) {
+        logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
+    }
+}
 
-        PENDING_CAPTCHAS.delete(key);
+/**
+ * Controlla i captcha scaduti ed esegue il kick.
+ * Da chiamare periodicamente (es. ogni minuto).
+ *
+ * @param {import('grammy').Bot} bot - Istanza del bot
+ */
+async function checkExpiredCaptchas(bot) {
+    try {
+        const expired = await dbStore.getExpiredCaptchas();
+        if (!expired.length) return;
+
+        logger.debug(`[Welcome] Found ${expired.length} expired captchas.`);
+
+        for (const record of expired) {
+            const { id, guild_id, user_id, message_id } = record;
+
+            // Perform Kick
+            try {
+                await bot.api.banChatMember(guild_id, user_id);
+                // Wait briefly then unban to just kick
+                await new Promise(r => setTimeout(r, 500));
+                await bot.api.unbanChatMember(guild_id, user_id);
+
+                // Delete Captcha Message
+                await bot.api.deleteMessage(guild_id, message_id).catch(() => { });
+
+                // Remove from DB
+                await dbStore.removeCaptchaById(id);
+
+                logger.info(`[Welcome] Kicked user ${user_id} in guild ${guild_id} (captcha expired).`);
+            } catch (e) {
+                logger.error(`[Welcome] Failed to expire captcha for user ${user_id} in ${guild_id}: ${e.message}`);
+                // If user is gone or bot has no rights, still remove from DB to avoid infinite loop
+                // but maybe we should check specific error codes. For now safe to remove.
+                await dbStore.removeCaptchaById(id);
+            }
+        }
+    } catch (e) {
+        logger.error(`[Welcome] Error in checkExpiredCaptchas: ${e.message}`);
     }
 }
 
 module.exports = {
     handleNewMember,
     handleCaptchaCallback,
+    checkExpiredCaptchas,
     handleMemberLeft
 };

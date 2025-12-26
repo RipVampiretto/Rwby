@@ -22,7 +22,7 @@
  * @requires ./ui - Interfaccia di configurazione
  */
 
-const { handleNewMember, handleCaptchaCallback, handleMemberLeft } = require('./core');
+const { handleNewMember, handleCaptchaCallback, handleMemberLeft, checkExpiredCaptchas } = require('./core');
 const { handleCallback } = require('./commands');
 const { handleMessage } = require('./wizard');
 const ui = require('./ui');
@@ -87,6 +87,11 @@ function register(bot) {
         if (handled) return;
         return next();
     });
+
+    // Start Expiration Loop (every 60s)
+    setInterval(() => {
+        checkExpiredCaptchas(bot);
+    }, 60000);
 }
 
 module.exports = {

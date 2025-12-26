@@ -401,6 +401,22 @@ async function createTables() {
     `);
 
     // ========================================================================
+    // PENDING CAPTCHAS - Persistent state for captcha timers
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS pending_captchas (
+            id SERIAL PRIMARY KEY,
+            guild_id BIGINT,
+            user_id BIGINT,
+            message_id BIGINT,
+            correct_answer TEXT,
+            options JSONB,
+            expires_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // ========================================================================
     // INDEXES
     // ========================================================================
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_user ON user_trust_flux(user_id)`);
