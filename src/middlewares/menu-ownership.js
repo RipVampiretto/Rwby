@@ -13,6 +13,7 @@
  */
 
 const logger = require('./logger');
+const { isSuperAdmin } = require('../utils/error-handlers');
 
 /**
  * Cache status admin per utente/chat.
@@ -30,16 +31,22 @@ const adminCache = new Map();
 const CACHE_TTL = 60000;
 
 /**
- * Verifica se l'utente è admin (con caching).
+ * Verifica se l'utente è admin o super admin (con caching per admin di gruppo).
+ * I super admin hanno sempre accesso.
  *
  * @param {import('grammy').Context} ctx - Contesto grammY
- * @returns {Promise<boolean>} True se admin
+ * @returns {Promise<boolean>} True se admin o super admin
  */
 async function isAdminCached(ctx) {
     const chatId = ctx.chat?.id;
     const userId = ctx.from?.id;
 
     if (!chatId || !userId) return false;
+
+    // Super admin hanno sempre accesso
+    if (isSuperAdmin(userId)) {
+        return true;
+    }
 
     const cacheKey = `${chatId}:${userId}`;
     const cached = adminCache.get(cacheKey);

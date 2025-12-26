@@ -5,7 +5,7 @@
  * @description
  * Sistema di logging con output su console e file.
  * Supporta formato strutturato con colonne allineate:
- * [data] [livello] [gruppo/modulo] [utente] messaggio
+ * [data orario] [livello] [nome chat] [chat id] [nome utente] [messaggio]
  *
  * **File di log generati:**
  * - `combined.log` - Tutti i log (10MB x 5 file)
@@ -33,6 +33,7 @@ const LOG_DIR = path.join(process.cwd(), 'logs');
 const COLUMN_WIDTHS = {
     level: 5,      // DEBUG, INFO, WARN, ERROR
     group: 20,     // Nome gruppo/modulo
+    chatId: 15,    // Chat ID
     user: 16       // Nome utente
 };
 
@@ -42,16 +43,7 @@ const COLUMN_WIDTHS = {
  */
 const EMPTY_SYMBOL = '—';
 
-/**
- * Emoji per livelli di log (console)
- * @constant {Object}
- */
-const LEVEL_ICONS = {
-    debug: '🔵',
-    info: '🟢',
-    warn: '🟡',
-    error: '🔴'
-};
+
 
 /**
  * Colori ANSI per i livelli
@@ -121,15 +113,15 @@ function buildFormattedMessage(level, message, context = {}, useColors = false) 
     const timestamp = getItalyTimestamp();
     const formattedLevel = formatLevel(level);
     const group = padOrTruncate(context.group || context.module || EMPTY_SYMBOL, COLUMN_WIDTHS.group);
+    const chatId = padOrTruncate(context.chatId || EMPTY_SYMBOL, COLUMN_WIDTHS.chatId);
     const user = padOrTruncate(context.user || EMPTY_SYMBOL, COLUMN_WIDTHS.user);
 
     if (useColors) {
-        const icon = LEVEL_ICONS[level] || '⚪';
         const color = LEVEL_COLORS[level] || '';
-        return `[${timestamp}] ${icon} ${color}[${formattedLevel}]${RESET_COLOR} [${group}] [${user}] ${message}`;
+        return `[${timestamp}] ${color}[${formattedLevel}]${RESET_COLOR} [${group}] [${chatId}] [${user}] ${message}`;
     }
 
-    return `[${timestamp}] [${formattedLevel}] [${group}] [${user}] ${message}`;
+    return `[${timestamp}] [${formattedLevel}] [${group}] [${chatId}] [${user}] ${message}`;
 }
 
 /**
@@ -137,8 +129,8 @@ function buildFormattedMessage(level, message, context = {}, useColors = false) 
  * @private
  */
 const consoleFormat = winston.format.combine(
-    winston.format.printf(({ level, message, group, user, module: mod }) => {
-        const context = { group, user, module: mod };
+    winston.format.printf(({ level, message, group, chatId, user, module: mod }) => {
+        const context = { group, chatId, user, module: mod };
         return buildFormattedMessage(level, message, context, true);
     })
 );
@@ -148,8 +140,8 @@ const consoleFormat = winston.format.combine(
  * @private
  */
 const fileFormat = winston.format.combine(
-    winston.format.printf(({ level, message, group, user, module: mod }) => {
-        const context = { group, user, module: mod };
+    winston.format.printf(({ level, message, group, chatId, user, module: mod }) => {
+        const context = { group, chatId, user, module: mod };
         return buildFormattedMessage(level, message, context, false);
     })
 );
@@ -227,11 +219,12 @@ function extractContext(ctx) {
 
     const result = {};
 
-    // Estrai nome gruppo
+    // Estrai nome gruppo e chat ID
     if (ctx.chat) {
         if (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup') {
             result.group = ctx.chat.title || `ID:${ctx.chat.id}`;
         }
+        result.chatId = String(ctx.chat.id);
     }
 
     // Estrai nome utente

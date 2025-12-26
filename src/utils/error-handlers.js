@@ -91,7 +91,7 @@ async function safeEdit(ctx, text, options = {}, module = 'unknown') {
         if (e.error_code === 429) {
             try {
                 await ctx.answerCallbackQuery('⚠️ Slow down!');
-            } catch (ignore) {}
+            } catch (ignore) { }
             return false;
         }
         handleTelegramError(module, 'editMessageText', e, ctx);
@@ -135,13 +135,19 @@ async function safeGetChatMember(ctx, userId, module = 'unknown') {
 }
 
 /**
- * Verifica se l'utente corrente è un admin del gruppo.
+ * Verifica se l'utente corrente è un admin del gruppo o un super admin del bot.
+ * I super admin hanno accesso totale a prescindere dal loro status nel gruppo.
  *
  * @param {import('grammy').Context} ctx - Contesto grammY
  * @param {string} [module='unknown'] - Nome del modulo per logging
- * @returns {Promise<boolean>} True se admin, false altrimenti
+ * @returns {Promise<boolean>} True se admin o super admin, false altrimenti
  */
 async function isAdmin(ctx, module = 'unknown') {
+    // Super admin hanno accesso totale
+    if (isSuperAdmin(ctx.from.id)) {
+        return true;
+    }
+
     const member = await safeGetChatMember(ctx, ctx.from.id, module);
     if (!member) return false;
     return ['creator', 'administrator'].includes(member.status);
