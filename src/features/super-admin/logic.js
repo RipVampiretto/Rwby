@@ -30,7 +30,7 @@ async function forwardToParliament(bot, db, params) {
                 } else {
                     topicId = topics.bans;
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Build keyboard based on type
@@ -42,7 +42,7 @@ async function forwardToParliament(bot, db, params) {
             let domainHost = '';
             try {
                 domainHost = new URL(domain || '').hostname;
-            } catch (e) {}
+            } catch (e) { }
 
             keyboard.inline_keyboard = [
                 [
@@ -163,7 +163,7 @@ async function forwardMediaToParliament(bot, db, topic, ctx, caption, customKeyb
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.reports || topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const keyboard = customKeyboard ? { inline_keyboard: customKeyboard } : null;
@@ -226,7 +226,7 @@ async function forwardAlbumToParliament(bot, db, topic, violations, info) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics[topic] || topics.image_spam || topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Build media group
@@ -302,7 +302,7 @@ async function sendGlobalLog(bot, db, event) {
                 else if (event.eventType === 'image_spam_check') threadId = topics.image_spam;
                 else if (event.eventType === 'link_check') threadId = topics.link_checks;
                 else threadId = topics.logs;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Build message based on event type
@@ -395,7 +395,7 @@ async function executeGlobalBan(ctx, db, bot, userId) {
                         `Global Ban by ${ctx.from.first_name}`
                     );
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         await ctx.reply(`🌍 Global Ban propagato a ${count} gruppi.`);
@@ -413,7 +413,7 @@ async function cleanupPendingDeletions(db, bot) {
         for (const p of pending) {
             try {
                 await bot.api.deleteMessage(p.chat_id, p.message_id);
-            } catch (e) {}
+            } catch (e) { }
             await db.query('DELETE FROM pending_deletions WHERE id = $1', [p.id]);
         }
     } catch (e) {
@@ -460,8 +460,23 @@ async function setupParliament(db, ctx, bot) {
 async function getStats(db) {
     return await db.queryOne(`
         SELECT 
+            (SELECT COUNT(*) FROM users) as users_count,
+            (SELECT COUNT(*) FROM guild_config) as guilds_count,
+            
             (SELECT COUNT(*) FROM users WHERE is_banned_global = TRUE) as global_bans,
-            (SELECT COUNT(*) FROM guild_config) as guilds
+            
+            -- Local Flux Stats
+            COALESCE((SELECT AVG(local_flux) FROM user_trust_flux), 0)::numeric as avg_local_flux,
+            COALESCE((SELECT SUM(local_flux) FROM user_trust_flux), 0)::numeric as total_local_flux,
+            
+            -- Global Flux Stats
+            COALESCE((SELECT AVG(global_flux) FROM user_global_flux), 0)::numeric as avg_global_flux,
+            COALESCE((SELECT SUM(global_flux) FROM user_global_flux), 0)::numeric as total_global_flux,
+            
+            -- Filter Stats
+            (SELECT COUNT(*) FROM link_rules WHERE type = 'domain' AND action = 'allow') as whitelist_count,
+            (SELECT COUNT(*) FROM link_rules WHERE type = 'domain' AND action = 'delete') as blacklist_count,
+            (SELECT COUNT(*) FROM active_votes WHERE status = 'active') as active_votes
     `);
 }
 
@@ -507,7 +522,7 @@ async function notifyNewGroup(bot, db, guildId, guildName) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 threadId = topics.add_group;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         if (!threadId) return;

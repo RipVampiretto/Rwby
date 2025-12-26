@@ -1,16 +1,16 @@
 async function sendGovernancePanel(ctx, stats) {
     const text =
-        `🌍 <b>GLOBAL GOVERNANCE PANEL</b>\n` +
-        `🏛️ Gruppi: ${stats.guilds || 0}\n` +
-        `🚫 Ban globali: ${stats.global_bans || 0}`;
+        `🌍 <b>GLOBAL GOVERNANCE PANEL</b>\n\n` +
+        `🏛️ <b>Network Overview</b>\n` +
+        `• Active Guilds: <b>${stats.guilds_count}</b>\n` +
+        `• Total Users: <b>${stats.users_count}</b>\n` +
+        `• Global Bans: <b>${stats.global_bans}</b>\n\n` +
+        `<i>Select an option to view detailed statistics or manage configuration.</i>`;
 
     const keyboard = {
         inline_keyboard: [
-            [
-                { text: '📊 Statistiche Rete', callback_data: 'g_stats' },
-                { text: '🛠️ Configurazione', callback_data: 'g_config' }
-            ],
-            [{ text: '❌ Chiudi', callback_data: 'g_close' }]
+            [{ text: '📊 View Full Statistics', callback_data: 'g_stats' }],
+            [{ text: '❌ Close Panel', callback_data: 'g_close' }]
         ]
     };
 
@@ -22,13 +22,33 @@ async function sendGovernancePanel(ctx, stats) {
 }
 
 function sendFullStats(ctx, stats) {
+    // Format numbers
+    const fmt = n => parseFloat(n).toLocaleString('en-US', { maximumFractionDigits: 1 });
+
     const text =
-        `📊 <b>NETWORK STATISTICS</b>\n\n` +
-        `🏛️ Active Guilds: ${stats.guilds || 0}\n` +
-        `🚫 Global Bans: ${stats.global_bans || 0}`;
+        `📊 <b>DETAILED STATISTICS</b>\n` +
+        `───────────────\n\n` +
+        `👥 <b>Userbase</b>\n` +
+        `• Registered Users: <b>${fmt(stats.users_count)}</b>\n` +
+        `• Banned Users: <b>${fmt(stats.global_bans)}</b>\n` +
+        `• Active Guilds: <b>${fmt(stats.guilds_count)}</b>\n\n` +
+        `💠 <b>Flux Reputation System</b>\n` +
+        `<b>Local (Per-Group)</b>\n` +
+        `   • Average: <b>${fmt(stats.avg_local_flux)}</b>\n` +
+        `   • Total: <b>${fmt(stats.total_local_flux)}</b>\n\n` +
+        `<b>Global (Network-Wide)</b>\n` +
+        `   • Average: <b>${fmt(stats.avg_global_flux)}</b>\n` +
+        `   • Total: <b>${fmt(stats.total_global_flux)}</b>\n\n` +
+        `🛡️ <b>Security Metrics</b>\n` +
+        `• Whitelisted Domains: <b>${stats.whitelist_count}</b>\n` +
+        `• Blacklisted Domains: <b>${stats.blacklist_count}</b>\n` +
+        `• Active VoteBans: <b>${stats.active_votes}</b>`;
 
     const keyboard = {
-        inline_keyboard: [[{ text: '🔙 Indietro', callback_data: 'g_menu' }]]
+        inline_keyboard: [
+            [{ text: '🔄 Refresh', callback_data: 'g_stats' }],
+            [{ text: '🔙 Back to Menu', callback_data: 'g_menu' }]
+        ]
     };
 
     return ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
