@@ -379,6 +379,51 @@ function registerCommands(bot, db) {
             return;
         }
 
+        // Analytics handlers
+        if (data === 'g_analytics' || data.startsWith('g_analytics:')) {
+            try {
+                const monthlyStats = require('../analytics/monthly-stats');
+                let monthYear;
+
+                if (data === 'g_analytics') {
+                    monthYear = monthlyStats.getCurrentMonthYear();
+                } else {
+                    monthYear = data.split(':')[1];
+                }
+
+                const stats = await monthlyStats.getMonthlyStats(db, monthYear);
+                const prevMonth = monthlyStats.getPreviousMonth(monthYear);
+                const prevStats = await monthlyStats.getMonthlyStats(db, prevMonth, false);
+
+                await ui.sendMonthlyAnalytics(ctx, stats || {}, monthYear, prevStats);
+                await ctx.answerCallbackQuery();
+            } catch (e) {
+                logger.error(`[super-admin] Analytics error: ${e.message}`);
+                await ctx.answerCallbackQuery('❌ Errore caricamento analytics');
+            }
+            return;
+        }
+
+        if (data.startsWith('g_analytics_refresh:')) {
+            try {
+                const monthlyStats = require('../analytics/monthly-stats');
+                const monthYear = data.split(':')[1];
+
+                await ctx.answerCallbackQuery('🔄 Aggiornamento in corso...');
+
+                // Force recalculate
+                const stats = await monthlyStats.getMonthlyStats(db, monthYear, true);
+                const prevMonth = monthlyStats.getPreviousMonth(monthYear);
+                const prevStats = await monthlyStats.getMonthlyStats(db, prevMonth, false);
+
+                await ui.sendMonthlyAnalytics(ctx, stats || {}, monthYear, prevStats);
+            } catch (e) {
+                logger.error(`[super-admin] Analytics refresh error: ${e.message}`);
+                await ctx.answerCallbackQuery('❌ Errore aggiornamento');
+            }
+            return;
+        }
+
         if (data.startsWith('gban:')) {
             const userId = data.split(':')[1];
             await ctx.answerCallbackQuery('🌍 Executing Global Ban...');

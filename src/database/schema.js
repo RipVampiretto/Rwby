@@ -320,6 +320,47 @@ async function createTables() {
     `);
 
     // ========================================================================
+    // USER MESSAGE COUNTS - Per-user message counter for analytics
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS user_message_counts (
+            user_id BIGINT PRIMARY KEY,
+            message_count INTEGER DEFAULT 0,
+            last_updated TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // ========================================================================
+    // GUILD MESSAGE COUNTS - Per-guild per-month message counter
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS guild_message_counts (
+            guild_id BIGINT,
+            month_year TEXT,
+            message_count INTEGER DEFAULT 0,
+            PRIMARY KEY (guild_id, month_year)
+        )
+    `);
+
+    // ========================================================================
+    // MONTHLY STATS - Aggregated monthly statistics snapshots
+    // ========================================================================
+    await query(`
+        CREATE TABLE IF NOT EXISTS monthly_stats (
+            month_year TEXT PRIMARY KEY,
+            new_users INTEGER DEFAULT 0,
+            active_users INTEGER DEFAULT 0,
+            new_guilds INTEGER DEFAULT 0,
+            lost_guilds INTEGER DEFAULT 0,
+            active_guilds INTEGER DEFAULT 0,
+            global_bans INTEGER DEFAULT 0,
+            deleted_messages INTEGER DEFAULT 0,
+            completed_votes INTEGER DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // ========================================================================
     // INDEXES
     // ========================================================================
     await query(`CREATE INDEX IF NOT EXISTS idx_user_trust_flux_user ON user_trust_flux(user_id)`);

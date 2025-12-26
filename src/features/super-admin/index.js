@@ -21,6 +21,7 @@
 const commands = require('./commands');
 const logic = require('./logic');
 const logger = require('../../middlewares/logger');
+const { createMessageCounter } = require('../analytics/message-counter');
 
 /**
  * Riferimento al database
@@ -52,6 +53,9 @@ function init(database) {
  */
 function register(bot) {
     _botInstance = bot;
+
+    // Message counter for analytics (runs async, doesn't block)
+    bot.use(createMessageCounter(db));
 
     // Cron per pulizia eliminazioni pendenti (ogni ora)
     setInterval(() => logic.cleanupPendingDeletions(db, bot), 3600000);
