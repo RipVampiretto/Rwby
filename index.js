@@ -203,7 +203,7 @@ const sendStartMenu = async (ctx) => {
                 { text: t('common.start.buttons.info'), callback_data: 'start_info' }
             ],
             [{ text: t('common.start.buttons.change_language'), callback_data: 'start_change_lang' }],
-            [{ text: t('common.start.buttons.channel'), url: 'https://t.me/RwbyBotUpdates' }]
+            [{ text: t('common.start.buttons.channel'), url: 'https://t.me/SafeJoinChannelLog' }]
         ]
     };
 
