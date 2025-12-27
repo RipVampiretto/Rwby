@@ -545,16 +545,29 @@ function registerCommands(bot, db) {
     });
 
     // Command: /gdelete <chat_id> <message_id> - Delete a message in any chat
+    // Also works in reply to a message (including service messages)
     bot.command('gdelete', async ctx => {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
 
-        const args = ctx.message.text.split(' ').slice(1);
-        const chatId = args[0];
-        const messageId = args[1];
+        let chatId, messageId;
+        const replyMsg = ctx.message.reply_to_message;
+
+        if (replyMsg) {
+            // Reply mode: delete the replied message
+            chatId = ctx.chat.id;
+            messageId = replyMsg.message_id;
+        } else {
+            // Args mode: /gdelete <chat_id> <message_id>
+            const args = ctx.message.text.split(' ').slice(1);
+            chatId = args[0];
+            messageId = args[1];
+        }
 
         if (!chatId || !messageId) {
             return ctx.reply(
-                '❓ <b>Uso:</b> <code>/gdelete &lt;chat_id&gt; &lt;message_id&gt;</code>\n\n' +
+                '❓ <b>Uso:</b>\n' +
+                    '• Rispondi a un messaggio con <code>/gdelete</code>\n' +
+                    '• <code>/gdelete &lt;chat_id&gt; &lt;message_id&gt;</code>\n\n' +
                     '<b>Esempio:</b>\n' +
                     '<code>/gdelete -1001234567890 12345</code>',
                 { parse_mode: 'HTML' }
@@ -563,30 +576,66 @@ function registerCommands(bot, db) {
 
         try {
             await bot.api.deleteMessage(chatId, parseInt(messageId));
-            await ctx.reply(
+            const confirmMsg = await ctx.reply(
                 `✅ <b>Messaggio eliminato</b>\n\n` +
                     `📍 Chat: <code>${chatId}</code>\n` +
                     `🆔 Message ID: <code>${messageId}</code>`,
                 { parse_mode: 'HTML' }
             );
             logger.info(`[super-admin] Message ${messageId} deleted from ${chatId} by ${ctx.from.id}`);
+
+            // Auto-delete confirmation after 10 seconds
+            setTimeout(async () => {
+                try {
+                    await bot.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
+                } catch (e) {}
+            }, 10000);
         } catch (e) {
-            await ctx.reply(`❌ Errore: ${e.message}`);
+            const errMsg = await ctx.reply(`❌ Errore: ${e.message}`);
             logger.error(`[super-admin] gdelete error: ${e.message}`);
+            setTimeout(async () => {
+                try {
+                    await bot.api.deleteMessage(ctx.chat.id, errMsg.message_id);
+                } catch (e) {}
+            }, 10000);
         }
     });
 
     // Command: /gunmute <chat_id> <user_id> - Unmute/unrestrict a user in any chat
+    // Also works in reply to a message (including service messages like join/leave)
     bot.command('gunmute', async ctx => {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
 
-        const args = ctx.message.text.split(' ').slice(1);
-        const chatId = args[0];
-        const userId = args[1];
+        let chatId, userId;
+        const replyMsg = ctx.message.reply_to_message;
+
+        if (replyMsg) {
+            // Reply mode: unmute the user from the replied message
+            chatId = ctx.chat.id;
+
+            // Try to get user from service message first, then fallback to from
+            if (replyMsg.new_chat_members && replyMsg.new_chat_members.length > 0) {
+                // Service message: user joined
+                userId = replyMsg.new_chat_members[0].id;
+            } else if (replyMsg.left_chat_member) {
+                // Service message: user left
+                userId = replyMsg.left_chat_member.id;
+            } else if (replyMsg.from) {
+                // Regular message
+                userId = replyMsg.from.id;
+            }
+        } else {
+            // Args mode: /gunmute <chat_id> <user_id>
+            const args = ctx.message.text.split(' ').slice(1);
+            chatId = args[0];
+            userId = args[1];
+        }
 
         if (!chatId || !userId) {
             return ctx.reply(
-                '❓ <b>Uso:</b> <code>/gunmute &lt;chat_id&gt; &lt;user_id&gt;</code>\n\n' +
+                '❓ <b>Uso:</b>\n' +
+                    '• Rispondi a un messaggio con <code>/gunmute</code>\n' +
+                    '• <code>/gunmute &lt;chat_id&gt; &lt;user_id&gt;</code>\n\n' +
                     '<b>Esempio:</b>\n' +
                     '<code>/gunmute -1001234567890 123456789</code>',
                 { parse_mode: 'HTML' }
@@ -618,16 +667,28 @@ function registerCommands(bot, db) {
                 userName = userInfo.first_name || 'Unknown';
             } catch (e) {}
 
-            await ctx.reply(
+            const confirmMsg = await ctx.reply(
                 `✅ <b>Utente smutato</b>\n\n` +
                     `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
                     `📍 Chat: <code>${chatId}</code>`,
                 { parse_mode: 'HTML' }
             );
             logger.info(`[super-admin] User ${userId} unmuted in ${chatId} by ${ctx.from.id}`);
+
+            // Auto-delete confirmation after 10 seconds
+            setTimeout(async () => {
+                try {
+                    await bot.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
+                } catch (e) {}
+            }, 10000);
         } catch (e) {
-            await ctx.reply(`❌ Errore: ${e.message}`);
+            const errMsg = await ctx.reply(`❌ Errore: ${e.message}`);
             logger.error(`[super-admin] gunmute error: ${e.message}`);
+            setTimeout(async () => {
+                try {
+                    await bot.api.deleteMessage(ctx.chat.id, errMsg.message_id);
+                } catch (e) {}
+            }, 10000);
         }
     });
 

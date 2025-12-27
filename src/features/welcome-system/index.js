@@ -81,13 +81,13 @@ function register(bot) {
             const pending = await dbStore.getPendingCaptcha(ctx.chat.id, leftUser.id);
             if (pending) {
                 // Delete captcha message
-                await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => {});
                 // Delete service message (join)
                 if (pending.service_message_id) {
-                    await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => { });
+                    await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => {});
                 }
                 // Delete the left_chat_member service message itself
-                await ctx.deleteMessage().catch(() => { });
+                await ctx.deleteMessage().catch(() => {});
                 // Remove from DB
                 await dbStore.removePendingCaptcha(ctx.chat.id, leftUser.id);
                 logger.info(`[Welcome] Cleaned up pending captcha for user ${leftUser.id} who left.`);
@@ -107,20 +107,22 @@ function register(bot) {
 
                 if (diffMins < 5) {
                     // User verified less than 5 mins ago and left! (join & run)
-                    logger.info(`[Welcome] Join & Run detected: user ${leftUser.id} left ${diffMins.toFixed(1)} mins after verification.`);
+                    logger.info(
+                        `[Welcome] Join & Run detected: user ${leftUser.id} left ${diffMins.toFixed(1)} mins after verification.`
+                    );
 
                     // Delete Welcome Message
                     if (recent.welcome_message_id) {
-                        await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => { });
+                        await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => {});
                     }
 
                     // Delete Service Message (join)
                     if (recent.service_message_id) {
-                        await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => { });
+                        await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => {});
                     }
 
                     // Delete the left_chat_member service message itself
-                    await ctx.deleteMessage().catch(() => { });
+                    await ctx.deleteMessage().catch(() => {});
                 }
 
                 // Clean up recent record
@@ -132,7 +134,6 @@ function register(bot) {
 
         return next();
     });
-
 
     // Callback
     bot.on('callback_query:data', async (ctx, next) => {

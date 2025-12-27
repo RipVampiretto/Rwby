@@ -186,7 +186,7 @@ async function logWelcomeEvent(ctx, type, details, config, userOverride = null) 
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) { }
+            } catch (e) {}
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -595,19 +595,29 @@ async function handleCaptchaCallback(ctx) {
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
-                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}:${serviceMsgId || 0}` }]
+                            [
+                                {
+                                    text: '✅ Ho Letto e Accetto',
+                                    callback_data: `wc:accept_rules:${ctx.from.id}:${serviceMsgId || 0}`
+                                }
+                            ]
                         ]
                     }
                 });
             } catch (e) {
                 // If edit fails, try sending new
-                await ctx.deleteMessage().catch(() => { });
+                await ctx.deleteMessage().catch(() => {});
                 await ctx.reply(text, {
                     parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
-                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}:${serviceMsgId || 0}` }]
+                            [
+                                {
+                                    text: '✅ Ho Letto e Accetto',
+                                    callback_data: `wc:accept_rules:${ctx.from.id}:${serviceMsgId || 0}`
+                                }
+                            ]
                         ]
                     }
                 });
@@ -721,7 +731,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
             } catch (e) {
                 // If edit fails (e.g. content type mismatch), delete and send new
                 logger.debug(`[Welcome] Edit failed: ${e.message}. Deleting and sending new.`);
-                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, messageToEditId).catch(() => {});
                 const sent = await ctx.reply(finalText, {
                     parse_mode: 'HTML',
                     reply_markup: markup,
@@ -743,7 +753,7 @@ async function sendWelcome(ctx, config, userOverride = null, messageToEditId = n
         // Auto-delete (timer is in minutes)
         if (config.welcome_autodelete_timer && config.welcome_autodelete_timer > 0 && sentMessageId) {
             setTimeout(() => {
-                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => { });
+                ctx.api.deleteMessage(ctx.chat.id, sentMessageId).catch(() => {});
             }, config.welcome_autodelete_timer * 60000); // minutes to ms
         }
     } catch (e) {
@@ -797,12 +807,12 @@ async function handleMemberLeft(ctx) {
 
                 // Delete Welcome Message
                 if (recent.welcome_message_id) {
-                    await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => { });
+                    await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => {});
                 }
 
                 // Delete Service Message
                 if (recent.service_message_id) {
-                    await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => { });
+                    await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => {});
                 }
             }
 
@@ -817,9 +827,9 @@ async function handleMemberLeft(ctx) {
     try {
         const pending = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
         if (pending) {
-            await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
+            await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => {});
             if (pending.service_message_id) {
-                await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => { });
+                await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => {});
             }
             await dbStore.removePendingCaptcha(ctx.chat.id, user.id);
             logger.info(`[Welcome] Deleted pending captcha (DB) for user ${user.id} who left.`);
@@ -856,17 +866,17 @@ async function checkExpiredCaptchas(bot) {
                 await new Promise(r => setTimeout(r, 1000));
 
                 // Delete Captcha Message
-                await bot.api.deleteMessage(guild_id, message_id).catch(() => { });
+                await bot.api.deleteMessage(guild_id, message_id).catch(() => {});
 
                 // Delete Join Service Message (user joined)
                 if (service_message_id) {
-                    await bot.api.deleteMessage(guild_id, service_message_id).catch(() => { });
+                    await bot.api.deleteMessage(guild_id, service_message_id).catch(() => {});
                 }
 
                 // Try to delete the kick service message (usually message_id + 1 or +2)
                 // We try a few IDs after the captcha message since Telegram creates them sequentially
                 for (let offset = 1; offset <= 3; offset++) {
-                    await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => { });
+                    await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => {});
                 }
 
                 // Remove from DB
@@ -881,7 +891,7 @@ async function checkExpiredCaptchas(bot) {
                             if (typeof config.log_events === 'string') {
                                 try {
                                     logEvents = JSON.parse(config.log_events);
-                                } catch (e) { }
+                                } catch (e) {}
                             } else if (typeof config.log_events === 'object') {
                                 logEvents = config.log_events;
                             }
@@ -893,14 +903,14 @@ async function checkExpiredCaptchas(bot) {
                             try {
                                 const userInfo = await bot.api.getChat(user_id);
                                 userName = userInfo.first_name || 'Unknown';
-                            } catch (e) { }
+                            } catch (e) {}
 
                             // Get chat info
                             let chatTitle = 'Unknown';
                             try {
                                 const chatInfo = await bot.api.getChat(guild_id);
                                 chatTitle = chatInfo.title || 'Unknown';
-                            } catch (e) { }
+                            } catch (e) {}
 
                             const lang = await i18n.getLanguage(guild_id);
                             const text = i18n.t(lang, 'welcome.logs.captcha_timeout', {
