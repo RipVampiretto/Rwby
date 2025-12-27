@@ -155,7 +155,7 @@ function register(bot) {
         return next();
     });
 
-    // Start Expiration Loop (every 60s)
+    // Start Expiration Loop (every 30s)
     setInterval(async () => {
         checkExpiredCaptchas(bot);
 
@@ -169,7 +169,7 @@ function register(bot) {
         } catch (e) {
             logger.debug(`[Welcome] Cleanup error: ${e.message}`);
         }
-    }, 60000);
+    }, 30000);
 }
 
 module.exports = {
