@@ -544,6 +544,93 @@ function registerCommands(bot, db) {
         return ctx.reply('❓ Uso: <code>/guildblacklist [list|add|remove]</code>', { parse_mode: 'HTML' });
     });
 
+    // Command: /gdelete <chat_id> <message_id> - Delete a message in any chat
+    bot.command('gdelete', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const chatId = args[0];
+        const messageId = args[1];
+
+        if (!chatId || !messageId) {
+            return ctx.reply(
+                '❓ <b>Uso:</b> <code>/gdelete &lt;chat_id&gt; &lt;message_id&gt;</code>\n\n' +
+                    '<b>Esempio:</b>\n' +
+                    '<code>/gdelete -1001234567890 12345</code>',
+                { parse_mode: 'HTML' }
+            );
+        }
+
+        try {
+            await bot.api.deleteMessage(chatId, parseInt(messageId));
+            await ctx.reply(
+                `✅ <b>Messaggio eliminato</b>\n\n` +
+                    `📍 Chat: <code>${chatId}</code>\n` +
+                    `🆔 Message ID: <code>${messageId}</code>`,
+                { parse_mode: 'HTML' }
+            );
+            logger.info(`[super-admin] Message ${messageId} deleted from ${chatId} by ${ctx.from.id}`);
+        } catch (e) {
+            await ctx.reply(`❌ Errore: ${e.message}`);
+            logger.error(`[super-admin] gdelete error: ${e.message}`);
+        }
+    });
+
+    // Command: /gunmute <chat_id> <user_id> - Unmute/unrestrict a user in any chat
+    bot.command('gunmute', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const chatId = args[0];
+        const userId = args[1];
+
+        if (!chatId || !userId) {
+            return ctx.reply(
+                '❓ <b>Uso:</b> <code>/gunmute &lt;chat_id&gt; &lt;user_id&gt;</code>\n\n' +
+                    '<b>Esempio:</b>\n' +
+                    '<code>/gunmute -1001234567890 123456789</code>',
+                { parse_mode: 'HTML' }
+            );
+        }
+
+        try {
+            await bot.api.restrictChatMember(chatId, parseInt(userId), {
+                can_send_messages: true,
+                can_send_audios: true,
+                can_send_documents: true,
+                can_send_photos: true,
+                can_send_videos: true,
+                can_send_video_notes: true,
+                can_send_voice_notes: true,
+                can_send_polls: true,
+                can_send_other_messages: true,
+                can_add_web_page_previews: true,
+                can_change_info: false,
+                can_invite_users: true,
+                can_pin_messages: false,
+                can_manage_topics: false
+            });
+
+            // Try to get user info
+            let userName = 'Unknown';
+            try {
+                const userInfo = await bot.api.getChat(userId);
+                userName = userInfo.first_name || 'Unknown';
+            } catch (e) {}
+
+            await ctx.reply(
+                `✅ <b>Utente smutato</b>\n\n` +
+                    `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
+                    `📍 Chat: <code>${chatId}</code>`,
+                { parse_mode: 'HTML' }
+            );
+            logger.info(`[super-admin] User ${userId} unmuted in ${chatId} by ${ctx.from.id}`);
+        } catch (e) {
+            await ctx.reply(`❌ Errore: ${e.message}`);
+            logger.error(`[super-admin] gunmute error: ${e.message}`);
+        }
+    });
+
     // Callback handlers
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;

@@ -365,13 +365,14 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
     const mode = modes[Math.floor(Math.random() * modes.length)];
     const timeoutMins = config.captcha_timeout || 5;
     let text = '';
+    let ans = null; // Declare ans at function scope so it's available for all captcha modes
     const keyboard = new InlineKeyboard();
 
     try {
         if (mode === 'math') {
             const ops = ['+', '-', '*'];
             const op = ops[Math.floor(Math.random() * ops.length)];
-            let a, b, ans;
+            let a, b;
 
             if (op === '*') {
                 a = getRandomInt(2, 6);
@@ -400,7 +401,7 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
         } else if (mode === 'char') {
             const word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
             const char = word.charAt(Math.floor(Math.random() * word.length));
-            const ans = word.split(char).length - 1;
+            ans = word.split(char).length - 1;
 
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_verification')}\n\n${t('welcome.captcha_messages.char_question', { char, word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
@@ -412,7 +413,7 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
             generateButtons(keyboard, user.id, ans, Array.from(options));
         } else if (mode === 'emoji') {
             const correctItem = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
-            const ans = correctItem.emoji;
+            ans = correctItem.emoji;
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.click_emoji')}\n\n${t('welcome.captcha_messages.emoji_question', { emoji: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
@@ -423,7 +424,7 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
             generateButtons(keyboard, user.id, ans, Array.from(options));
         } else if (mode === 'color') {
             const correctItem = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
-            const ans = correctItem.emoji;
+            ans = correctItem.emoji;
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.select_color')}\n\n${t('welcome.captcha_messages.color_question', { color: correctItem.name })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
@@ -434,7 +435,7 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
             generateButtons(keyboard, user.id, ans, Array.from(options));
         } else if (mode === 'reverse') {
             const word = REVERSE_WORDS[Math.floor(Math.random() * REVERSE_WORDS.length)];
-            const ans = word.split('').reverse().join('');
+            ans = word.split('').reverse().join('');
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.show_attention')}\n\n${t('welcome.captcha_messages.reverse_question', { word })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
@@ -446,7 +447,7 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
             generateButtons(keyboard, user.id, ans, Array.from(options));
         } else if (mode === 'logic') {
             const puzzle = LOGIC_SEQUENCES[Math.floor(Math.random() * LOGIC_SEQUENCES.length)];
-            const ans = puzzle.ans;
+            ans = puzzle.ans;
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.complete_sequence')}\n\n${t('welcome.captcha_messages.logic_question', { sequence: puzzle.seq })}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
 
             const options = new Set([ans]);
@@ -465,6 +466,7 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
             generateButtons(keyboard, user.id, ans, Array.from(options));
         } else {
             // Button mode (Default)
+            ans = 'CHECK'; // Button mode doesn't need a specific answer
             text = `${t('welcome.captcha_messages.welcome', { name: user.first_name })}\n${t('welcome.captcha_messages.confirm_human')}\n\n${t('welcome.captcha_messages.timeout', { minutes: timeoutMins })}`;
             keyboard.text('✅ Non sono un robot', `wc:b:${user.id}`);
         }
@@ -475,6 +477,9 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
         });
 
         // SAVE TO DB
+        logger.debug(
+            `[Welcome] Saving captcha: user=${user.id}, msgId=${msg.message_id}, ans=${ans}, serviceMsgId=${serviceMessageId}`
+        );
         await dbStore.addPendingCaptcha(
             guildId,
             user.id,
@@ -824,12 +829,21 @@ async function checkExpiredCaptchas(bot) {
                 await new Promise(r => setTimeout(r, 500));
                 await bot.api.unbanChatMember(guild_id, user_id);
 
+                // Wait for Telegram to create the kick service message
+                await new Promise(r => setTimeout(r, 1000));
+
                 // Delete Captcha Message
                 await bot.api.deleteMessage(guild_id, message_id).catch(() => {});
 
-                // Delete Service Message
+                // Delete Join Service Message (user joined)
                 if (service_message_id) {
                     await bot.api.deleteMessage(guild_id, service_message_id).catch(() => {});
+                }
+
+                // Try to delete the kick service message (usually message_id + 1 or +2)
+                // We try a few IDs after the captcha message since Telegram creates them sequentially
+                for (let offset = 1; offset <= 3; offset++) {
+                    await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => {});
                 }
 
                 // Remove from DB
