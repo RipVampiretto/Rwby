@@ -751,14 +751,22 @@ async function handleMemberLeft(ctx) {
 
     const newStatus = ctx.chatMember.new_chat_member.status;
     const oldStatus = ctx.chatMember.old_chat_member.status;
+    const user = ctx.chatMember.new_chat_member.user;
+
+    logger.debug(
+        `[Welcome] Member left check: user=${user.id} (${user.first_name}), old=${oldStatus}, new=${newStatus}`
+    );
 
     // Only trigger on leave (left/kicked from member/restricted)
     const isLeave =
         (newStatus === 'left' || newStatus === 'kicked') && (oldStatus === 'member' || oldStatus === 'restricted');
 
-    if (!isLeave) return;
+    if (!isLeave) {
+        logger.debug(`[Welcome] Not a leave event (isLeave=${isLeave}). Ignoring.`);
+        return;
+    }
 
-    const user = ctx.chatMember.new_chat_member.user;
+    logger.debug(`[Welcome] User ${user.id} left. Checking for pending captcha...`);
 
     // Check Recently Verified "Join & Run"
     try {

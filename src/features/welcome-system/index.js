@@ -67,6 +67,38 @@ function register(bot) {
     });
     bot.on('message:new_chat_members', handleNewMember);
 
+    // Fallback per left_chat_member (quando chat_member update non è disponibile)
+    bot.on('message:left_chat_member', async (ctx, next) => {
+        const leftUser = ctx.message.left_chat_member;
+        if (!leftUser || leftUser.is_bot) return next();
+
+        logger.debug(`[Welcome] left_chat_member event: user=${leftUser.id} (${leftUser.first_name})`);
+
+        // Check for pending captcha
+        try {
+            const { getPendingCaptcha, removePendingCaptcha } = require('./db-store');
+            const pending = await getPendingCaptcha(ctx.chat.id, leftUser.id);
+            if (pending) {
+                // Delete captcha message
+                await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
+                // Delete service message (join)
+                if (pending.service_message_id) {
+                    await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => { });
+                }
+                // Delete the left_chat_member service message itself
+                await ctx.deleteMessage().catch(() => { });
+                // Remove from DB
+                await removePendingCaptcha(ctx.chat.id, leftUser.id);
+                logger.info(`[Welcome] Cleaned up pending captcha for user ${leftUser.id} who left.`);
+            }
+        } catch (e) {
+            logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
+        }
+
+        return next();
+    });
+
+
     // Callback
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
