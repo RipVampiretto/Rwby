@@ -9,18 +9,23 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 function init(database) {
     db = database;
+    logger.info(`[SpamPatterns] Module initialized`);
 }
 
 async function refreshCache() {
+    logger.debug(`[SpamPatterns] Refreshing modal cache...`);
     modalCacheTime = 0;
     if (db) {
         try {
             modalCache = await db.queryAll('SELECT * FROM spam_patterns WHERE enabled = TRUE');
             modalCacheTime = Date.now();
+            logger.info(`[SpamPatterns] Cache refreshed: ${modalCache.length} patterns loaded`);
         } catch (e) {
-            logger.error(`[spam-patterns] Failed to load modals: ${e.message}`);
+            logger.error(`[SpamPatterns] Failed to load modals: ${e.message}`);
             modalCache = [];
         }
+    } else {
+        logger.warn(`[SpamPatterns] Cannot refresh cache: database not initialized`);
     }
 }
 
@@ -28,12 +33,17 @@ async function refreshCache() {
  * Load all modals (with caching)
  */
 async function getAllModals() {
-    if (!db) return [];
+    if (!db) {
+        logger.debug(`[SpamPatterns] getAllModals called but db not initialized`);
+        return [];
+    }
 
     if (Date.now() - modalCacheTime < CACHE_TTL && modalCache.length > 0) {
+        logger.debug(`[SpamPatterns] Using cached modals (${modalCache.length} patterns)`);
         return modalCache;
     }
 
+    logger.debug(`[SpamPatterns] Cache expired, refreshing...`);
     await refreshCache();
 
     return modalCache;
@@ -104,20 +114,30 @@ function diceSimilarity(text1, text2) {
  */
 async function checkMessageAgainstModals(ctx, config) {
     const text = (ctx.message.text || '').toLowerCase().trim();
-    if (text.length < 10) return null;
+
+    if (text.length < 10) {
+        logger.debug(`[SpamPatterns] Message too short (${text.length} chars), skipping check`, ctx);
+        return null;
+    }
+
+    logger.debug(`[SpamPatterns] Checking message against patterns: "${text.substring(0, 50)}..."`, ctx);
 
     // Check against ALL modals regardless of language
     const modals = await getAllModals();
     const guildId = ctx.chat.id;
 
     for (const modal of modals) {
-        if (!(await isModalEnabledForGuild(guildId, modal.id))) continue;
+        if (!(await isModalEnabledForGuild(guildId, modal.id))) {
+            logger.debug(`[SpamPatterns] Modal ${modal.name || modal.id} disabled for guild ${guildId}`, ctx);
+            continue;
+        }
 
         const patterns = safeJsonParse(modal.patterns, []);
         for (const pattern of patterns) {
             const similarity = diceSimilarity(text, pattern);
 
             if (similarity >= (modal.similarity_threshold || 0.6)) {
+                logger.info(`[SpamPatterns] MATCH FOUND! Pattern: "${pattern.substring(0, 30)}...", similarity: ${(similarity * 100).toFixed(1)}%, action: ${config.spam_patterns_action || modal.action || 'report_only'}`, ctx);
                 return {
                     modal: modal,
                     category: modal.category,
@@ -129,6 +149,7 @@ async function checkMessageAgainstModals(ctx, config) {
         }
     }
 
+    logger.debug(`[SpamPatterns] No pattern matches found for message`, ctx);
     return null;
 }
 

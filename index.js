@@ -15,6 +15,7 @@ const botConfig = process.env.TELEGRAM_API_URL ? {
     }
 } : {};
 
+logger.info(`[Bot] Initializing bot with config: apiRoot=${process.env.TELEGRAM_API_URL || 'default'}`);
 const bot = new Bot(process.env.BOT_TOKEN, botConfig);
 
 // ============================================================================
@@ -51,6 +52,16 @@ const i18n = require("./src/i18n");
 // GLOBAL MIDDLEWARE - Logging & User Cache & Global Ban Check
 // ============================================================================
 bot.use(async (ctx, next) => {
+    // Detect update type from ctx.update object
+    const updateType = ctx.message ? 'message' :
+        ctx.editedMessage ? 'edited_message' :
+            ctx.callbackQuery ? 'callback_query' :
+                ctx.inlineQuery ? 'inline_query' :
+                    ctx.chatMember ? 'chat_member' :
+                        ctx.myChatMember ? 'my_chat_member' :
+                            'other';
+    logger.debug(`[Bot] Processing update: type=${updateType}, updateId=${ctx.update?.update_id}`, ctx);
+
     // Cache user info (async)
     if (ctx.from) {
         await db.upsertUser(ctx.from);
@@ -59,9 +70,10 @@ bot.use(async (ctx, next) => {
         const isNew = await db.upsertGuild(ctx.chat);
 
         if (isNew && features.isEnabled('superAdmin')) {
+            logger.info(`[Bot] New group detected: ${ctx.chat.title} (${ctx.chat.id})`);
             // Don't await to not block the main flow
             superAdmin.notifyNewGroup(ctx.chat.id, ctx.chat.title).catch(err => {
-                logger.error(`[index] Failed to notify new group: ${err.message}`);
+                logger.error(`[Bot] Failed to notify new group: ${err.message}`);
             });
         }
 
@@ -72,15 +84,17 @@ bot.use(async (ctx, next) => {
             if (config.casban_enabled) {
                 const isBanned = await db.isUserGloballyBanned(ctx.from.id);
                 if (isBanned) {
-                    logger.info(`[global-ban] Intercepted globally banned user ${ctx.from.id} in ${ctx.chat.id}`);
+                    logger.info(`[Gban] Intercepted globally banned user ${ctx.from.id} in ${ctx.chat.id}`, ctx);
                     try {
                         await ctx.banChatMember(ctx.from.id);
+                        logger.info(`[Gban] Successfully banned user ${ctx.from.id}`, ctx);
                         // Try to delete the message that triggered this
                         if (ctx.message) {
                             await ctx.deleteMessage().catch(() => { });
+                            logger.debug(`[Gban] Deleted message from banned user`, ctx);
                         }
                     } catch (e) {
-                        logger.warn(`[global-ban] Failed to ban ${ctx.from.id}: ${e.message}`);
+                        logger.warn(`[Gban] Failed to ban ${ctx.from.id}: ${e.message}`, ctx);
                     }
                     return; // Stop processing - user is globally banned
                 }
@@ -121,14 +135,17 @@ if (features.isEnabled('globalBlacklist')) {
 if (features.isEnabled('actionLog')) {
     actionLog.init(db);
     actionLog.register(bot);
+    logger.debug(`[Bot] Feature registered: actionLog`);
 }
 if (features.isEnabled('staffCoordination')) {
     staffCoordination.init(db);
     staffCoordination.register(bot);
+    logger.debug(`[Bot] Feature registered: staffCoordination`);
 }
 if (features.isEnabled('superAdmin')) {
     superAdmin.init(db);
     superAdmin.register(bot);
+    logger.debug(`[Bot] Feature registered: superAdmin`);
 }
 
 // Detection: Text-based
@@ -419,14 +436,23 @@ bot.callbackQuery("start_info", async (ctx) => {
 // ============================================================================
 bot.catch((err) => {
     const ctx = err.ctx;
-    logger.error(`Error while handling update ${ctx.update.update_id}:`);
+    const updateId = ctx?.update?.update_id || 'unknown';
+    const userId = ctx?.from?.id || 'unknown';
+    const chatId = ctx?.chat?.id || 'unknown';
+
+    logger.error(`[Bot] Error while handling update ${updateId}: userId=${userId}, chatId=${chatId}`);
+
     const e = err.error;
     if (e instanceof GrammyError) {
-        logger.error(`Error in request: ${e.description}`);
+        logger.error(`[Bot] GrammyError: ${e.description} (error_code: ${e.error_code})`);
+        logger.error(`[Bot] Method: ${e.method || 'unknown'}, Payload: ${JSON.stringify(e.payload || {}).substring(0, 200)}`);
     } else if (e instanceof HttpError) {
-        logger.error(`Could not contact Telegram: ${e}`);
+        logger.error(`[Bot] HttpError: Could not contact Telegram: ${e.message}`);
     } else {
-        logger.error(`Unknown error: ${e}`);
+        logger.error(`[Bot] Unknown error: ${e?.message || e}`);
+        if (e?.stack) {
+            logger.error(`[Bot] Stack trace: ${e.stack}`);
+        }
     }
 });
 
@@ -436,25 +462,56 @@ bot.catch((err) => {
 const backup = require('./src/database/backup');
 
 async function start() {
+    logger.info(`[Bot] ========================================`);
+    logger.info(`[Bot] Starting RWBY Telegram Bot...`);
+    logger.info(`[Bot] ========================================`);
+
     // Init database
     await db.init();
-    logger.info("Database initialized (PostgreSQL)");
+    logger.info(`[Bot] Database initialized (PostgreSQL)`);
 
     // Init i18n
     i18n.init(db);
-    logger.info("i18n initialized");
+    logger.info(`[Bot] i18n initialized`);
 
     // Start backup scheduler
     backup.startScheduler();
-    logger.info("Backup scheduler started");
+    logger.info(`[Bot] Backup scheduler started`);
 
-    // Start bot
-    logger.info("🚀 Bot avviato...");
-    bot.start({ drop_pending_updates: true });
+    // Log enabled features
+    const enabledFeatures = [
+        'userReputation', 'globalBlacklist', 'actionLog', 'staffCoordination', 'superAdmin',
+        'wordFilter', 'languageFilter', 'spamPatterns', 'linkFilter', 'mentionFilter',
+        'editMonitor', 'mediaFilter', 'reportSystem', 'welcomeSystem', 'settingsMenu'
+    ].filter(f => features.isEnabled(f));
+    logger.info(`[Bot] Enabled features: ${enabledFeatures.join(', ')}`);
+
+    // Start bot with chat_member updates enabled
+    logger.info(`[Bot] 🚀 Bot starting with drop_pending_updates=true and chat_member updates enabled...`);
+    bot.start({
+        drop_pending_updates: true,
+        allowed_updates: [
+            'message',
+            'edited_message',
+            'channel_post',
+            'edited_channel_post',
+            'inline_query',
+            'chosen_inline_result',
+            'callback_query',
+            'shipping_query',
+            'pre_checkout_query',
+            'poll',
+            'poll_answer',
+            'my_chat_member',
+            'chat_member'  // Required for user join/leave detection
+        ]
+    });
+    logger.info(`[Bot] ✅ Bot is now running!`);
 }
 
 start().catch(err => {
-    logger.error("Failed to start bot:", err);
+    logger.error(`[Bot] FATAL: Failed to start bot: ${err.message}`);
+    logger.error(`[Bot] Stack: ${err.stack}`);
     process.exit(1);
 });
 

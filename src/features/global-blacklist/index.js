@@ -40,10 +40,10 @@ let db = null;
 let _botInstance = null;
 
 /**
- * Intervallo di sincronizzazione: 24 ore in millisecondi
+ * Intervallo di sincronizzazione: 1 ora in millisecondi
  * @constant {number}
  */
-const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const SYNC_INTERVAL_MS = 1 * 60 * 60 * 1000;
 
 /**
  * Inizializza il modulo con il database.
@@ -135,7 +135,7 @@ function register(bot) {
 
                         try {
                             await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                        } catch (e) {}
+                        } catch (e) { }
 
                         const completeMsg = await ctx.reply(
                             `✅ Sincronizzazione completata: ${result.success} utenti bannati.`
@@ -144,7 +144,7 @@ function register(bot) {
                         setTimeout(async () => {
                             try {
                                 await ctx.api.deleteMessage(ctx.chat.id, completeMsg.message_id);
-                            } catch (e) {}
+                            } catch (e) { }
                         }, 10000);
                     } catch (e) {
                         logger.error(`[global-blacklist] Sync failed: ${e.message}`);
@@ -154,7 +154,7 @@ function register(bot) {
                 setTimeout(async () => {
                     try {
                         await ctx.api.deleteMessage(ctx.chat.id, syncMsg.message_id);
-                    } catch (e) {}
+                    } catch (e) { }
                 }, 30000);
             }
 
@@ -190,13 +190,13 @@ function scheduleSync() {
         await sync.syncCasBans();
     }, 5000);
 
-    // Sync ricorrente ogni 24 ore
+    // Sync ricorrente ogni 1 ora
     setInterval(async () => {
         logger.info('[global-blacklist] Running scheduled CAS sync...');
         await sync.syncCasBans();
     }, SYNC_INTERVAL_MS);
 
-    logger.info('[global-blacklist] Scheduled daily sync');
+    logger.info('[global-blacklist] Scheduled hourly sync');
 }
 
 /**

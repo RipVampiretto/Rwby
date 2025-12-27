@@ -5,21 +5,27 @@ const superAdmin = require('../super-admin');
 const snapshots = require('./snapshots');
 const detection = require('./detection');
 const i18n = require('../../i18n');
+const logger = require('../../middlewares/logger');
 
 let db = null;
 
 function init(database) {
     db = database;
     snapshots.init(database);
+    logger.info(`[EditMonitor] Module initialized`);
 }
 
 async function processEdit(ctx, config) {
     const editedMsg = ctx.editedMessage;
+    logger.debug(`[EditMonitor] Processing edit for message ${editedMsg.message_id}`, ctx);
 
     // Retrieve snapshot
     const snapshot = await snapshots.getSnapshot(editedMsg.message_id, editedMsg.chat.id);
 
-    if (!snapshot) return; // No baseline
+    if (!snapshot) {
+        logger.debug(`[EditMonitor] No snapshot found for message ${editedMsg.message_id}`, ctx);
+        return; // No baseline
+    }
 
     // Grace period check: skip if message was created recently
     const gracePeriod = config.edit_grace_period ?? 0; // 0 = no grace period
@@ -28,6 +34,7 @@ async function processEdit(ctx, config) {
         const now = Date.now();
         const minutesSinceCreation = (now - createdAt) / 60000;
         if (minutesSinceCreation < gracePeriod) {
+            logger.debug(`[EditMonitor] Within grace period (${minutesSinceCreation.toFixed(1)}/${gracePeriod} min), allowing`, ctx);
             return; // Within grace period, allow edits
         }
     }
@@ -46,6 +53,7 @@ async function processEdit(ctx, config) {
 
     // Check A: Link Injection
     if (!originalHasLink && newHasLink) {
+        logger.info(`[EditMonitor] LINK INJECTION detected in message ${editedMsg.message_id}`, ctx);
         await executeAction(ctx, config, 'link_injection', originalText, newText);
         return;
     }
@@ -63,7 +71,9 @@ async function processEdit(ctx, config) {
 
         // Fixed 75% threshold
         const sim = detection.similarity(originalText, newText);
+        logger.debug(`[EditMonitor] Similarity check: ${(sim * 100).toFixed(1)}%`, ctx);
         if (sim < 0.75) {
+            logger.info(`[EditMonitor] LOW SIMILARITY detected (${(sim * 100).toFixed(1)}%) in message ${editedMsg.message_id}`, ctx);
             await executeAction(ctx, config, 'low_similarity', originalText, newText);
             return;
         }
@@ -75,13 +85,15 @@ async function executeAction(ctx, config, reason, original, current) {
     const user = ctx.from;
     const lang = await i18n.getLanguage(ctx.chat.id);
 
+    logger.info(`[EditMonitor] Executing action: ${action} for reason: ${reason}, user: ${user.id}`, ctx);
+
     // Parse log events
     let logEvents = {};
     if (config.log_events) {
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }
@@ -112,6 +124,7 @@ async function executeAction(ctx, config, reason, original, current) {
         }
 
         await safeDelete(ctx, 'anti-edit-abuse');
+        logger.debug(`[EditMonitor] Message deleted for edit abuse`, ctx);
 
         // Send warning and auto-delete after 1 minute
         try {
@@ -123,9 +136,9 @@ async function executeAction(ctx, config, reason, original, current) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, warning.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 60000);
-        } catch (e) {}
+        } catch (e) { }
 
         // Log if enabled
         if (logEvents['edit_delete'] && actionLog.getLogEvent()) {

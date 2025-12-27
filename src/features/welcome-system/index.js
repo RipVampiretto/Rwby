@@ -27,6 +27,7 @@ const { handleCallback } = require('./commands');
 const { handleMessage } = require('./wizard');
 const ui = require('./ui');
 const logger = require('../../middlewares/logger');
+const { chatMemberFilter } = require('@grammyjs/chat-members');
 
 /**
  * Riferimento al database, inizializzato tramite init()
@@ -43,13 +44,14 @@ let db = null;
  */
 function init(database) {
     db = database;
+    logger.info(`[Welcome] Module initialized`);
 }
 
 /**
  * Registra tutti gli handler del modulo sul bot.
  *
  * Handler registrati:
- * - chat_member: Gestisce join/leave dei membri
+ * - chat_member: Gestisce join/leave dei membri con chatMemberFilter
  * - message:new_chat_members: Backup per join (alcuni client)
  * - callback_query:data: Gestisce callback captcha (wc:) e UI (wc_)
  * - message:text: Listener per wizard configurazione
@@ -58,91 +60,43 @@ function init(database) {
  * @returns {void}
  */
 function register(bot) {
-    // Eventi join/leave
-    bot.on('chat_member', async (ctx, next) => {
-        // Gestisce sia join che leave negli update chat_member
+    logger.debug(`[Welcome] Registering event handlers with chatMemberFilter...`);
+
+    // Filtra solo gruppi e supergruppi
+    const groups = bot.chatType(['group', 'supergroup']);
+
+    // Utente entra nel gruppo (out -> in: left/kicked/restricted_out -> member/admin/restricted_in)
+    groups.filter(chatMemberFilter('out', 'in'), async (ctx, next) => {
+        const { new_chat_member: { user } } = ctx.chatMember;
+        logger.info(`[Welcome] chat_member JOIN: user=${user.id} (${user.first_name}) in chat ${ctx.chat.id}`, ctx);
         await handleNewMember(ctx);
+        return next();
+    });
+
+    // Utente esce dal gruppo (in -> out: member/admin/restricted_in -> left/kicked)
+    groups.filter(chatMemberFilter('in', 'out'), async (ctx, next) => {
+        const { old_chat_member: { user } } = ctx.chatMember;
+        logger.info(`[Welcome] chat_member LEAVE: user=${user.id} (${user.first_name}) from chat ${ctx.chat.id}`, ctx);
         await handleMemberLeft(ctx);
         return next();
     });
-    bot.on('message:new_chat_members', handleNewMember);
 
-    // Fallback per left_chat_member (quando chat_member update non è disponibile)
-    bot.on('message:left_chat_member', async (ctx, next) => {
-        const leftUser = ctx.message.left_chat_member;
-        if (!leftUser || leftUser.is_bot) return next();
+    // NOTA: message:new_chat_members rimosso perché chat_member è ora abilitato
+    // e gestisce correttamente sia join che leave
 
-        logger.debug(`[Welcome] left_chat_member event: user=${leftUser.id} (${leftUser.first_name})`);
-
-        const dbStore = require('./db-store');
-
-        // Check for pending captcha (user left during verification)
-        try {
-            const pending = await dbStore.getPendingCaptcha(ctx.chat.id, leftUser.id);
-            if (pending) {
-                // Delete captcha message
-                await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => {});
-                // Delete service message (join)
-                if (pending.service_message_id) {
-                    await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => {});
-                }
-                // Delete the left_chat_member service message itself
-                await ctx.deleteMessage().catch(() => {});
-                // Remove from DB
-                await dbStore.removePendingCaptcha(ctx.chat.id, leftUser.id);
-                logger.info(`[Welcome] Cleaned up pending captcha for user ${leftUser.id} who left.`);
-                return next();
-            }
-        } catch (e) {
-            logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
-        }
-
-        // Check for recently verified (join & run detection)
-        try {
-            const recent = await dbStore.getRecentlyVerified(ctx.chat.id, leftUser.id);
-            if (recent) {
-                const now = new Date();
-                const verifiedAt = new Date(recent.verified_at);
-                const diffMins = (now - verifiedAt) / 60000;
-
-                if (diffMins < 5) {
-                    // User verified less than 5 mins ago and left! (join & run)
-                    logger.info(
-                        `[Welcome] Join & Run detected: user ${leftUser.id} left ${diffMins.toFixed(1)} mins after verification.`
-                    );
-
-                    // Delete Welcome Message
-                    if (recent.welcome_message_id) {
-                        await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => {});
-                    }
-
-                    // Delete Service Message (join)
-                    if (recent.service_message_id) {
-                        await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => {});
-                    }
-
-                    // Delete the left_chat_member service message itself
-                    await ctx.deleteMessage().catch(() => {});
-                }
-
-                // Clean up recent record
-                await dbStore.removeRecentlyVerified(ctx.chat.id, leftUser.id);
-            }
-        } catch (e) {
-            logger.debug(`[Welcome] Failed to clean up join-run: ${e.message}`);
-        }
-
-        return next();
-    });
+    // NOTA: message:left_chat_member rimosso perché chatMemberFilter('in', 'out')
+    // gestisce correttamente le uscite. La logica è in handleMemberLeft (core.js)
 
     // Callback
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
         if (data.startsWith('wc:')) {
+            logger.debug(`[Welcome] Routing to captcha callback handler: ${data}`, ctx);
             return handleCaptchaCallback(ctx);
         }
 
         if (data.startsWith('wc_')) {
+            logger.debug(`[Welcome] Routing to UI callback handler: ${data}`, ctx);
             return handleCallback(ctx);
         }
 

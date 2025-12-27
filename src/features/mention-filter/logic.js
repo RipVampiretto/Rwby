@@ -5,6 +5,7 @@ let db = null;
 
 function init(database) {
     db = database;
+    logger.info(`[MentionFilter] Module initialized`);
 }
 
 /**
@@ -22,13 +23,19 @@ function extractMentions(message) {
             // @username mention - extract from text
             const username = text.substring(entity.offset + 1, entity.offset + entity.length); // +1 to skip @
             mentions.push({ username: username.toLowerCase(), userId: null });
+            logger.debug(`[MentionFilter] Found @mention: ${username}`);
         } else if (entity.type === 'text_mention') {
             // text_mention includes user object with id
             mentions.push({
                 username: entity.user.username ? entity.user.username.toLowerCase() : null,
                 userId: entity.user.id
             });
+            logger.debug(`[MentionFilter] Found text_mention: userId=${entity.user.id}`);
         }
+    }
+
+    if (mentions.length > 0) {
+        logger.debug(`[MentionFilter] Total mentions extracted: ${mentions.length}`);
     }
 
     return mentions;
@@ -191,7 +198,12 @@ async function scanMessage(ctx, config) {
     const message = ctx.message;
     const mentions = extractMentions(message);
 
-    if (mentions.length === 0) return null;
+    if (mentions.length === 0) {
+        logger.debug(`[MentionFilter] No mentions in message`, ctx);
+        return null;
+    }
+
+    logger.info(`[MentionFilter] Scanning message with ${mentions.length} mentions`, ctx);
 
     const messageText = message.text || message.caption || '';
     const senderId = ctx.from?.id;
@@ -264,12 +276,13 @@ async function scanMessage(ctx, config) {
             // Log for monitoring even if classified as safe
             if (aiResult.confidence > 0) {
                 logger.debug(
-                    `[mention-filter] External @${mention.username} classified as safe (conf: ${aiResult.confidence})`
+                    `[MentionFilter] External @${mention.username} classified as safe (conf: ${aiResult.confidence})`, ctx
                 );
             }
         }
     }
 
+    logger.debug(`[MentionFilter] All mentions passed checks`, ctx);
     return null;
 }
 

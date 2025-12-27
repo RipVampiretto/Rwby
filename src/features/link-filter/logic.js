@@ -7,6 +7,8 @@
  * Supporta sia entità Telegram che rilevamento regex per domini senza protocollo.
  */
 
+const logger = require('../../middlewares/logger');
+
 /**
  * Riferimento al database
  * @type {Object|null}
@@ -21,6 +23,7 @@ let db = null;
  */
 function init(database) {
     db = database;
+    logger.info(`[LinkFilter] Module initialized`);
 }
 
 /**
@@ -35,7 +38,9 @@ function extractLinks(message) {
 
     // Gestisce sia oggetto messaggio che testo semplice (retrocompatibilità)
     if (typeof message === 'string') {
-        return extractLinksFromText(message);
+        const extracted = extractLinksFromText(message);
+        logger.debug(`[LinkFilter] Extracted ${extracted.length} links from text string`);
+        return extracted;
     }
 
     const text = message.text || message.caption || '';
@@ -46,9 +51,11 @@ function extractLinks(message) {
             // URL visibile - estrai dal testo
             const url = text.substring(entity.offset, entity.offset + entity.length);
             links.push(url);
+            logger.debug(`[LinkFilter] Found URL entity: ${url}`);
         } else if (entity.type === 'text_link') {
             // URL nascosto (testo cliccabile) - usa entity.url
             links.push(entity.url);
+            logger.debug(`[LinkFilter] Found text_link entity: ${entity.url}`);
         }
     }
 
@@ -57,7 +64,12 @@ function extractLinks(message) {
     for (const link of regexLinks) {
         if (!links.includes(link)) {
             links.push(link);
+            logger.debug(`[LinkFilter] Found regex link: ${link}`);
         }
+    }
+
+    if (links.length > 0) {
+        logger.debug(`[LinkFilter] Total links extracted: ${links.length}`);
     }
 
     return links;
@@ -143,7 +155,10 @@ function getDomain(url) {
  * @returns {Promise<'whitelist'|'blacklist'|'unknown'>} Stato del dominio
  */
 async function checkIntel(domain) {
-    if (!db) return 'unknown';
+    if (!db) {
+        logger.debug(`[LinkFilter] checkIntel called but db not initialized`);
+        return 'unknown';
+    }
 
     // Costruisce lista domini da controllare: dominio completo + tutti i parent
     // es. "gigino.palla.com" -> ["gigino.palla.com", "palla.com"]
@@ -153,6 +168,8 @@ async function checkIntel(domain) {
     for (let i = 0; i < parts.length - 1; i++) {
         domainsToCheck.push(parts.slice(i).join('.'));
     }
+
+    logger.debug(`[LinkFilter] Checking intel for domains: ${domainsToCheck.join(', ')}`);
 
     // Controlla tutti i domini in una singola query per efficienza
     const res = await db.queryOne(
@@ -166,8 +183,12 @@ async function checkIntel(domain) {
     );
 
     if (res) {
-        return res.action === 'allow' ? 'whitelist' : 'blacklist';
+        const result = res.action === 'allow' ? 'whitelist' : 'blacklist';
+        logger.info(`[LinkFilter] Intel check: ${domain} -> ${result} (matched: ${res.pattern})`);
+        return result;
     }
+
+    logger.debug(`[LinkFilter] Intel check: ${domain} -> unknown (no match in db)`);
     return 'unknown';
 }
 
@@ -180,27 +201,42 @@ async function checkIntel(domain) {
  */
 async function scanMessage(ctx, config) {
     const links = extractLinks(ctx.message);
-    if (links.length === 0) return null;
+
+    if (links.length === 0) {
+        logger.debug(`[LinkFilter] No links found in message`, ctx);
+        return null;
+    }
+
+    logger.debug(`[LinkFilter] Scanning ${links.length} links in message`, ctx);
 
     for (const link of links) {
         const domain = getDomain(link);
-        if (!domain) continue;
+        if (!domain) {
+            logger.debug(`[LinkFilter] Could not parse domain from: ${link}`, ctx);
+            continue;
+        }
+
+        logger.debug(`[LinkFilter] Checking domain: ${domain}`, ctx);
 
         // Usa sempre il controllo intel globale
         const intelCheck = await checkIntel(domain);
 
         if (intelCheck === 'whitelist') {
+            logger.debug(`[LinkFilter] Domain ${domain} is whitelisted, allowing`, ctx);
             continue;
         }
 
         if (intelCheck === 'blacklist') {
+            logger.info(`[LinkFilter] BLACKLISTED domain detected: ${domain}`, ctx);
             return { type: 'blacklist', domain, link };
         }
 
         // Dominio sconosciuto - inoltra al Parliament per revisione
+        logger.info(`[LinkFilter] Unknown domain detected: ${domain} - forwarding for review`, ctx);
         return { type: 'unknown', domain, link };
     }
 
+    logger.debug(`[LinkFilter] All links passed checks`, ctx);
     return null;
 }
 

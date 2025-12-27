@@ -20,7 +20,7 @@ function setupConfirmationTimeout(ctx, target, confirmMsg, reason) {
         PENDING_CONFIRMATIONS.delete(key);
         try {
             await ctx.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
-        } catch (e) {}
+        } catch (e) { }
         logger.info(`[report-system] Confirmation timeout for ${target.id}`);
     }, 120000); // 2 minutes
 
@@ -43,12 +43,17 @@ function registerCommands(bot, db) {
             return next();
         }
 
+        logger.debug(`[Report] Admin trigger detected: "${text}"`, ctx);
+
         if (ctx.chat.type === 'private') return next();
 
         const config = await db.getGuildConfig(ctx.chat.id);
         const votebanEnabled = config.report_enabled;
 
-        if (!votebanEnabled) return next();
+        if (!votebanEnabled) {
+            logger.debug(`[Report] Report system disabled for chat ${ctx.chat.id}`, ctx);
+            return next();
+        }
 
         // Must reply to a message
         if (!ctx.message.reply_to_message) {
@@ -57,7 +62,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 60000);
             return;
         }
@@ -72,9 +77,12 @@ function registerCommands(bot, db) {
         try {
             const member = await ctx.getChatMember(target.id);
             if (['creator', 'administrator'].includes(member.status)) {
+                logger.debug(`[Report] Target ${target.id} is admin, ignoring report`, ctx);
                 return;
             }
-        } catch (e) {}
+        } catch (e) {
+            logger.debug(`[Report] Could not check admin status for ${target.id}: ${e.message}`, ctx);
+        }
 
         // Check for existing vote
         const existing = await logic.getActiveVoteForUser(db, ctx.chat.id, target.id);
@@ -93,7 +101,7 @@ function registerCommands(bot, db) {
 
         if (reportMode === 'report') {
             // MODE: Report only - send to staff group, no voting
-            logger.info(`[report] Report mode - sending to staff for ${target.id}`);
+            logger.info(`[Report] Report mode - forwarding to staff for user ${target.id}`, ctx);
 
             const staffGroupId = config.staff_group_id;
             if (!staffGroupId) {
@@ -103,7 +111,7 @@ function registerCommands(bot, db) {
                 setTimeout(async () => {
                     try {
                         await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                    } catch (e) {}
+                    } catch (e) { }
                 }, 60000);
                 return;
             }
@@ -143,7 +151,7 @@ function registerCommands(bot, db) {
                 if (typeof config.log_events === 'string') {
                     try {
                         logEvents = JSON.parse(config.log_events);
-                    } catch (e) {}
+                    } catch (e) { }
                 } else if (typeof config.log_events === 'object') {
                     logEvents = config.log_events;
                 }
@@ -163,7 +171,7 @@ function registerCommands(bot, db) {
                 // Forward message to log channel first
                 try {
                     await ctx.api.forwardMessage(config.log_channel_id, ctx.chat.id, targetMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
 
                 await ctx.api.sendMessage(config.log_channel_id, logText, { parse_mode: 'HTML' });
             }
@@ -173,16 +181,17 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await ctx.api.deleteMessage(ctx.chat.id, notifyMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 300000); // 5 minutes
 
             return;
         }
 
         // MODE: Vote - show confirmation prompt for voting
-        logger.info(`[report] Vote mode - showing confirmation for ${target.id}`);
+        logger.info(`[Report] Vote mode - showing confirmation for user ${target.id}`, ctx);
         const confirmMsg = await ui.sendConfirmationPrompt(ctx, target, targetMsg.message_id);
         setupConfirmationTimeout(ctx, target, confirmMsg, reason);
+        logger.debug(`[Report] Confirmation prompt sent for ${target.id}, timeout set`, ctx);
     });
 
     // Callback handlers
@@ -191,6 +200,7 @@ function registerCommands(bot, db) {
 
         // VoteBan Confirmation Handler
         if (data.startsWith('vb_confirm:')) {
+            logger.debug(`[Report] Confirmation callback received: ${data}`, ctx);
             const parts = data.split(':');
             const action = parts[1]; // delete | ban | cancel
             const targetId = parseInt(parts[2]);
@@ -199,6 +209,7 @@ function registerCommands(bot, db) {
 
             // Only initiator can confirm
             if (ctx.from.id !== initiatorId) {
+                logger.warn(`[Report] User ${ctx.from.id} tried to confirm vote for initiator ${initiatorId}`, ctx);
                 const lang = await i18n.getLanguage(ctx.chat.id);
                 return ctx.answerCallbackQuery(i18n.t(lang, 'report.errors.not_initiator'));
             }
@@ -214,9 +225,12 @@ function registerCommands(bot, db) {
             PENDING_CONFIRMATIONS.delete(key);
 
             if (action === 'cancel') {
+                logger.info(`[Report] Vote cancelled by initiator ${ctx.from.id}`, ctx);
                 await ctx.deleteMessage();
                 return ctx.answerCallbackQuery('❌ Annullato');
             }
+
+            logger.info(`[Report] Starting vote: action=${action}, target=${targetId}`, ctx);
 
             // Start VoteBan with chosen action type
             const config = await db.getGuildConfig(ctx.chat.id);
@@ -337,7 +351,7 @@ function registerCommands(bot, db) {
                     if (typeof config.log_events === 'string') {
                         try {
                             logEvents = JSON.parse(config.log_events);
-                        } catch (e) {}
+                        } catch (e) { }
                     } else if (typeof config.log_events === 'object') {
                         logEvents = config.log_events;
                     }
@@ -351,12 +365,14 @@ function registerCommands(bot, db) {
             return;
         }
         if (data.startsWith('vote_')) {
+            logger.debug(`[Report] Vote callback received: ${data}`, ctx);
             const parts = data.split('_');
             const voteType = parts[1]; // 'yes' or 'no'
             const voteId = parseInt(parts[2]);
 
             const vote = await logic.getVote(db, voteId);
             if (!vote || vote.status !== 'active') {
+                logger.debug(`[Report] Vote ${voteId} not active or not found`, ctx);
                 return ctx.answerCallbackQuery('❌ Votazione terminata');
             }
 
@@ -371,9 +387,11 @@ function registerCommands(bot, db) {
             }
 
             if (voters.some(v => v.id === ctx.from.id)) {
+                logger.debug(`[Report] User ${ctx.from.id} already voted on ${voteId}`, ctx);
                 return ctx.answerCallbackQuery('⚠️ Hai già votato');
             }
 
+            logger.info(`[Report] User ${ctx.from.id} voted ${voteType} on vote ${voteId}`, ctx);
             voters.push({ id: ctx.from.id, name: ctx.from.first_name, vote: voteType });
 
             const yesVotes = voters.filter(v => v.vote === 'yes').length;
@@ -385,6 +403,7 @@ function registerCommands(bot, db) {
 
             // Check if majority reached
             if (yesVotes >= vote.required_votes) {
+                logger.info(`[Report] Vote ${voteId} completed! Yes: ${yesVotes}, Required: ${vote.required_votes}`, ctx);
                 await logic.updateVote(db, voteId, { status: 'completed' });
 
                 // Extract action type from reason (saved as [DELETE] or [BAN] prefix)
@@ -478,7 +497,7 @@ function logVoteResult(config, guildId, actionType, targetId, targetName, yesVot
         if (typeof config.log_events === 'string') {
             try {
                 logEvents = JSON.parse(config.log_events);
-            } catch (e) {}
+            } catch (e) { }
         } else if (typeof config.log_events === 'object') {
             logEvents = config.log_events;
         }

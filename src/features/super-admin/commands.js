@@ -38,18 +38,156 @@ function registerCommands(bot, db) {
             await logic.setupParliament(db, ctx, bot);
             await ctx.reply(
                 '✅ <b>Parliament Group Configurato</b>\n\n' +
-                    'Creati i topic per:\n' +
-                    '- Bans (Ban globali)\n' +
-                    '- Logs (Sistema)\n' +
-                    '- Join Logs (Ingressi)\n' +
-                    '- Add Group (Nuovi gruppi)\n' +
-                    '- Image Spam (Analisi AI)\n' +
-                    '- Link Checks (Link checks)',
+                'Creati i topic per:\n' +
+                '- Bans (Ban globali)\n' +
+                '- Logs (Sistema)\n' +
+                '- Join Logs (Ingressi)\n' +
+                '- Add Group (Nuovi gruppi)\n' +
+                '- Image Spam (Analisi AI)\n' +
+                '- Link Checks (Link checks)',
                 { parse_mode: 'HTML' }
             );
         } catch (e) {
             logger.error(`[super-admin] Setup error: ${e.message}`);
             ctx.reply('❌ Errore setup: ' + e.message);
+        }
+    });
+
+    // Command: /fixrestricted - Restore restricted users to normal member status
+    bot.command('fixrestricted', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+
+        const args = ctx.message.text.split(' ').slice(1);
+        const targetGuildId = args[0];
+
+        if (!targetGuildId) {
+            return ctx.reply(
+                '🔧 <b>Fix Restricted Users</b>\n\n' +
+                'Ripristina TUTTI gli utenti "restricted" ai permessi normali del gruppo.\n' +
+                'Esclude solo gli utenti bannati (kicked).\n\n' +
+                '<b>Uso:</b>\n' +
+                '<code>/fixrestricted [guild_id]</code> - Fix per un gruppo specifico\n' +
+                '<code>/fixrestricted all</code> - Fix per tutti i gruppi',
+                { parse_mode: 'HTML' }
+            );
+        }
+
+        const statusMsg = await ctx.reply('🔄 Avvio processo di ripristino... Questo potrebbe richiedere tempo.');
+
+        try {
+            let guilds = [];
+            if (targetGuildId === 'all') {
+                guilds = await db.queryAll('SELECT guild_id FROM guild_config WHERE captcha_enabled = TRUE');
+                logger.info(`[super-admin] fixrestricted: Processing ${guilds.length} groups with captcha enabled`);
+            } else {
+                guilds = [{ guild_id: parseInt(targetGuildId) }];
+            }
+
+            // Get ALL known users from database
+            const allUsers = await db.queryAll('SELECT DISTINCT user_id FROM users');
+            logger.info(`[super-admin] fixrestricted: Checking ${allUsers.length} known users across ${guilds.length} groups`);
+
+            let totalFixed = 0;
+            let totalErrors = 0;
+            let totalSkipped = 0;
+            let groupsProcessed = 0;
+
+            for (const guild of guilds) {
+                try {
+                    // Get chat info and default permissions
+                    const chat = await bot.api.getChat(guild.guild_id);
+                    const defaultPerms = chat.permissions || {};
+                    const chatTitle = chat.title || guild.guild_id;
+
+                    let guildFixed = 0;
+
+                    for (const user of allUsers) {
+                        try {
+                            const member = await bot.api.getChatMember(guild.guild_id, user.user_id);
+
+                            // Skip banned users (kicked status)
+                            if (member.status === 'kicked') {
+                                totalSkipped++;
+                                continue;
+                            }
+
+                            // Fix ALL "restricted" members (regardless of permissions)
+                            if (member.status === 'restricted') {
+                                // Per Telegram API: "Pass True for all permissions to lift restrictions"
+                                await bot.api.restrictChatMember(guild.guild_id, user.user_id, {
+                                    can_send_messages: true,
+                                    can_send_audios: true,
+                                    can_send_documents: true,
+                                    can_send_photos: true,
+                                    can_send_videos: true,
+                                    can_send_video_notes: true,
+                                    can_send_voice_notes: true,
+                                    can_send_polls: true,
+                                    can_send_other_messages: true,
+                                    can_add_web_page_previews: true,
+                                    can_change_info: true,
+                                    can_invite_users: true,
+                                    can_pin_messages: true,
+                                    can_manage_topics: true
+                                });
+
+                                guildFixed++;
+                                totalFixed++;
+                                logger.debug(`[super-admin] Fixed restricted user ${user.user_id} in ${guild.guild_id}`);
+                            }
+                        } catch (e) {
+                            // User not in chat or other error - skip silently
+                        }
+
+                        // Rate limit protection (50ms between API calls)
+                        await new Promise(r => setTimeout(r, 50));
+                    }
+
+                    if (guildFixed > 0) {
+                        logger.info(`[super-admin] Fixed ${guildFixed} users in ${chatTitle} (${guild.guild_id})`);
+                    }
+                    groupsProcessed++;
+
+                    // Update status message periodically
+                    if (groupsProcessed % 5 === 0) {
+                        await ctx.api.editMessageText(
+                            ctx.chat.id,
+                            statusMsg.message_id,
+                            `🔄 <b>Ripristino in corso...</b>\n\n` +
+                            `📊 Gruppi: ${groupsProcessed}/${guilds.length}\n` +
+                            `👤 Utenti ripristinati: ${totalFixed}`,
+                            { parse_mode: 'HTML' }
+                        ).catch(() => { });
+                    }
+
+                } catch (e) {
+                    totalErrors++;
+                    logger.error(`[super-admin] Error processing guild ${guild.guild_id}: ${e.message}`);
+                }
+            }
+
+            await ctx.api.editMessageText(
+                ctx.chat.id,
+                statusMsg.message_id,
+                `✅ <b>Ripristino completato</b>\n\n` +
+                `📊 Gruppi processati: ${groupsProcessed}\n` +
+                `👤 Utenti controllati: ${allUsers.length}\n` +
+                `✅ Utenti ripristinati: ${totalFixed}\n` +
+                `⏭️ Bannati saltati: ${totalSkipped}\n` +
+                `❌ Errori: ${totalErrors}`,
+                { parse_mode: 'HTML' }
+            );
+
+            logger.info(`[super-admin] fixrestricted completed: ${totalFixed} users fixed, ${totalSkipped} skipped, ${totalErrors} errors`);
+
+        } catch (e) {
+            logger.error(`[super-admin] fixrestricted error: ${e.message}`);
+            await ctx.api.editMessageText(
+                ctx.chat.id,
+                statusMsg.message_id,
+                `❌ Errore: ${e.message}`,
+                { parse_mode: 'HTML' }
+            );
         }
     });
 
@@ -81,7 +219,7 @@ function registerCommands(bot, db) {
             try {
                 const userInfo = await bot.api.getChat(userId);
                 userName = userInfo.first_name || 'Unknown';
-            } catch (e) {}
+            } catch (e) { }
 
             // Unban from all groups
             const guilds = await db.queryAll('SELECT guild_id FROM guild_config');
@@ -90,14 +228,14 @@ function registerCommands(bot, db) {
                 try {
                     await bot.api.unbanChatMember(g.guild_id, userId, { only_if_banned: true });
                     count++;
-                } catch (e) {}
+                } catch (e) { }
             }
 
             await ctx.reply(
                 `✅ <b>Global Unban eseguito</b>\n\n` +
-                    `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
-                    `📊 Sbannato da: ${count} gruppi\n` +
-                    `👮 Eseguito da: ${ctx.from.first_name}`,
+                `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
+                `📊 Sbannato da: ${count} gruppi\n` +
+                `👮 Eseguito da: ${ctx.from.first_name}`,
                 { parse_mode: 'HTML' }
             );
 
@@ -408,7 +546,7 @@ function registerCommands(bot, db) {
             await gating.setGuildFeatureAccess(parseInt(guildId), featureName, false, reason, ctx.from.id);
             return ctx.reply(
                 `🚫 Feature <code>${featureName}</code> bloccata per gruppo <code>${guildId}</code>\n` +
-                    `📝 Motivo: ${reason}`,
+                `📝 Motivo: ${reason}`,
                 { parse_mode: 'HTML' }
             );
         }
@@ -428,7 +566,7 @@ function registerCommands(bot, db) {
             await gating.setGuildFeatureAccess(parseInt(guildId), featureName, true, reason, ctx.from.id);
             return ctx.reply(
                 `✅ Feature <code>${featureName}</code> abilitata per gruppo <code>${guildId}</code>\n` +
-                    `📝 Motivo: ${reason}`,
+                `📝 Motivo: ${reason}`,
                 { parse_mode: 'HTML' }
             );
         }
@@ -524,8 +662,8 @@ function registerCommands(bot, db) {
             const expiresText = days ? `${days} giorni` : 'permanente';
             return ctx.reply(
                 `⛔ Gruppo <code>${guildId}</code> aggiunto alla blacklist\n` +
-                    `📝 Motivo: ${reason}\n` +
-                    `⏰ Durata: ${expiresText}`,
+                `📝 Motivo: ${reason}\n` +
+                `⏰ Durata: ${expiresText}`,
                 { parse_mode: 'HTML' }
             );
         }
@@ -566,10 +704,10 @@ function registerCommands(bot, db) {
         if (!chatId || !messageId) {
             return ctx.reply(
                 '❓ <b>Uso:</b>\n' +
-                    '• Rispondi a un messaggio con <code>/gdelete</code>\n' +
-                    '• <code>/gdelete &lt;chat_id&gt; &lt;message_id&gt;</code>\n\n' +
-                    '<b>Esempio:</b>\n' +
-                    '<code>/gdelete -1001234567890 12345</code>',
+                '• Rispondi a un messaggio con <code>/gdelete</code>\n' +
+                '• <code>/gdelete &lt;chat_id&gt; &lt;message_id&gt;</code>\n\n' +
+                '<b>Esempio:</b>\n' +
+                '<code>/gdelete -1001234567890 12345</code>',
                 { parse_mode: 'HTML' }
             );
         }
@@ -578,8 +716,8 @@ function registerCommands(bot, db) {
             await bot.api.deleteMessage(chatId, parseInt(messageId));
             const confirmMsg = await ctx.reply(
                 `✅ <b>Messaggio eliminato</b>\n\n` +
-                    `📍 Chat: <code>${chatId}</code>\n` +
-                    `🆔 Message ID: <code>${messageId}</code>`,
+                `📍 Chat: <code>${chatId}</code>\n` +
+                `🆔 Message ID: <code>${messageId}</code>`,
                 { parse_mode: 'HTML' }
             );
             logger.info(`[super-admin] Message ${messageId} deleted from ${chatId} by ${ctx.from.id}`);
@@ -588,7 +726,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await bot.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 10000);
         } catch (e) {
             const errMsg = await ctx.reply(`❌ Errore: ${e.message}`);
@@ -596,7 +734,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await bot.api.deleteMessage(ctx.chat.id, errMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 10000);
         }
     });
@@ -634,10 +772,10 @@ function registerCommands(bot, db) {
         if (!chatId || !userId) {
             return ctx.reply(
                 '❓ <b>Uso:</b>\n' +
-                    '• Rispondi a un messaggio con <code>/gunmute</code>\n' +
-                    '• <code>/gunmute &lt;chat_id&gt; &lt;user_id&gt;</code>\n\n' +
-                    '<b>Esempio:</b>\n' +
-                    '<code>/gunmute -1001234567890 123456789</code>',
+                '• Rispondi a un messaggio con <code>/gunmute</code>\n' +
+                '• <code>/gunmute &lt;chat_id&gt; &lt;user_id&gt;</code>\n\n' +
+                '<b>Esempio:</b>\n' +
+                '<code>/gunmute -1001234567890 123456789</code>',
                 { parse_mode: 'HTML' }
             );
         }
@@ -665,12 +803,12 @@ function registerCommands(bot, db) {
             try {
                 const userInfo = await bot.api.getChat(userId);
                 userName = userInfo.first_name || 'Unknown';
-            } catch (e) {}
+            } catch (e) { }
 
             const confirmMsg = await ctx.reply(
                 `✅ <b>Utente smutato</b>\n\n` +
-                    `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
-                    `📍 Chat: <code>${chatId}</code>`,
+                `👤 Utente: ${userName} [<code>${userId}</code>]\n` +
+                `📍 Chat: <code>${chatId}</code>`,
                 { parse_mode: 'HTML' }
             );
             logger.info(`[super-admin] User ${userId} unmuted in ${chatId} by ${ctx.from.id}`);
@@ -679,7 +817,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await bot.api.deleteMessage(ctx.chat.id, confirmMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 10000);
         } catch (e) {
             const errMsg = await ctx.reply(`❌ Errore: ${e.message}`);
@@ -687,7 +825,7 @@ function registerCommands(bot, db) {
             setTimeout(async () => {
                 try {
                     await bot.api.deleteMessage(ctx.chat.id, errMsg.message_id);
-                } catch (e) {}
+                } catch (e) { }
             }, 10000);
         }
     });
@@ -875,7 +1013,7 @@ function registerCommands(bot, db) {
                 if (session.origGuildId && session.origMsgId) {
                     try {
                         await bot.api.deleteMessage(session.origGuildId, session.origMsgId);
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             } else if (type === 'word') {
                 await db.query('INSERT INTO word_filters (word) VALUES ($1)', [input]);

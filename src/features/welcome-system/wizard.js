@@ -52,6 +52,7 @@ setInterval(() => {
  */
 function startSession(userId, chatId, menuMsgId, type = 'set_welcome_msg') {
     const key = `${userId}:${chatId}`;
+    logger.info(`[Welcome] Wizard session started: userId=${userId}, chatId=${chatId}, type=${type}`);
     WIZARD_SESSIONS.set(key, {
         startTime: Date.now(),
         type: type,
@@ -67,6 +68,7 @@ function startSession(userId, chatId, menuMsgId, type = 'set_welcome_msg') {
  */
 function stopSession(userId, chatId) {
     const key = `${userId}:${chatId}`;
+    logger.info(`[Welcome] Wizard session stopped: userId=${userId}, chatId=${chatId}`);
     WIZARD_SESSIONS.delete(key);
 }
 
@@ -95,6 +97,8 @@ async function handleMessage(ctx) {
     const session = WIZARD_SESSIONS.get(key);
 
     if (!session) return false;
+
+    logger.debug(`[Welcome] Wizard handling message: type=${session.type}, userId=${ctx.from.id}`, ctx);
 
     // Helper to Restore Menu
     const restoreMenu = async () => {
@@ -135,18 +139,19 @@ async function handleMessage(ctx) {
                         reply: (text, extra) => ctx.reply(text, extra)
                     };
                     await ui.sendWelcomeMenu(mockCtx, false);
-                } catch (e2) {}
+                } catch (e2) { }
             }
         }
     };
 
     // Check cancel
     if (ctx.message.text && ctx.message.text.toLowerCase() === 'cancel') {
+        logger.info(`[Welcome] Wizard cancelled by user ${ctx.from.id}`, ctx);
         WIZARD_SESSIONS.delete(key);
         // Delete user cancel message
         try {
             await ctx.deleteMessage();
-        } catch (e) {}
+        } catch (e) { }
 
         await restoreMenu();
         return true;
@@ -158,12 +163,12 @@ async function handleMessage(ctx) {
         // Delete user message to keep chat clean
         try {
             await ctx.deleteMessage();
-        } catch (e) {}
+        } catch (e) { }
 
         if (!input) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const warning = await ctx.reply(i18n.t(lang, 'welcome.wizard.text_required'));
-            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => {}), 3000);
+            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => { }), 3000);
             return true;
         }
 
@@ -174,7 +179,7 @@ async function handleMessage(ctx) {
         if (!welcomeText) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const warning = await ctx.reply(i18n.t(lang, 'welcome.wizard.text_empty'));
-            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => {}), 3000);
+            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => { }), 3000);
             return true;
         }
 
@@ -219,11 +224,12 @@ async function handleMessage(ctx) {
             welcome_msg_enabled: 1
         });
 
+        logger.info(`[Welcome] Welcome message saved for chat ${ctx.chat.id}, buttons: ${buttonJson ? 'yes' : 'no'}`, ctx);
         WIZARD_SESSIONS.delete(key);
         await restoreMenu();
         const lang = await i18n.getLanguage(ctx.chat.id);
         const success = await ctx.reply(i18n.t(lang, 'welcome.wizard.saved'));
-        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => {}), 3000);
+        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => { }), 3000);
         return true;
     }
 
@@ -231,21 +237,22 @@ async function handleMessage(ctx) {
         const input = ctx.message.text;
         try {
             await ctx.deleteMessage();
-        } catch (e) {}
+        } catch (e) { }
 
         if (!input || (!input.startsWith('http') && !input.startsWith('tg://'))) {
             const lang = await i18n.getLanguage(ctx.chat.id);
             const warning = await ctx.reply(i18n.t(lang, 'welcome.wizard.link_invalid'));
-            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => {}), 3000);
+            setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, warning.message_id).catch(() => { }), 3000);
             return true;
         }
 
+        logger.info(`[Welcome] Rules link saved for chat ${ctx.chat.id}: ${input.trim().substring(0, 50)}...`, ctx);
         updateGuildConfig(ctx.chat.id, { rules_link: input.trim() });
         WIZARD_SESSIONS.delete(key);
         await restoreMenu();
         const lang = await i18n.getLanguage(ctx.chat.id);
         const success = await ctx.reply(i18n.t(lang, 'welcome.wizard.rules_saved'));
-        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => {}), 3000);
+        setTimeout(() => ctx.api.deleteMessage(ctx.chat.id, success.message_id).catch(() => { }), 3000);
         return true;
     }
 
