@@ -109,6 +109,18 @@ async function removeRecentlyVerified(guildId, userId) {
     await query(`DELETE FROM recently_verified_users WHERE guild_id = $1 AND user_id = $2`, [guildId, userId]);
 }
 
+/**
+ * Rimuove tutti i record di recently_verified_users più vecchi di X minuti.
+ * @param {number} [minutes=5] - Minuti dopo i quali rimuovere i record
+ * @returns {Promise<number>} Numero di record rimossi
+ */
+async function cleanupOldVerifiedUsers(minutes = 5) {
+    const res = await query(
+        `DELETE FROM recently_verified_users WHERE verified_at < NOW() - INTERVAL '${minutes} minutes'`
+    );
+    return res.rowCount || 0;
+}
+
 module.exports = {
     addPendingCaptcha,
     getPendingCaptcha,
@@ -117,5 +129,6 @@ module.exports = {
     removeCaptchaById,
     addRecentlyVerified,
     getRecentlyVerified,
-    removeRecentlyVerified
+    removeRecentlyVerified,
+    cleanupOldVerifiedUsers
 };

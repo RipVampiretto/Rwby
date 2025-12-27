@@ -532,11 +532,14 @@ async function handleCaptchaCallback(ctx) {
 
     if (data.startsWith('wc:accept_rules:')) {
         // Rules acceptance
-        // wc:accept_rules:USERID
-        const targetUserId = parseInt(data.split(':')[2]);
+        // wc:accept_rules:USERID:SERVICEMSGID
+        const parts = data.split(':');
+        const targetUserId = parseInt(parts[2]);
+        const serviceMsgId = parts[3] && parts[3] !== '0' ? parseInt(parts[3]) : null;
+
         if (ctx.from.id !== targetUserId) return ctx.answerCallbackQuery('Non per te.');
 
-        await completeVerification(ctx, targetUserId);
+        await completeVerificationWithServiceMsgId(ctx, targetUserId, serviceMsgId);
         return;
     }
 
@@ -572,6 +575,10 @@ async function handleCaptchaCallback(ctx) {
     }
 
     if (success) {
+        // Get pending info BEFORE removing it
+        const pending = await dbStore.getPendingCaptcha(ctx.chat.id, ctx.from.id);
+        const serviceMsgId = pending ? pending.service_message_id : null;
+
         await dbStore.removePendingCaptcha(ctx.chat.id, ctx.from.id);
 
         // Check Rules - only show if rules_enabled AND rules_link is set
@@ -588,7 +595,7 @@ async function handleCaptchaCallback(ctx) {
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
-                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
+                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}:${serviceMsgId || 0}` }]
                         ]
                     }
                 });
@@ -600,7 +607,7 @@ async function handleCaptchaCallback(ctx) {
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '🔗 Leggi Regolamento', url: rulesLink }],
-                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}` }]
+                            [{ text: '✅ Ho Letto e Accetto', callback_data: `wc:accept_rules:${ctx.from.id}:${serviceMsgId || 0}` }]
                         ]
                     }
                 });
@@ -608,26 +615,24 @@ async function handleCaptchaCallback(ctx) {
             return;
         }
 
-        await completeVerification(ctx, ctx.from.id);
+        // No rules, complete verification directly with serviceMsgId
+        await completeVerificationWithServiceMsgId(ctx, ctx.from.id, serviceMsgId);
     }
 }
 
 /**
- * Completa la verifica dell'utente.
+ * Completa la verifica dell'utente con serviceMsgId già noto.
  * Sblocca i permessi e invia il messaggio di benvenuto personalizzato.
  *
  * @param {import('grammy').Context} ctx - Contesto grammY
  * @param {number} userId - ID dell'utente da sbloccare
+ * @param {number|null} serviceMsgId - ID del messaggio di servizio (join)
  * @returns {Promise<void>}
  * @private
  */
-async function completeVerification(ctx, userId) {
+async function completeVerificationWithServiceMsgId(ctx, userId, serviceMsgId) {
     const config = await getGuildConfig(ctx.chat.id);
     logWelcomeEvent(ctx, 'SUCCESS', null, config);
-
-    // Get Pending info to know service_message_id
-    const pending = await dbStore.getPendingCaptcha(ctx.chat.id, userId);
-    const serviceMsgId = pending ? pending.service_message_id : null;
 
     try {
         await ctx.restrictChatMember(userId, {
@@ -662,8 +667,18 @@ async function completeVerification(ctx, userId) {
     // We save welcome message ID and service message ID
     await dbStore.addRecentlyVerified(ctx.chat.id, userId, sentWelcomeId, serviceMsgId);
 
-    // Remove from pending
+    // Remove from pending (may already be removed, but safe to call)
     await dbStore.removePendingCaptcha(ctx.chat.id, userId);
+}
+
+/**
+ * Completa la verifica dell'utente (legacy, recupera serviceMsgId dal DB).
+ * @deprecated Use completeVerificationWithServiceMsgId instead
+ */
+async function completeVerification(ctx, userId) {
+    const pending = await dbStore.getPendingCaptcha(ctx.chat.id, userId);
+    const serviceMsgId = pending ? pending.service_message_id : null;
+    await completeVerificationWithServiceMsgId(ctx, userId, serviceMsgId);
 }
 
 /**

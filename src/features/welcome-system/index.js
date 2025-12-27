@@ -74,10 +74,11 @@ function register(bot) {
 
         logger.debug(`[Welcome] left_chat_member event: user=${leftUser.id} (${leftUser.first_name})`);
 
-        // Check for pending captcha
+        const dbStore = require('./db-store');
+
+        // Check for pending captcha (user left during verification)
         try {
-            const { getPendingCaptcha, removePendingCaptcha } = require('./db-store');
-            const pending = await getPendingCaptcha(ctx.chat.id, leftUser.id);
+            const pending = await dbStore.getPendingCaptcha(ctx.chat.id, leftUser.id);
             if (pending) {
                 // Delete captcha message
                 await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
@@ -88,11 +89,45 @@ function register(bot) {
                 // Delete the left_chat_member service message itself
                 await ctx.deleteMessage().catch(() => { });
                 // Remove from DB
-                await removePendingCaptcha(ctx.chat.id, leftUser.id);
+                await dbStore.removePendingCaptcha(ctx.chat.id, leftUser.id);
                 logger.info(`[Welcome] Cleaned up pending captcha for user ${leftUser.id} who left.`);
+                return next();
             }
         } catch (e) {
             logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
+        }
+
+        // Check for recently verified (join & run detection)
+        try {
+            const recent = await dbStore.getRecentlyVerified(ctx.chat.id, leftUser.id);
+            if (recent) {
+                const now = new Date();
+                const verifiedAt = new Date(recent.verified_at);
+                const diffMins = (now - verifiedAt) / 60000;
+
+                if (diffMins < 5) {
+                    // User verified less than 5 mins ago and left! (join & run)
+                    logger.info(`[Welcome] Join & Run detected: user ${leftUser.id} left ${diffMins.toFixed(1)} mins after verification.`);
+
+                    // Delete Welcome Message
+                    if (recent.welcome_message_id) {
+                        await ctx.api.deleteMessage(ctx.chat.id, recent.welcome_message_id).catch(() => { });
+                    }
+
+                    // Delete Service Message (join)
+                    if (recent.service_message_id) {
+                        await ctx.api.deleteMessage(ctx.chat.id, recent.service_message_id).catch(() => { });
+                    }
+
+                    // Delete the left_chat_member service message itself
+                    await ctx.deleteMessage().catch(() => { });
+                }
+
+                // Clean up recent record
+                await dbStore.removeRecentlyVerified(ctx.chat.id, leftUser.id);
+            }
+        } catch (e) {
+            logger.debug(`[Welcome] Failed to clean up join-run: ${e.message}`);
         }
 
         return next();
@@ -121,8 +156,19 @@ function register(bot) {
     });
 
     // Start Expiration Loop (every 60s)
-    setInterval(() => {
+    setInterval(async () => {
         checkExpiredCaptchas(bot);
+
+        // Cleanup old verified users (older than 5 mins - no longer needed for join-run detection)
+        try {
+            const { cleanupOldVerifiedUsers } = require('./db-store');
+            const removed = await cleanupOldVerifiedUsers(5);
+            if (removed > 0) {
+                logger.debug(`[Welcome] Cleaned up ${removed} old verified user records.`);
+            }
+        } catch (e) {
+            logger.debug(`[Welcome] Cleanup error: ${e.message}`);
+        }
     }, 60000);
 }
 
