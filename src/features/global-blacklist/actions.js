@@ -18,28 +18,48 @@ function init(database, bot) {
 }
 
 /**
- * Handle a message from a CAS-banned user
+ * Handle a message from a globally banned user (CAS or local gban)
+ * Propagates ban to ALL groups with blacklist enabled
+ * @param {Context} ctx - grammY context
+ * @param {string} source - 'cas' or 'local'
  */
-async function handleCasBan(ctx) {
+async function handleCasBan(ctx, source = 'cas') {
     const user = ctx.from;
-    logger.info(`[global-blacklist] CAS banned user detected: ${user.id} (${user.first_name})`);
+    const sourceLabel = source === 'local' ? 'Local Gban' : 'CAS Ban';
+    logger.info(`[global-blacklist] ${sourceLabel} user detected: ${user.id} (${user.first_name})`);
 
     try {
-        await safeDelete(ctx, 'cas-ban');
-        const banned = await safeBan(ctx, user.id, 'cas-ban');
+        // Delete message in current chat
+        await safeDelete(ctx, 'gban');
 
-        if (banned) {
-            const config = await db.getGuildConfig(ctx.chat.id);
+        // Get ALL guilds with blacklist enabled
+        const guilds = await db.queryAll('SELECT guild_id, guild_name FROM guild_config WHERE blacklist_enabled = true');
+        let bannedCount = 0;
 
-            // Queue notification if enabled
-            if (config.blacklist_notify && config.log_channel_id) {
-                queueBanNotification(config.log_channel_id, user, ctx.chat, 'CAS Ban');
+        // Ban from all guilds with blacklist enabled
+        for (const guild of guilds) {
+            try {
+                await _botInstance.api.banChatMember(guild.guild_id, user.id);
+                bannedCount++;
+
+                // Queue notification if enabled for this guild
+                const config = await db.getGuildConfig(guild.guild_id);
+                if (config.blacklist_notify && config.log_channel_id) {
+                    queueBanNotification(
+                        config.log_channel_id,
+                        user,
+                        { id: guild.guild_id, title: guild.guild_name || `Group ${guild.guild_id}` },
+                        sourceLabel
+                    );
+                }
+            } catch (e) {
+                // User might not be in this chat or already banned - that's ok
             }
-
-            logger.info(`[global-blacklist] Banned user ${user.id} from chat ${ctx.chat.id}`);
         }
+
+        logger.info(`[global-blacklist] ${sourceLabel} user ${user.id} banned from ${bannedCount}/${guilds.length} groups`);
     } catch (e) {
-        logger.error(`[global-blacklist] Failed to handle CAS ban: ${e.message}`);
+        logger.error(`[global-blacklist] Failed to handle gban: ${e.message}`);
     }
 }
 
@@ -220,7 +240,7 @@ async function notifyParliament(newUsers, banCount, guildCount) {
                         ? JSON.parse(globalConfig.global_topics)
                         : globalConfig.global_topics;
                 topicId = topics.bans;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const processedCount = Math.min(newUsers.length, 100);

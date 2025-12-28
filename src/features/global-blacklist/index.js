@@ -68,7 +68,7 @@ function register(bot) {
     sync.init(db, bot);
     actions.init(db, bot);
 
-    // Middleware per controllo CAS su ogni messaggio
+    // Middleware per controllo gban (CAS + local) su ogni messaggio
     bot.on('message', async (ctx, next) => {
         // Skip chat private
         if (ctx.chat.type === 'private') return next();
@@ -77,10 +77,10 @@ function register(bot) {
         const config = await db.getGuildConfig(ctx.chat.id);
         if (!config.blacklist_enabled) return next();
 
-        // Verifica se l'utente è bannato da CAS
-        const isBanned = await detection.isCasBanned(ctx.from.id);
-        if (isBanned) {
-            await actions.handleCasBan(ctx);
+        // Verifica se l'utente è globalmente bannato (CAS + local gban)
+        const gbanResult = await detection.isGloballyBanned(ctx.from.id);
+        if (gbanResult.banned) {
+            await actions.handleCasBan(ctx, gbanResult.source);
             return; // Stop processing, utente bannato
         }
 
@@ -179,6 +179,54 @@ function register(bot) {
 }
 
 /**
+ * Sync local gbans to all groups at startup
+ * Bans all users with is_banned_global = TRUE from all groups with blacklist enabled
+ * @private
+ */
+async function syncLocalGbans() {
+    try {
+        // Get all locally gbanned users
+        const bannedUsers = await db.queryAll('SELECT user_id FROM users WHERE is_banned_global = TRUE');
+        if (bannedUsers.length === 0) {
+            logger.info('[global-blacklist] No local gbans to sync');
+            return;
+        }
+
+        // Get all guilds with blacklist enabled
+        const guilds = await db.queryAll('SELECT guild_id FROM guild_config WHERE blacklist_enabled = true');
+        if (guilds.length === 0) {
+            logger.info('[global-blacklist] No guilds with blacklist enabled');
+            return;
+        }
+
+        logger.info(`[global-blacklist] Syncing ${bannedUsers.length} local gbans to ${guilds.length} groups...`);
+
+        let totalBanned = 0;
+        let totalFailed = 0;
+
+        for (const user of bannedUsers) {
+            for (const guild of guilds) {
+                try {
+                    await _botInstance.api.banChatMember(guild.guild_id, user.user_id);
+                    totalBanned++;
+                } catch (e) {
+                    // User not in chat or already banned - ok
+                    totalFailed++;
+                }
+            }
+            // Small delay to avoid rate limits
+            if (bannedUsers.indexOf(user) % 10 === 9) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+
+        logger.info(`[global-blacklist] Local gban sync completed: ${totalBanned} bans applied, ${totalFailed} skipped`);
+    } catch (e) {
+        logger.error(`[global-blacklist] Local gban sync failed: ${e.message}`);
+    }
+}
+
+/**
  * Schedula sincronizzazione periodica con CAS.
  * Esegue sync iniziale dopo 5 secondi, poi ogni 24 ore.
  * @private
@@ -188,6 +236,10 @@ function scheduleSync() {
     setTimeout(async () => {
         logger.info('[global-blacklist] Running initial CAS sync...');
         await sync.syncCasBans();
+
+        // Sync local gbans after CAS sync
+        logger.info('[global-blacklist] Running initial local gban sync...');
+        await syncLocalGbans();
     }, 5000);
 
     // Sync ricorrente ogni 1 ora

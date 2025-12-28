@@ -211,8 +211,12 @@ function registerCommands(bot, db) {
                 });
             }
 
-            // Remove global ban
+            // Remove global ban from database
             await db.query('UPDATE users SET is_banned_global = FALSE WHERE user_id = $1', [userId]);
+
+            // Remove from local gban cache
+            const detection = require('../global-blacklist/detection');
+            detection.removeFromLocalCache(parseInt(userId));
 
             // Try to get user info
             let userName = 'Unknown';
