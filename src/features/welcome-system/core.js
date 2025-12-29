@@ -366,6 +366,26 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
         logger.error(`[Welcome] Failed to restrict ${user.id}: ${e.message}`);
     }
 
+    // Check for existing pending captcha to avoid duplicates (e.g. chat_member update + message update)
+    try {
+        const existing = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
+        if (existing) {
+            logger.debug(`[Welcome] Found existing pending captcha for user ${user.id}`);
+
+            // If we have a service ID now but didn't before, update it
+            if (serviceMessageId && !existing.service_message_id) {
+                logger.debug(`[Welcome] Updating service_message_id for existing captcha: ${serviceMessageId}`);
+                await dbStore.updatePendingServiceMessage(existing.id, serviceMessageId);
+            }
+
+            // Ensure user is restricted (just in case - handled above)
+            // Skip sending a second captcha message and overwriting DB
+            return;
+        }
+    } catch (e) {
+        logger.error(`[Welcome] Error checking existing captcha: ${e.message}`);
+    }
+
     // 2. Prepare Captcha
     const guildId = ctx.chat.id;
     const lang = await i18n.getLanguage(guildId);
@@ -845,6 +865,17 @@ async function handleMemberLeft(ctx) {
 
     logger.info(`[Welcome] User ${user.id} (${user.first_name}) LEFT group ${ctx.chat.id}: ${oldStatus} -> ${newStatus}`, ctx);
 
+    // DEBUG: Log full chatMember object to understand why status is 'restricted' on leave
+    // User confirmed they left, but status claims 'restricted'.
+    // We trust chatMemberFilter('in', 'out') for now, so we proceed with cleanup.
+    if (newStatus === oldStatus) {
+        logger.debug(`[Welcome] Weird status transition ${oldStatus} -> ${newStatus}. Full payload: ${JSON.stringify(ctx.chatMember)}`);
+    }
+
+    // STRICT CHECK REVERTED: User confirmed they left even if status says restricted.
+    // relying on chatMemberFilter('in', 'out') from index.js to only trigger on actual leaves.
+    // if (newStatus !== 'left' && newStatus !== 'kicked') ...
+
     logger.debug(`[Welcome] Checking for pending captcha for user ${user.id}...`, ctx);
 
     // Check Recently Verified "Join & Run"
@@ -909,35 +940,63 @@ async function checkExpiredCaptchas(bot) {
         for (const record of expired) {
             const { id, guild_id, user_id, message_id, service_message_id } = record;
 
-            // Perform Kick
+            // 1. Perform Kick
+            let kickSuccess = false;
             try {
+                logger.debug(`[Welcome] Expiring captcha for user ${user_id}. ServiceMsgId: ${service_message_id}, CaptchaMsgId: ${message_id}`);
+
                 await bot.api.banChatMember(guild_id, user_id);
                 // Wait briefly then unban to just kick
                 await new Promise(r => setTimeout(r, 500));
                 await bot.api.unbanChatMember(guild_id, user_id);
+                kickSuccess = true;
+                logger.info(`[Welcome] Kicked user ${user_id} in guild ${guild_id} (captcha expired).`);
+            } catch (e) {
+                logger.error(`[Welcome] Failed to kick user ${user_id} in ${guild_id}: ${e.message}`);
+                // Proceed to cleanup anyway
+            }
 
-                // Wait for Telegram to create the kick service message
-                await new Promise(r => setTimeout(r, 1000));
-
+            // 2. Cleanup Messages (even if kick failed)
+            try {
                 // Delete Captcha Message
-                await bot.api.deleteMessage(guild_id, message_id).catch(() => { });
+                if (message_id) {
+                    logger.debug(`[Welcome] Deleting captcha message ${message_id}`);
+                    await bot.api.deleteMessage(guild_id, message_id).catch(err => {
+                        logger.error(`[Welcome] Failed to delete captcha message ${message_id}: ${err.message}`);
+                    });
+                }
 
                 // Delete Join Service Message (user joined)
                 if (service_message_id) {
-                    await bot.api.deleteMessage(guild_id, service_message_id).catch(() => { });
+                    logger.debug(`[Welcome] Deleting service message ${service_message_id}`);
+                    await bot.api.deleteMessage(guild_id, service_message_id).catch(err => {
+                        logger.error(`[Welcome] Failed to delete service message ${service_message_id}: ${err.message}`);
+                    });
+                } else {
+                    logger.warn(`[Welcome] No service_message_id found for user ${user_id} - cannot delete join message.`);
                 }
 
                 // Try to delete the kick service message (usually message_id + 1 or +2)
-                // We try a few IDs after the captcha message since Telegram creates them sequentially
-                for (let offset = 1; offset <= 3; offset++) {
-                    await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => { });
+                if (kickSuccess) {
+                    // Wait for Telegram to create the kick service message
+                    await new Promise(r => setTimeout(r, 1000));
+                    for (let offset = 1; offset <= 3; offset++) {
+                        await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => { });
+                    }
                 }
+            } catch (e) {
+                logger.error(`[Welcome] Failed to clean up messages for ${user_id}: ${e.message}`);
+            }
 
+            // 3. Remove from DB & Log
+            try {
                 // Remove from DB
                 await dbStore.removeCaptchaById(id);
+                logger.debug(`[Welcome] Removed expired captcha record ${id} from DB`);
 
                 // Log timeout event to log channel
-                try {
+                if (kickSuccess) { // Only log timeout if we actually acted on it, or maybe always? 
+                    // Let's log always as "expired", but note if kick failed? Standard log message implies user removed.
                     const config = await getGuildConfig(guild_id);
                     if (config.log_channel_id) {
                         let logEvents = {};
@@ -977,16 +1036,11 @@ async function checkExpiredCaptchas(bot) {
                             await bot.api.sendMessage(config.log_channel_id, text, { parse_mode: 'HTML' });
                         }
                     }
-                } catch (logErr) {
-                    logger.debug(`[Welcome] Failed to send timeout log: ${logErr.message}`);
                 }
-
-                logger.info(`[Welcome] Kicked user ${user_id} in guild ${guild_id} (captcha expired).`);
             } catch (e) {
-                logger.error(`[Welcome] Failed to expire captcha for user ${user_id} in ${guild_id}: ${e.message}`);
-                // If user is gone or bot has no rights, still remove from DB to avoid infinite loop
-                // but maybe we should check specific error codes. For now safe to remove.
-                await dbStore.removeCaptchaById(id);
+                logger.error(`[Welcome] Failed post-expiration cleanup for ${user_id}: ${e.message}`);
+                // Ensure removal from DB if above failed
+                await dbStore.removeCaptchaById(id).catch(() => { });
             }
         }
     } catch (e) {

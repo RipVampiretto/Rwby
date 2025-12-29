@@ -121,6 +121,16 @@ async function cleanupOldVerifiedUsers(minutes = 5) {
     return res.rowCount || 0;
 }
 
+/**
+ * Aggiorna il service_message_id di un captcha pendente.
+ * @param {number} id - ID del record captcha
+ * @param {number} serviceMessageId - ID del messaggio di servizio (join)
+ * @returns {Promise<void>}
+ */
+async function updatePendingServiceMessage(id, serviceMessageId) {
+    await query(`UPDATE pending_captchas SET service_message_id = $1 WHERE id = $2`, [serviceMessageId, id]);
+}
+
 module.exports = {
     addPendingCaptcha,
     getPendingCaptcha,
@@ -130,5 +140,6 @@ module.exports = {
     addRecentlyVerified,
     getRecentlyVerified,
     removeRecentlyVerified,
-    cleanupOldVerifiedUsers
+    cleanupOldVerifiedUsers,
+    updatePendingServiceMessage
 };

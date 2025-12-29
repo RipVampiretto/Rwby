@@ -394,42 +394,73 @@ bot.callbackQuery("start_info", async (ctx) => {
     return sendInfoMenu(ctx);
 });
 
-// bot.command("help", async (ctx) => {
-//     const guildId = ctx.chat.id;
-//     const t = (key, params) => i18n.t(guildId, key, params);
-//     let isGroupAdmin = false;
+// Command: /help - Shows available commands based on user privileges
+const { isSuperAdmin } = require('./src/utils/error-handlers');
 
-//     // Check admin status if in group
-//     if (ctx.chat.type !== 'private') {
-//         try {
-//             const member = await ctx.getChatMember(ctx.from.id);
-//             isGroupAdmin = ['creator', 'administrator'].includes(member.status);
-//         } catch (e) { }
-//     }
+bot.command("help", async (ctx) => {
+    const userId = ctx.from.id;
+    const userLang = await db.getUserLanguage(userId) || 'en';
+    const isSuper = isSuperAdmin(userId);
 
-//     let helpText = `${t('common.help.title')}\n\n`;
+    // Define all registered commands with descriptions
+    const userCommands = [
+        { cmd: 'start', desc: userLang === 'it' ? 'Avvia il bot / menu principale' : 'Start the bot / main menu' },
+        { cmd: 'help', desc: userLang === 'it' ? 'Mostra questo messaggio' : 'Show this message' },
+        { cmd: 'myflux', desc: userLang === 'it' ? 'Visualizza il tuo punteggio flux' : 'View your flux score' },
+        { cmd: 'tier', desc: userLang === 'it' ? 'Visualizza il tuo tier di reputazione' : 'View your reputation tier' },
+    ];
 
-//     // User commands
-//     helpText += `${t('common.help.user_section')}\n`;
-//     helpText += `${t('common.help.myflux_cmd')}\n`;
-//     helpText += `${t('common.help.tier_cmd')}\n\n`;
+    const adminCommands = [
+        { cmd: 'settings', desc: userLang === 'it' ? 'Configura il bot per questo gruppo' : 'Configure bot for this group' },
+        { cmd: 'notes', desc: userLang === 'it' ? 'Gestisci le note dello staff' : 'Manage staff notes' },
+        { cmd: 'cassync', desc: userLang === 'it' ? 'Sincronizza la blacklist CAS' : 'Sync CAS blacklist' },
+    ];
 
-//     if (isGroupAdmin) {
-//         // Admin commands
-//         helpText += `${t('common.help.admin_section')}\n`;
-//         helpText += `${t('common.help.settings_cmd')}\n`;
-//         helpText += `${t('common.help.settings_desc')}\n\n`;
+    const superAdminCommands = [
+        { cmd: 'gpanel', desc: 'Pannello governance globale' },
+        { cmd: 'setgstaff', desc: 'Configura gruppo Parliament' },
+        { cmd: 'fixrestricted', syntax: '[guild_id|all]', desc: 'Ripristina utenti restricted' },
+        { cmd: 'ungban', syntax: '&lt;user_id&gt;', desc: 'Rimuovi ban globale' },
+        { cmd: 'gwhitelist', syntax: '[list|add|remove] [dominio]', desc: 'Whitelist domini' },
+        { cmd: 'gblacklist', syntax: '&lt;w|d&gt; &lt;add|remove|list&gt; [valore]', desc: 'Blacklist parole/domini' },
+        { cmd: 'gmodal', syntax: '[list|add|hide|toggle] [lang] [cat]', desc: 'Gestisci modali spam' },
+        { cmd: 'gfeature', syntax: '[list|toggle|allow|block|status] ...', desc: 'Feature flags' },
+        { cmd: 'guildblacklist', syntax: '[list|add|remove] [guild_id]', desc: 'Blacklist gruppi' },
+        { cmd: 'gdelete', syntax: '[chat_id] [msg_id] | reply', desc: 'Elimina messaggio' },
+        { cmd: 'gunmute', syntax: '[chat_id] [user_id] | reply', desc: 'Rimuovi restrizioni' },
+    ];
 
-//         helpText += `${t('common.help.other_commands')}\n`;
-//         helpText += `${t('common.help.setstaff_cmd')}\n`;
-//         helpText += `${t('common.help.notes_cmd')}\n\n`;
+    // Build help message
+    let helpText = userLang === 'it'
+        ? '📚 <b>COMANDI DISPONIBILI</b>\n\n'
+        : '📚 <b>AVAILABLE COMMANDS</b>\n\n';
 
-//         helpText += `${t('common.help.moderation_section')}\n`;
-//         helpText += `${t('common.help.voteban_trigger')}\n`;
-//     }
+    // User commands section
+    helpText += userLang === 'it' ? '<b>👤 Comandi Utente:</b>\n' : '<b>👤 User Commands:</b>\n';
+    for (const c of userCommands) {
+        helpText += `• /<code>${c.cmd}</code> - ${c.desc}\n`;
+    }
 
-//     await ctx.reply(helpText, { parse_mode: "Markdown" });
-// });
+    // Admin commands section (only in groups)
+    if (ctx.chat.type !== 'private') {
+        helpText += '\n';
+        helpText += userLang === 'it' ? '<b>👮 Comandi Admin:</b>\n' : '<b>👮 Admin Commands:</b>\n';
+        for (const c of adminCommands) {
+            helpText += `• /<code>${c.cmd}</code> - ${c.desc}\n`;
+        }
+    }
+
+    // Super admin commands (only for super admins)
+    if (isSuper) {
+        helpText += '\n<b>🔐 Comandi Super Admin:</b>\n';
+        for (const c of superAdminCommands) {
+            const syntax = c.syntax ? ` ${c.syntax}` : '';
+            helpText += `• /<code>${c.cmd}</code>${syntax} - ${c.desc}\n`;
+        }
+    }
+
+    await ctx.reply(helpText, { parse_mode: 'HTML' });
+});
 
 // ============================================================================
 // ERROR HANDLER
