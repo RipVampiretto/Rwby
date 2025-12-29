@@ -143,6 +143,33 @@ const WORD_LIST = [
 
 // --- HELPER FUNCTIONS ---
 
+const recentlyLeftUsers = new Set();
+
+/**
+ * Gestisce il messaggio di servizio "User left" (message:left_chat_member).
+ * Se l'utente è uscito mentre aveva un captcha (tracciato in recentlyLeftUsers),
+ * eliminiamo il messaggio di servizio per pulizia.
+ *
+ * @param {import('grammy').Context} ctx - Contesto grammY
+ * @returns {Promise<void>}
+ */
+async function handleLeftMessage(ctx) {
+    const userId = ctx.message.left_chat_member.id;
+    const key = `${ctx.chat.id}:${userId}`;
+
+    // Check if this user is in our "recently failed/left during captcha" list or if we just want to suppress it?
+    // For now, we only suppress if they were tracked in handleMemberLeft
+    if (recentlyLeftUsers.has(key)) {
+        logger.debug(`[Welcome] Deleting 'User left' message ${ctx.message.message_id} for user ${userId}`);
+        try {
+            await ctx.deleteMessage();
+            recentlyLeftUsers.delete(key);
+        } catch (e) {
+            logger.debug(`[Welcome] Failed to delete 'User left' message: ${e.message}`);
+        }
+    }
+}
+
 /**
  * Mescola un array in ordine casuale (Fisher-Yates semplificato).
  * @param {Array} array - Array da mescolare
@@ -262,13 +289,18 @@ async function handleNewMember(ctx) {
     else if (ctx.chatMember) {
         const status = ctx.chatMember.new_chat_member.status;
         const oldStatus = ctx.chatMember.old_chat_member.status;
+        const oldIsMember = ctx.chatMember.old_chat_member.is_member;
+        const newIsMember = ctx.chatMember.new_chat_member.is_member;
 
         logger.debug(
-            `[Welcome] Member update: ${ctx.from.id} (${ctx.from.first_name}) - Old: ${oldStatus}, New: ${status}`
+            `[Welcome] Member update: ${ctx.from.id} (${ctx.from.first_name}) - Old: ${oldStatus} (isMember:${oldIsMember}), New: ${status} (isMember:${newIsMember})`
         );
 
         // Only trigger on join (member/restricted) from non-member
-        isJoin = (status === 'member' || status === 'restricted') && (oldStatus === 'left' || oldStatus === 'kicked');
+        // Standard join: left/kicked -> member/restricted
+        // Re-join after restricted leave: restricted (isMember:false) -> restricted/member
+        isJoin = (status === 'member' || status === 'restricted') &&
+            (oldStatus === 'left' || oldStatus === 'kicked' || (oldStatus === 'restricted' && oldIsMember === false));
 
         if (isJoin) {
             newMembers = [ctx.chatMember.new_chat_member.user];
@@ -317,6 +349,26 @@ async function handleNewMember(ctx) {
  * @private
  */
 async function processUserJoin(ctx, user, config, serviceMessageId = null) {
+    // 0. Check for existing pending captcha to avoid duplicates & double logging
+    // If found, we just update the service_message_id (if available) and exit.
+    try {
+        const existing = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
+        if (existing) {
+            logger.debug(`[Welcome] Found existing pending captcha for user ${user.id}`);
+
+            // If we have a service ID now but didn't before, update it
+            if (serviceMessageId && !existing.service_message_id) {
+                logger.debug(`[Welcome] Updating service_message_id for existing captcha: ${serviceMessageId}`);
+                await dbStore.updatePendingServiceMessage(existing.id, serviceMessageId);
+            }
+
+            // Exit immediately, assuming chat_member event already handled the rest
+            return;
+        }
+    } catch (e) {
+        logger.error(`[Welcome] Error checking existing captcha: ${e.message}`);
+    }
+
     // IMPORTANT: Track the user in database when they join (not just when they message)
     try {
         const db = require('../../database');
@@ -364,26 +416,6 @@ async function processUserJoin(ctx, user, config, serviceMessageId = null) {
         logger.debug(`[Welcome] User ${user.id} restricted successfully.`);
     } catch (e) {
         logger.error(`[Welcome] Failed to restrict ${user.id}: ${e.message}`);
-    }
-
-    // Check for existing pending captcha to avoid duplicates (e.g. chat_member update + message update)
-    try {
-        const existing = await dbStore.getPendingCaptcha(ctx.chat.id, user.id);
-        if (existing) {
-            logger.debug(`[Welcome] Found existing pending captcha for user ${user.id}`);
-
-            // If we have a service ID now but didn't before, update it
-            if (serviceMessageId && !existing.service_message_id) {
-                logger.debug(`[Welcome] Updating service_message_id for existing captcha: ${serviceMessageId}`);
-                await dbStore.updatePendingServiceMessage(existing.id, serviceMessageId);
-            }
-
-            // Ensure user is restricted (just in case - handled above)
-            // Skip sending a second captcha message and overwriting DB
-            return;
-        }
-    } catch (e) {
-        logger.error(`[Welcome] Error checking existing captcha: ${e.message}`);
     }
 
     // 2. Prepare Captcha
@@ -865,16 +897,18 @@ async function handleMemberLeft(ctx) {
 
     logger.info(`[Welcome] User ${user.id} (${user.first_name}) LEFT group ${ctx.chat.id}: ${oldStatus} -> ${newStatus}`, ctx);
 
-    // DEBUG: Log full chatMember object to understand why status is 'restricted' on leave
-    // User confirmed they left, but status claims 'restricted'.
-    // We trust chatMemberFilter('in', 'out') for now, so we proceed with cleanup.
-    if (newStatus === oldStatus) {
-        logger.debug(`[Welcome] Weird status transition ${oldStatus} -> ${newStatus}. Full payload: ${JSON.stringify(ctx.chatMember)}`);
-    }
+    // STRICT CHECK: Only proceed if user strictly LEFT
+    // Valid leave states:
+    // 1. status is 'left' or 'kicked'
+    // 2. status is 'restricted' BUT is_member is false (Restricted user left)
+    const isMember = ctx.chatMember.new_chat_member.is_member;
+    const isLeft = newStatus === 'left' || newStatus === 'kicked';
+    const isRestrictedSafeLeft = newStatus === 'restricted' && isMember === false;
 
-    // STRICT CHECK REVERTED: User confirmed they left even if status says restricted.
-    // relying on chatMemberFilter('in', 'out') from index.js to only trigger on actual leaves.
-    // if (newStatus !== 'left' && newStatus !== 'kicked') ...
+    if (!isLeft && !isRestrictedSafeLeft) {
+        logger.debug(`[Welcome] User status is ${newStatus} (is_member=${isMember}). Not a leave event. Ignoring cleanup.`, ctx);
+        return;
+    }
 
     logger.debug(`[Welcome] Checking for pending captcha for user ${user.id}...`, ctx);
 
@@ -914,10 +948,17 @@ async function handleMemberLeft(ctx) {
         if (pending) {
             await ctx.api.deleteMessage(ctx.chat.id, pending.message_id).catch(() => { });
             if (pending.service_message_id) {
+                logger.debug(`[Welcome] handleMemberLeft deleting service message ${pending.service_message_id}`);
                 await ctx.api.deleteMessage(ctx.chat.id, pending.service_message_id).catch(() => { });
             }
             await dbStore.removePendingCaptcha(ctx.chat.id, user.id);
             logger.info(`[Welcome] Deleted pending captcha (DB) for user ${user.id} who left.`);
+
+            // Track in recentlyLeftUsers to delete the subsequent "User left" message
+            const key = `${ctx.chat.id}:${user.id}`;
+            recentlyLeftUsers.add(key);
+            // Auto-remove from set after 30 seconds to prevent memory leaks
+            setTimeout(() => recentlyLeftUsers.delete(key), 30000);
         }
     } catch (e) {
         logger.debug(`[Welcome] Failed to clean up captcha for leaver: ${e.message}`);
@@ -962,7 +1003,12 @@ async function checkExpiredCaptchas(bot) {
                 if (message_id) {
                     logger.debug(`[Welcome] Deleting captcha message ${message_id}`);
                     await bot.api.deleteMessage(guild_id, message_id).catch(err => {
-                        logger.error(`[Welcome] Failed to delete captcha message ${message_id}: ${err.message}`);
+                        // Ignore "message to delete not found" as handleMemberLeft might have deleted it
+                        if (err.description && err.description.includes('message to delete not found')) {
+                            logger.debug(`[Welcome] Captcha message ${message_id} already deleted (race condition).`);
+                        } else {
+                            logger.error(`[Welcome] Failed to delete captcha message ${message_id}: ${err.message}`);
+                        }
                     });
                 }
 
@@ -970,7 +1016,11 @@ async function checkExpiredCaptchas(bot) {
                 if (service_message_id) {
                     logger.debug(`[Welcome] Deleting service message ${service_message_id}`);
                     await bot.api.deleteMessage(guild_id, service_message_id).catch(err => {
-                        logger.error(`[Welcome] Failed to delete service message ${service_message_id}: ${err.message}`);
+                        if (err.description && err.description.includes('message to delete not found')) {
+                            logger.debug(`[Welcome] Service message ${service_message_id} already deleted (race condition).`);
+                        } else {
+                            logger.error(`[Welcome] Failed to delete service message ${service_message_id}: ${err.message}`);
+                        }
                     });
                 } else {
                     logger.warn(`[Welcome] No service_message_id found for user ${user_id} - cannot delete join message.`);
@@ -1052,5 +1102,6 @@ module.exports = {
     handleNewMember,
     handleCaptchaCallback,
     checkExpiredCaptchas,
-    handleMemberLeft
+    handleMemberLeft,
+    handleLeftMessage
 };

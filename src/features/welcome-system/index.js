@@ -22,7 +22,7 @@
  * @requires ./ui - Interfaccia di configurazione
  */
 
-const { handleNewMember, handleCaptchaCallback, handleMemberLeft, checkExpiredCaptchas } = require('./core');
+const { handleNewMember, handleCaptchaCallback, handleMemberLeft, checkExpiredCaptchas, handleLeftMessage } = require('./core');
 const { handleCallback } = require('./commands');
 const { handleMessage } = require('./wizard');
 const ui = require('./ui');
@@ -81,11 +81,23 @@ function register(bot) {
         return next();
     });
 
-    // NOTA: message:new_chat_members rimosso perché chat_member è ora abilitato
-    // e gestisce correttamente sia join che leave
-
     // NOTA: message:left_chat_member rimosso perché chatMemberFilter('in', 'out')
     // gestisce correttamente le uscite. La logica è in handleMemberLeft (core.js)
+
+    // RE-ENABLED: We need message:new_chat_members to capture the service_message_id
+    // for deletion purposes. The logic in core.js handles duplicates safely.
+    bot.on('message:new_chat_members', async (ctx, next) => {
+        logger.debug(`[Welcome] message:new_chat_members event received`, ctx);
+        await handleNewMember(ctx);
+        return next();
+    });
+
+    // Callback
+    bot.on('message:left_chat_member', async (ctx, next) => {
+        logger.debug(`[Welcome] message:left_chat_member event received`, ctx);
+        await handleLeftMessage(ctx);
+        return next();
+    });
 
     // Callback
     bot.on('callback_query:data', async (ctx, next) => {
