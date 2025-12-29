@@ -467,7 +467,7 @@ async function getStats(db) {
             (SELECT COUNT(*) FROM users) as users_count,
             (SELECT COUNT(*) FROM guild_config) as guilds_count,
             
-            (SELECT COUNT(*) FROM users WHERE is_banned_global = TRUE) as global_bans,
+            (SELECT COUNT(DISTINCT user_id) FROM (SELECT user_id FROM users WHERE is_banned_global = TRUE UNION SELECT user_id FROM cas_bans) as all_bans) as global_bans,
             
             -- Local Flux Stats
             COALESCE((SELECT AVG(local_flux) FROM user_trust_flux), 0)::numeric as avg_local_flux,

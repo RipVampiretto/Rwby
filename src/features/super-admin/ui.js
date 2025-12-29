@@ -9,12 +9,13 @@ const {
 } = require('../analytics/monthly-stats');
 
 async function sendGovernancePanel(ctx, stats) {
+    const fmt = n => (n || 0).toLocaleString('it-IT');
     const text =
         `🌍 <b>GLOBAL GOVERNANCE PANEL</b>\n\n` +
         `🏛️ <b>Network Overview</b>\n` +
-        `• Active Guilds: <b>${stats.guilds_count}</b>\n` +
-        `• Total Users: <b>${stats.users_count}</b>\n` +
-        `• Global Bans: <b>${stats.global_bans}</b>\n\n` +
+        `• Active Guilds: <b>${fmt(stats.guilds_count)}</b>\n` +
+        `• Total Users: <b>${fmt(stats.users_count)}</b>\n` +
+        `• Global Bans: <b>${fmt(stats.global_bans)}</b>\n\n` +
         `<i>Select an option to view detailed statistics or manage configuration.</i>`;
 
     const keyboard = {

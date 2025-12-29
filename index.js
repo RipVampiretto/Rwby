@@ -520,7 +520,7 @@ async function start() {
     // Start bot with chat_member updates enabled
     logger.info(`[Bot] 🚀 Bot starting with drop_pending_updates=true and chat_member updates enabled...`);
     bot.start({
-        drop_pending_updates: true,
+        drop_pending_updates: false,
         allowed_updates: [
             'message',
             'edited_message',

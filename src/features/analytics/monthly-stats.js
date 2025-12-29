@@ -92,11 +92,11 @@ async function calculateMonthlyStats(db, monthYear) {
         );
         const activeGuilds = parseInt(activeGuildsResult?.count || 0);
 
-        // Global bans this month
-        // Note: We need to track ban dates - for now use total if no date tracking
+        // Global bans this month (CAS Bans imported this month)
         const globalBansResult = await db.queryOne(`
-            SELECT COUNT(*) as count FROM users WHERE is_banned_global = TRUE
-        `);
+            SELECT COUNT(*) as count FROM cas_bans 
+            WHERE imported_at >= $1 AND imported_at <= $2
+        `, [startISO, endISO]);
         const globalBans = parseInt(globalBansResult?.count || 0);
 
         // Completed votes this month
