@@ -254,25 +254,25 @@ function registerCommands(bot, db) {
     bot.command('gban', async ctx => {
         if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
 
-        let userId;
+        let userIds = [];
         const replyMsg = ctx.message.reply_to_message;
 
         if (replyMsg) {
             // Reply mode: get user ID from replied message
-            userId = replyMsg.from?.id;
+            if (replyMsg.from?.id) userIds.push(replyMsg.from.id);
         } else {
-            // Args mode: /gban <user_id>
+            // Args mode: /gban <user_id> <user_id> ...
             const args = ctx.message.text.split(' ').slice(1);
-            userId = args[0];
+            userIds = args.filter(id => id && !isNaN(id));
         }
 
-        if (!userId || isNaN(userId)) {
+        if (userIds.length === 0) {
             return ctx.reply(
                 '❓ <b>Uso:</b>\n' +
                 '• Rispondi a un messaggio con <code>/gban</code>\n' +
-                '• <code>/gban &lt;user_id&gt;</code>\n\n' +
+                '• <code>/gban &lt;user_id&gt; [&lt;user_id&gt; ...]</code>\n\n' +
                 '<b>Esempio:</b>\n' +
-                '<code>/gban 123456789</code>',
+                '<code>/gban 123456789 987654321</code>',
                 { parse_mode: 'HTML' }
             );
         }
@@ -292,59 +292,62 @@ function registerCommands(bot, db) {
                 await bot.api.deleteMessage(ctx.chat.id, ctx.message.message_id);
             } catch (e) { }
 
-            // Update database to set is_banned_global = TRUE
-            await db.query('UPDATE users SET is_banned_global = TRUE WHERE user_id = $1', [userId]);
-
-            // Update local gban cache
             const detection = require('../global-blacklist/detection');
-            detection.addToLocalCache(parseInt(userId));
-
-            // Try to get user info for logging
-            let targetUser = { id: userId, first_name: 'Unknown' };
-            try {
-                const userInfo = await bot.api.getChat(userId);
-                targetUser = {
-                    id: userId,
-                    first_name: userInfo.first_name || 'Unknown',
-                    username: userInfo.username
-                };
-            } catch (e) {
-                // User info not available, use default
-            }
-
-            // Get all guilds and ban the user from each
-            const guilds = await db.queryAll('SELECT guild_id, guild_name FROM guild_config');
-            let count = 0;
             const { queueBanNotification } = require('../global-blacklist/actions');
+            const guilds = await db.queryAll('SELECT guild_id, guild_name FROM guild_config');
 
-            for (const g of guilds) {
+            let results = [];
+
+            for (const userId of userIds) {
+                // Update database to set is_banned_global = TRUE
+                await db.query('UPDATE users SET is_banned_global = TRUE WHERE user_id = $1', [userId]);
+                detection.addToLocalCache(parseInt(userId));
+
+                // Try to get user info for logging
+                let targetUser = { id: userId, first_name: 'Unknown' };
                 try {
-                    await bot.api.banChatMember(g.guild_id, userId);
-                    count++;
-
-                    // Send aggregated notification if blacklist_notify is enabled for this guild
-                    const config = await db.getGuildConfig(g.guild_id);
-                    if (config && config.blacklist_notify && config.log_channel_id) {
-                        queueBanNotification(
-                            config.log_channel_id,
-                            targetUser,
-                            { id: g.guild_id, title: g.guild_name || `Group ${g.guild_id}` },
-                            `Global Ban by ${ctx.from.first_name}`
-                        );
-                    }
+                    const userInfo = await bot.api.getChat(userId);
+                    targetUser = {
+                        id: userId,
+                        first_name: userInfo.first_name || 'Unknown',
+                        username: userInfo.username
+                    };
                 } catch (e) {
-                    // User might not be in this group or bot lacks permissions
+                    // User info not available, use default
                 }
+
+                let count = 0;
+                for (const g of guilds) {
+                    try {
+                        await bot.api.banChatMember(g.guild_id, userId);
+                        count++;
+                        // Send aggregated notification if blacklist_notify is enabled for this guild
+                        const config = await db.getGuildConfig(g.guild_id);
+                        if (config && config.blacklist_notify && config.log_channel_id) {
+                            queueBanNotification(
+                                config.log_channel_id,
+                                targetUser,
+                                { id: g.guild_id, title: g.guild_name || `Group ${g.guild_id}` },
+                                `Global Ban by ${ctx.from.first_name}`
+                            );
+                        }
+                    } catch (e) {
+                        // User might not be in this group or bot lacks permissions
+                    }
+                }
+                results.push({ user: targetUser, count });
+                logger.info(`[super-admin] Global Ban: ${userId} by ${ctx.from.id}`);
             }
 
             // Send confirmation message
-            const confirmMsg = await ctx.reply(
-                `🌍 <b>Global Ban eseguito</b>\n\n` +
-                `👤 Utente: ${targetUser.first_name} [<code>${userId}</code>]\n` +
-                `📊 Bannato da: ${count} gruppi\n` +
-                `👮 Eseguito da: ${ctx.from.first_name}`,
-                { parse_mode: 'HTML' }
-            );
+            let confirmText = `🌍 <b>Global Ban eseguito</b>\n\n`;
+            for (const r of results) {
+                confirmText += `👤 Utente: ${r.user.first_name} [<code>${r.user.id}</code>]\n`;
+                confirmText += `📊 Bannato da: ${r.count} gruppi\n\n`;
+            }
+            confirmText += `👮 Eseguito da: ${ctx.from.first_name}`;
+
+            const confirmMsg = await ctx.reply(confirmText, { parse_mode: 'HTML' });
 
             // Auto-delete confirmation after 5 seconds if NOT in Parliament group
             const globalConfig = await db.queryOne('SELECT parliament_group_id FROM global_config WHERE id = 1');
@@ -357,8 +360,6 @@ function registerCommands(bot, db) {
                     }
                 }, 5000);
             }
-
-            logger.info(`[super-admin] Global Ban: ${userId} by ${ctx.from.id}`);
         } catch (e) {
             logger.error(`[super-admin] Gban error: ${e.message}`);
             await ctx.reply('❌ Errore: ' + e.message);

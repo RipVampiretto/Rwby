@@ -11,3 +11,4 @@ telegram-bot-api-data
 temp/
 coverage/
 backups/
+.vscode/
