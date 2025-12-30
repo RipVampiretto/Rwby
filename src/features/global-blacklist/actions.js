@@ -145,7 +145,7 @@ async function flushBanQueue(logChannelId) {
 
         // List groups
         for (const [groupId, groupTitle] of allGroups) {
-            text += `- ${groupTitle} ✅ [<code>${groupId}</code>]\n`;
+            text += `- ${groupTitle} [<code>${groupId}</code>]\n`;
         }
 
         // Add hashtags for all user IDs
