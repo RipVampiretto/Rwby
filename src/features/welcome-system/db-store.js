@@ -131,6 +131,22 @@ async function updatePendingServiceMessage(id, serviceMessageId) {
     await query(`UPDATE pending_captchas SET service_message_id = $1 WHERE id = $2`, [serviceMessageId, id]);
 }
 
+/**
+ * Aggiorna la scadenza di un captcha pendente.
+ * @param {bigint} guildId
+ * @param {bigint} userId
+ * @param {number} minutesFromNow
+ * @returns {Promise<void>}
+ */
+async function updatePendingCaptchaExpiry(guildId, userId, minutesFromNow) {
+    const expiresAt = new Date(Date.now() + minutesFromNow * 60 * 1000);
+    await query(`UPDATE pending_captchas SET expires_at = $1 WHERE guild_id = $2 AND user_id = $3`, [
+        expiresAt,
+        guildId,
+        userId
+    ]);
+}
+
 module.exports = {
     addPendingCaptcha,
     getPendingCaptcha,
@@ -141,5 +157,7 @@ module.exports = {
     getRecentlyVerified,
     removeRecentlyVerified,
     cleanupOldVerifiedUsers,
-    updatePendingServiceMessage
+    updatePendingServiceMessage,
+    updatePendingCaptchaExpiry
 };
+

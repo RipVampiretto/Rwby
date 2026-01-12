@@ -18,6 +18,7 @@
 const { fetchGuildConfig: getGuildConfig } = require('../../database/repos/guild');
 const i18n = require('../../i18n');
 const { replaceWildcards, parseButtonConfig } = require('./utils');
+const logger = require('../../middlewares/logger');
 
 /**
  * Mostra il menu principale del sistema Welcome.
@@ -256,7 +257,9 @@ async function sendRulesWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) {
+        logger.error(`[Welcome] Failed to send rules wizard prompt: ${e.message}`, ctx);
+    }
 }
 
 /**
@@ -315,7 +318,9 @@ async function sendWizardPrompt(ctx) {
 
     try {
         await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: 'HTML' });
-    } catch (e) {}
+    } catch (e) {
+        logger.error(`[Welcome] Failed to send wizard prompt: ${e.message}`, ctx);
+    }
 }
 
 /**

@@ -619,7 +619,7 @@
         },
         "rules_message": {
             "title": "📜 <b>Read the Rules</b>",
-            "instruction": "Before joining, confirm you have read the group rules."
+            "instruction": "Before joining, confirm you have read the group rules. You have {minutes} minutes to accept or you will be removed."
         },
         "wizard": {
             "title": "✏️ <b>Set Welcome Message</b>",

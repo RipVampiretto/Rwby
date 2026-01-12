@@ -662,23 +662,27 @@ async function handleCaptchaCallback(ctx) {
     if (success) {
         logger.info(`[Welcome] Captcha success for user ${ctx.from.id}, processing verification`, ctx);
 
-        // Get pending info BEFORE removing it
+        // Get pending info
         const pending = await dbStore.getPendingCaptcha(ctx.chat.id, ctx.from.id);
         const serviceMsgId = pending ? pending.service_message_id : null;
         logger.debug(`[Welcome] Retrieved pending captcha data: serviceMsgId=${serviceMsgId}`, ctx);
 
-        await dbStore.removePendingCaptcha(ctx.chat.id, ctx.from.id);
-        logger.debug(`[Welcome] Removed pending captcha from DB for user ${ctx.from.id}`, ctx);
-
         // Check Rules - only show if rules_enabled AND rules_link is set
         const rulesEnabled = config.rules_enabled === true || config.rules_enabled === 1;
         if (rulesEnabled && config.rules_link) {
-            logger.info(`[Welcome] Showing rules acceptance screen to user ${ctx.from.id}`, ctx);
+            // If rules are enabled, EXTEND the session (don't remove yet)
+            // Set 2 minutes timeout for reading rules
+            const timeoutRules = 2;
+            await dbStore.updatePendingCaptchaExpiry(ctx.chat.id, ctx.from.id, timeoutRules);
+            logger.info(`[Welcome] Showing rules acceptance screen to user ${ctx.from.id}. Timeout set to ${timeoutRules} mins.`, ctx);
+
             const guildId = ctx.chat.id;
             const lang = await i18n.getLanguage(guildId);
             const t = (key, params) => i18n.t(lang, key, params);
             const rulesLink = config.rules_link;
-            const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction')}`;
+
+            const text = `${t('welcome.rules_message.title')}\n\n${t('welcome.rules_message.instruction', { minutes: timeoutRules })}`;
+
             try {
                 await ctx.editMessageText(text, {
                     parse_mode: 'HTML',

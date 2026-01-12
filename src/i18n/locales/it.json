@@ -613,14 +613,14 @@
         },
         "rules_prompt": {
             "title": "📜 <b>Imposta Link Regolamento</b>",
-            "instruction": "Invia ora il link al regolamento (es. <code>https://t.me/...</code> o <code>http://....",
+            "instruction": "Invia ora il link al regolamento (es. <code>https://t.me/...</code> o <code>http://...</code>).",
             "usage": "Questo link verrà usato nel bottone 'Leggi Regolamento'.",
             "cancel": "🔴 <b>Scrivi 'cancel' per annullare.</b>",
             "button_cancel": "❌ Annulla"
         },
         "rules_message": {
             "title": "📜 <b>Leggi il Regolamento</b>",
-            "instruction": "Prima di accedere, conferma di aver letto le regole del gruppo."
+            "instruction": "Prima di accedere, conferma di aver letto le regole del gruppo. Hai {minutes} minuti per accettare o verrai rimosso."
         },
         "wizard": {
             "title": "✏️ <b>Imposta Messaggio di Benvenuto</b>",
