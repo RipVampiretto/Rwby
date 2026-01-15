@@ -1,4 +1,25 @@
-require('dotenv').config();
+// ============================================================================
+// DYNAMIC ENV FILE LOADING
+// ============================================================================
+// Usage: BOT_INSTANCE=rwby node index.js  ->  loads .env.rwby
+//        BOT_INSTANCE=safejoin node index.js  ->  loads .env.safejoin
+//        node index.js  ->  loads .env (fallback)
+// ============================================================================
+const path = require('path');
+const instance = process.env.BOT_INSTANCE || 'safejoin';
+const envFile = `.env.${instance}`;
+const envPath = path.join(__dirname, envFile);
+
+// Try instance-specific file first, fallback to .env
+const fs = require('fs');
+if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    console.log(`[Env] Loaded ${envFile}`);
+} else {
+    require('dotenv').config();
+    console.log(`[Env] ${envFile} not found, loaded .env`);
+}
+
 const { Bot, GrammyError, HttpError } = require("grammy");
 const logger = require("./src/middlewares/logger");
 const features = require("./src/utils/feature-flags");
@@ -16,6 +37,7 @@ const botConfig = process.env.TELEGRAM_API_URL ? {
 } : {};
 
 logger.info(`[Bot] Initializing bot with config: apiRoot=${process.env.TELEGRAM_API_URL || 'default'}`);
+logger.info(`[Bot] Instance: ${instance}`);
 const bot = new Bot(process.env.BOT_TOKEN, botConfig);
 
 // ============================================================================
