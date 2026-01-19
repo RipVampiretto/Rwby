@@ -102,6 +102,9 @@ const flags = {
 
     /** AI Daily Recap - Solo rwby (esempio futuro) */
     // aiDailyRecap: ['rwby'],
+
+    /** Mascotte AI (Risposte automatiche) - Solo rwby */
+    aiMascot: ['rwby']
 };
 
 /**

@@ -49,6 +49,7 @@ const globalBlacklist = require("./src/features/global-blacklist");
 const actionLog = require("./src/features/action-log");
 const staffCoordination = require("./src/features/staff-coordination");
 const superAdmin = require("./src/features/super-admin");
+const aiMascot = require("./src/features/ai-mascot");
 
 // Detection modules
 const editMonitor = require("./src/features/edit-monitor");
@@ -168,6 +169,11 @@ if (features.isEnabled('superAdmin')) {
     superAdmin.init(db);
     superAdmin.register(bot);
     logger.debug(`[Bot] Feature registered: superAdmin`);
+}
+if (features.isEnabled('aiMascot')) {
+    aiMascot.init();
+    aiMascot.register(bot);
+    logger.debug(`[Bot] Feature registered: aiMascot`);
 }
 
 // Detection: Text-based
