@@ -124,7 +124,11 @@ function register(bot) {
 
     // Start Expiration Loop (every 30s)
     setInterval(async () => {
-        checkExpiredCaptchas(bot);
+        try {
+            await checkExpiredCaptchas(bot);
+        } catch (e) {
+            logger.error(`[Welcome] Expiration check error: ${e.message}`);
+        }
 
         // Cleanup old verified users (older than 5 mins - no longer needed for join-run detection)
         try {

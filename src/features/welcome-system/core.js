@@ -998,10 +998,15 @@ async function checkExpiredCaptchas(bot) {
                 logger.info(`[Welcome] Kicked user ${user_id} in guild ${guild_id} (captcha expired).`);
             } catch (e) {
                 logger.error(`[Welcome] Failed to kick user ${user_id} in ${guild_id}: ${e.message}`);
-                // Proceed to cleanup anyway
+                // DO NOT proceed to cleanup - keep record for retry
+                // But still try to delete the captcha message to avoid confusion
+                if (message_id) {
+                    await bot.api.deleteMessage(guild_id, message_id).catch(() => { });
+                }
+                continue; // Skip to next expired captcha, keep this one in DB for retry
             }
 
-            // 2. Cleanup Messages (even if kick failed)
+            // 2. Cleanup Messages (only if kick succeeded)
             try {
                 // Delete Captcha Message
                 if (message_id) {
@@ -1031,70 +1036,63 @@ async function checkExpiredCaptchas(bot) {
                 }
 
                 // Try to delete the kick service message (usually message_id + 1 or +2)
-                if (kickSuccess) {
-                    // Wait for Telegram to create the kick service message
-                    await new Promise(r => setTimeout(r, 1000));
-                    for (let offset = 1; offset <= 3; offset++) {
-                        await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => { });
-                    }
+                // Wait for Telegram to create the kick service message
+                await new Promise(r => setTimeout(r, 1000));
+                for (let offset = 1; offset <= 3; offset++) {
+                    await bot.api.deleteMessage(guild_id, message_id + offset).catch(() => { });
                 }
             } catch (e) {
                 logger.error(`[Welcome] Failed to clean up messages for ${user_id}: ${e.message}`);
             }
 
-            // 3. Remove from DB & Log
+            // 3. Remove from DB & Log (only after successful kick)
             try {
                 // Remove from DB
                 await dbStore.removeCaptchaById(id);
                 logger.debug(`[Welcome] Removed expired captcha record ${id} from DB`);
 
                 // Log timeout event to log channel
-                if (kickSuccess) { // Only log timeout if we actually acted on it, or maybe always? 
-                    // Let's log always as "expired", but note if kick failed? Standard log message implies user removed.
-                    const config = await getGuildConfig(guild_id);
-                    if (config.log_channel_id) {
-                        let logEvents = {};
-                        if (config.log_events) {
-                            if (typeof config.log_events === 'string') {
-                                try {
-                                    logEvents = JSON.parse(config.log_events);
-                                } catch (e) { }
-                            } else if (typeof config.log_events === 'object') {
-                                logEvents = config.log_events;
-                            }
-                        }
-
-                        if (logEvents.welcome_captcha_timeout) {
-                            // Try to get user info
-                            let userName = 'Unknown';
+                const config = await getGuildConfig(guild_id);
+                if (config.log_channel_id) {
+                    let logEvents = {};
+                    if (config.log_events) {
+                        if (typeof config.log_events === 'string') {
                             try {
-                                const userInfo = await bot.api.getChat(user_id);
-                                userName = userInfo.first_name || 'Unknown';
+                                logEvents = JSON.parse(config.log_events);
                             } catch (e) { }
-
-                            // Get chat info
-                            let chatTitle = 'Unknown';
-                            try {
-                                const chatInfo = await bot.api.getChat(guild_id);
-                                chatTitle = chatInfo.title || 'Unknown';
-                            } catch (e) { }
-
-                            const lang = await i18n.getLanguage(guild_id);
-                            const text = i18n.t(lang, 'welcome.logs.captcha_timeout', {
-                                name: userName,
-                                userId: user_id,
-                                groupName: chatTitle,
-                                groupId: guild_id
-                            });
-
-                            await bot.api.sendMessage(config.log_channel_id, text, { parse_mode: 'HTML' });
+                        } else if (typeof config.log_events === 'object') {
+                            logEvents = config.log_events;
                         }
+                    }
+
+                    if (logEvents.welcome_captcha_timeout) {
+                        // Try to get user info
+                        let userName = 'Unknown';
+                        try {
+                            const userInfo = await bot.api.getChat(user_id);
+                            userName = userInfo.first_name || 'Unknown';
+                        } catch (e) { }
+
+                        // Get chat info
+                        let chatTitle = 'Unknown';
+                        try {
+                            const chatInfo = await bot.api.getChat(guild_id);
+                            chatTitle = chatInfo.title || 'Unknown';
+                        } catch (e) { }
+
+                        const lang = await i18n.getLanguage(guild_id);
+                        const text = i18n.t(lang, 'welcome.logs.captcha_timeout', {
+                            name: userName,
+                            userId: user_id,
+                            groupName: chatTitle,
+                            groupId: guild_id
+                        });
+
+                        await bot.api.sendMessage(config.log_channel_id, text, { parse_mode: 'HTML' });
                     }
                 }
             } catch (e) {
                 logger.error(`[Welcome] Failed post-expiration cleanup for ${user_id}: ${e.message}`);
-                // Ensure removal from DB if above failed
-                await dbStore.removeCaptchaById(id).catch(() => { });
             }
         }
     } catch (e) {

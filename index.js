@@ -537,6 +537,14 @@ async function start() {
     backup.startScheduler();
     logger.info(`[Bot] Backup scheduler started`);
 
+    // Verify AI Models (Blocking)
+    const aiHealthCheck = require('./src/utils/ai-health-check');
+    const aiCheckPassed = await aiHealthCheck.verifyModels();
+    if (!aiCheckPassed) {
+        logger.error('[Bot] FATAL: AI Model verification failed. Stopping startup.');
+        process.exit(1);
+    }
+
     // Log enabled features
     const enabledFeatures = [
         'userReputation', 'globalBlacklist', 'actionLog', 'staffCoordination', 'superAdmin',

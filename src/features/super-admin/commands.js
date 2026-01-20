@@ -950,6 +950,47 @@ function registerCommands(bot, db) {
         }
     });
 
+    // Command: /leave [chat_id] - Leave the current or specified group
+    bot.command('leave', async ctx => {
+        if (!isSuperAdmin(ctx.from.id)) return ctx.reply('❌ Accesso negato');
+
+        let chatId = ctx.chat.id;
+        const args = ctx.message.text.split(' ').slice(1);
+
+        if (args.length > 0) {
+            chatId = args[0];
+        } else if (ctx.chat.type === 'private') {
+            return ctx.reply('❓ Specifica un ID gruppo: /leave <chat_id>');
+        }
+
+        try {
+            // Get chat info to confirm command
+            let chatName = chatId;
+            try {
+                const chat = await bot.api.getChat(chatId);
+                chatName = chat.title || chat.username || chatId;
+            } catch (e) {
+                // Ignore if bot cannot see chat details
+            }
+
+            // Send goodbye message if possible
+            try {
+                await bot.api.sendMessage(chatId, '👋 Bye!');
+            } catch (e) {
+                // Ignore failure to send message
+            }
+
+            await bot.api.leaveChat(chatId);
+
+            await ctx.reply(`✅ Lasciato il gruppo: ${chatName} (${chatId})`);
+            logger.info(`[super-admin] Bot left ${chatId} requested by ${ctx.from.id}`);
+
+        } catch (e) {
+            logger.error(`[super-admin] Leave error: ${e.message}`);
+            ctx.reply(`❌ Errore: ${e.message}`);
+        }
+    });
+
     // Callback handlers
     bot.on('callback_query:data', async (ctx, next) => {
         const data = ctx.callbackQuery.data;
