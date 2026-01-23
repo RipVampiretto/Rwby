@@ -39,6 +39,7 @@ fluentFfmpeg.setFfprobePath(ffprobePath);
 const logger = require('../../middlewares/logger');
 const actions = require('./actions');
 const envConfig = require('../../config/env');
+const lmLogger = require('../../utils/lm-studio-logger');
 
 /**
  * Directory temporanea per i file scaricati e i frame estratti.
@@ -47,204 +48,14 @@ const envConfig = require('../../config/env');
  */
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'nsfw');
 
-/**
- * Directory per il salvataggio delle conversazioni in formato LM Studio.
- * Opzionale, usato solo per debug. Se null, il salvataggio è disabilitato.
- * @constant {string|null}
- */
-const LM_STUDIO_CONVERSATIONS_DIR = process.env.LM_STUDIO_CONVERSATIONS_DIR || null;
-
-/**
- * Directory per i file utente in formato LM Studio.
- * Opzionale, usato solo per debug. Se null, il salvataggio è disabilitato.
- * @constant {string|null}
- */
-const LM_STUDIO_USER_FILES_DIR = process.env.LM_STUDIO_USER_FILES_DIR || null;
+// LM Studio logging is now handled by ../../utils/lm-studio-logger.js
 
 // Crea la directory temporanea se non esiste
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
-/**
- * Salva una conversazione nel formato LM Studio per debugging.
- * Crea file di conversazione e metadati compatibili con l'interfaccia LM Studio.
- *
- * Questa funzione è opzionale e viene eseguita solo se le variabili d'ambiente
- * LM_STUDIO_CONVERSATIONS_DIR e LM_STUDIO_USER_FILES_DIR sono configurate.
- *
- * @param {string} chatId - ID della chat Telegram
- * @param {string} systemPrompt - System prompt utilizzato per l'analisi
- * @param {string} userMessage - Messaggio utente inviato al modello
- * @param {string} base64Image - Immagine codificata in Base64
- * @param {string} responseText - Risposta testuale del modello LLM
- * @param {Object} stats - Statistiche della risposta
- * @param {number} [stats.tokensPerSecond] - Token generati al secondo
- * @param {number} [stats.timeToFirstTokenSec] - Tempo al primo token
- * @param {number} [stats.totalTimeSec] - Tempo totale di generazione
- * @param {number} [stats.promptTokensCount] - Numero di token nel prompt
- * @param {number} [stats.predictedTokensCount] - Numero di token generati
- * @param {number} [stats.totalTokensCount] - Numero totale di token
- * @returns {void}
- * @private
- */
-function saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image, responseText, stats) {
-    // Skip if LM Studio conversation saving is not configured
-    if (!LM_STUDIO_CONVERSATIONS_DIR || !LM_STUDIO_USER_FILES_DIR) {
-        logger.debug('[media-filter] LM Studio conversation saving disabled (env vars not set)');
-        return;
-    }
-
-    try {
-        const crypto = require('crypto');
-        const chatDir = path.join(LM_STUDIO_CONVERSATIONS_DIR, String(chatId));
-        const userFilesDir = LM_STUDIO_USER_FILES_DIR;
-
-        // Create directories if they don't exist
-        if (!fs.existsSync(chatDir)) {
-            fs.mkdirSync(chatDir, { recursive: true });
-        }
-        if (!fs.existsSync(userFilesDir)) {
-            fs.mkdirSync(userFilesDir, { recursive: true });
-        }
-
-        const timestamp = Date.now();
-        const imageBuffer = Buffer.from(base64Image, 'base64');
-        const imageSize = imageBuffer.length;
-        const sha256Hex = crypto.createHash('sha256').update(imageBuffer).digest('hex');
-
-        // Generate random number for file identifier (like LM Studio does)
-        const randomNum = Math.floor(Math.random() * 100);
-        const fileIdentifier = `${timestamp} - ${randomNum}.jpg`;
-
-        // Save image to user-files directory
-        const imagePath = path.join(userFilesDir, fileIdentifier);
-        fs.writeFileSync(imagePath, imageBuffer);
-
-        // Create metadata file
-        const metadataPath = path.join(userFilesDir, `${fileIdentifier}.metadata.json`);
-        const metadata = {
-            type: 'image',
-            sizeBytes: imageSize,
-            originalName: `media_${chatId}_${timestamp}.jpg`,
-            fileIdentifier: fileIdentifier,
-            preview: {
-                data: `data:image/jpeg;base64,${base64Image}`
-            },
-            sha256Hex: sha256Hex
-        };
-        fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-
-        logger.debug(`[media-filter] 🖼️ Saved image to user-files: ${imagePath}`);
-
-        // Generate a name based on primary category if available
-        let conversationName = 'NSFW Analysis';
-        try {
-            const parsed = JSON.parse(responseText.match(/\{[\s\S]*\}/)?.[0] || '{}');
-            if (parsed.primary_category) {
-                conversationName = `NSFW: ${parsed.primary_category}`;
-            }
-        } catch (e) {}
-
-        const conversation = {
-            name: conversationName,
-            pinned: false,
-            createdAt: timestamp,
-            preset: '',
-            tokenCount: stats.totalTokensCount || 0,
-            userLastMessagedAt: timestamp,
-            systemPrompt: '',
-            messages: [
-                {
-                    versions: [
-                        {
-                            type: 'singleStep',
-                            role: 'user',
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: systemPrompt + '\n\n' + userMessage
-                                },
-                                {
-                                    type: 'file',
-                                    fileIdentifier: fileIdentifier,
-                                    fileType: 'image',
-                                    sizeBytes: imageSize
-                                }
-                            ]
-                        }
-                    ],
-                    currentlySelected: 0
-                },
-                {
-                    versions: [
-                        {
-                            type: 'multiStep',
-                            role: 'assistant',
-                            steps: [
-                                {
-                                    type: 'contentBlock',
-                                    stepIdentifier: `${timestamp}-0.${Math.random().toString().slice(2, 18)}`,
-                                    content: [
-                                        {
-                                            type: 'text',
-                                            text: responseText,
-                                            fromDraftModel: false,
-                                            tokensCount: stats.predictedTokensCount || 0,
-                                            isStructural: false
-                                        }
-                                    ],
-                                    defaultShouldIncludeInContext: true,
-                                    shouldIncludeInContext: true,
-                                    genInfo: {
-                                        indexedModelIdentifier: envConfig.LM_STUDIO.nsfwModel,
-                                        identifier: envConfig.LM_STUDIO.nsfwModel,
-                                        stats: {
-                                            stopReason: 'eosFound',
-                                            tokensPerSecond: stats.tokensPerSecond || 0,
-                                            timeToFirstTokenSec: stats.timeToFirstTokenSec || 0,
-                                            totalTimeSec: stats.totalTimeSec || 0,
-                                            promptTokensCount: stats.promptTokensCount || 0,
-                                            predictedTokensCount: stats.predictedTokensCount || 0,
-                                            totalTokensCount: stats.totalTokensCount || 0
-                                        }
-                                    }
-                                }
-                            ],
-                            senderInfo: {
-                                senderName: envConfig.LM_STUDIO.nsfwModel
-                            }
-                        }
-                    ],
-                    currentlySelected: 0
-                }
-            ],
-            usePerChatPredictionConfig: true,
-            perChatPredictionConfig: { fields: [] },
-            clientInput: '',
-            clientInputFiles: [],
-            userFilesSizeBytes: imageSize,
-            lastUsedModel: {
-                identifier: envConfig.LM_STUDIO.nsfwModel,
-                indexedModelIdentifier: envConfig.LM_STUDIO.nsfwModel,
-                instanceLoadTimeConfig: { fields: [] },
-                instanceOperationTimeConfig: { fields: [] }
-            },
-            notes: [],
-            plugins: [],
-            pluginConfigs: {},
-            disabledPluginTools: [],
-            looseFiles: [],
-            assistantLastMessagedAt: timestamp + 100
-        };
-
-        const jsonPath = path.join(chatDir, `${timestamp}.conversation.json`);
-        fs.writeFileSync(jsonPath, JSON.stringify(conversation, null, 2));
-        logger.debug(`[media-filter] 💾 Saved conversation to LM Studio: ${jsonPath}`);
-    } catch (e) {
-        logger.warn(`[media-filter] ⚠️ Failed to save LM Studio conversation: ${e.message}`);
-    }
-}
+// saveLMStudioConversation function moved to ../../utils/lm-studio-logger.js
 
 /**
  * Elabora un messaggio contenente media per rilevare contenuti NSFW.
@@ -457,7 +268,7 @@ async function processMedia(ctx, config) {
         logger.debug(`[media-filter] 🧹 Cleaning up temp file: ${localPath}`);
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 
@@ -488,7 +299,7 @@ async function downloadFile(url, dest) {
             })
             .on('error', err => {
                 logger.error(`[media-filter] ❌ downloadFile: Error - ${err.message}`);
-                fs.unlink(dest, () => {});
+                fs.unlink(dest, () => { });
                 reject(err);
             });
     });
@@ -695,7 +506,7 @@ async function checkVideo(videoPath, config, reasons, caption = null, chatId = n
         for (const frame of validFrames) {
             try {
                 fs.unlinkSync(frame.path);
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 }
@@ -1108,13 +919,16 @@ FINAL NOTES
 
         // Save conversation to LM Studio format
         if (chatId) {
-            saveLMStudioConversation(chatId, systemPrompt, userMessage, base64Image, content, {
+            lmLogger.saveVisionConversation(chatId, systemPrompt, userMessage, base64Image, content, {
                 tokensPerSecond: 0,
                 timeToFirstTokenSec: 0,
                 totalTimeSec: responseTime / 1000,
                 promptTokensCount: 0,
                 predictedTokensCount: 0,
                 totalTokensCount: 0
+            }, {
+                source: 'media-filter',
+                model: envConfig.LM_STUDIO.nsfwModel
             });
         }
 
@@ -1261,7 +1075,7 @@ async function analyzeMediaOnly(ctx, config) {
     } finally {
         try {
             fs.unlinkSync(localPath);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 

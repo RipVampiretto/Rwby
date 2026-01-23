@@ -4,8 +4,10 @@
  */
 const logger = require('../../middlewares/logger');
 const buffer = require('./buffer');
+const { searchWeb } = require('../../utils/search-client');
 const { SYSTEM_PROMPT } = require('./personality');
 const axios = require('axios');
+const lmLogger = require('../../utils/lm-studio-logger');
 
 // Configurazione
 const ENABLED_INSTANCE = 'rwby';
@@ -34,17 +36,42 @@ async function generateReply(guildId, userMessage, replyContext = null, assistan
         const history = buffer.getFormattedHistory(guildId);
 
         let messages;
+        assistantMode = false
 
         if (assistantMode) {
-            // Modalità assistente: risponde dalla conoscenza interna, senza personalità RWBY
+            // Modalità assistente: Cerca su internet e risponde
             let cleanQuery = userMessage.text
                 .replace(/@\w+/g, '') // Rimuove menzioni
                 .replace(/cerca\s+su\s+internet\s*/i, '') // Rimuove "cerca su internet"
                 .trim();
 
+            let systemContent = "Sei un assistente AI utile e informativo. Rispondi in italiano. NON usare formattazione markdown complessa (grassetto, corsivo) se non necessario. Usa testo semplice quando possibile.";
+            let userContent = cleanQuery;
+
+            try {
+                logger.info(`[ai-mascot] Searching web for: ${cleanQuery}`);
+                const searchResults = await searchWeb(cleanQuery);
+
+                if (searchResults && searchResults.length > 0) {
+                    const formattedResults = searchResults.map(r => {
+                        let text = `TITOLO: ${r.title}\nLINK: ${r.link}\nSNIPPET: ${r.snippet}`;
+                        if (r.full_content) {
+                            text += `\nCONTENUTO COMPLETO: ${r.full_content}`;
+                        }
+                        return text;
+                    }).join('\n\n');
+
+                    userContent = `DOMANDA UTENTE: ${cleanQuery}\n\nCONTESTO DAL WEB (Deep Search):\n${formattedResults}\n\nRispondi alla domanda utente usando le informazioni sopra. NON includere link o URL nella risposta.`;
+                } else {
+                    userContent = `DOMANDA UTENTE: ${cleanQuery}\n\n(Nessun risultato trovato sul web, rispondi basandoti sulle tue conoscenze)`;
+                }
+            } catch (e) {
+                logger.error(`[ai-mascot] Search failed inside generateReply: ${e.message}`);
+            }
+
             messages = [
-                { role: "system", content: "Sei un assistente AI utile e informativo. Rispondi in italiano in modo chiaro e conciso. NON usare formattazione markdown, HTML o caratteri speciali come **, ##, *, ecc. Usa SOLO testo semplice." },
-                { role: "user", content: cleanQuery }
+                { role: "system", content: systemContent },
+                { role: "user", content: userContent }
             ];
         } else {
             // Modalità mascotte: con personalità RWBY
@@ -79,7 +106,19 @@ async function generateReply(guildId, userMessage, replyContext = null, assistan
         const response = await axios.post(`${AI_URL}/v1/chat/completions`, payload, { timeout: 30000 });
 
         if (response.data && response.data.choices && response.data.choices.length > 0) {
-            return response.data.choices[0].message.content.trim();
+            const responseText = response.data.choices[0].message.content.trim();
+
+            // Save conversation to LM Studio
+            lmLogger.saveTextConversation(guildId, messages[0].content, messages[1].content, responseText, {
+                totalTimeSec: 0
+            }, {
+                source: 'ai-mascot',
+                model: AI_MODEL,
+                username: userMessage.username,
+                assistantMode
+            });
+
+            return responseText;
         }
     } catch (e) {
         logger.error(`[ai-mascot] Error generating reply: ${e.message}`);
@@ -144,7 +183,8 @@ function register(bot) {
             if (response) {
                 try {
                     await ctx.reply(response, {
-                        reply_to_message_id: ctx.message.message_id
+                        reply_to_message_id: ctx.message.message_id,
+                        parse_mode: 'Markdown'
                     });
                     logger.info(`[ai-mascot] Replied to ${username} in ${guildId}${assistantMode ? ' (assistant mode)' : ''}`);
                 } catch (e) {

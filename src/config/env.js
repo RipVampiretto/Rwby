@@ -93,6 +93,12 @@ const config = {
         retentionHours: parseInt(process.env.BACKUP_RETENTION_HOURS),
         retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS),
         retentionWeeks: parseInt(process.env.BACKUP_RETENTION_WEEKS)
+    },
+
+    // LM Studio Logging (optional)
+    LM_STUDIO_LOGGING: {
+        conversationsDir: process.env.LM_STUDIO_CONVERSATIONS_DIR || null,
+        userFilesDir: process.env.LM_STUDIO_USER_FILES_DIR || null
     }
 };
 

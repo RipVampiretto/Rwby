@@ -1,5 +1,6 @@
 const logger = require('../../middlewares/logger');
 const envConfig = require('../../config/env');
+const lmLogger = require('../../utils/lm-studio-logger');
 
 let db = null;
 
@@ -175,7 +176,18 @@ Classify as scam or safe. Respond ONLY with the JSON object.`;
         return {
             isScam: result.classification === 'scam',
             confidence: result.confidence || 0.5,
-            reason: result.reason || 'No reason provided'
+            reason: result.reason || 'No reason provided',
+            _lmLogSaved: (() => {
+                // Save conversation to LM Studio
+                lmLogger.saveTextConversation(null, systemPrompt, userPrompt, content, {
+                    totalTimeSec: 0
+                }, {
+                    source: 'mention-filter',
+                    model: model,
+                    mentionedUsername
+                });
+                return true;
+            })()
         };
     } catch (e) {
         if (e.name === 'AbortError') {

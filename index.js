@@ -623,7 +623,7 @@ async function gracefulShutdown(signal) {
         backup.stopScheduler();
         logger.info('[shutdown] ✓ Backup scheduler stopped');
 
-        // 3. Close database connections
+        // 4. Close database connections
         logger.info('[shutdown] Closing database connections...');
         await db.close();
         logger.info('[shutdown] ✓ Database closed');
