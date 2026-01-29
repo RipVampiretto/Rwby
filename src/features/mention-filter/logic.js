@@ -20,19 +20,61 @@ function extractMentions(message) {
     const text = message.text || message.caption || '';
     const entities = message.entities || message.caption_entities || [];
 
+    // Helper set to avoid duplicates
+    const foundUsernames = new Set();
+
     for (const entity of entities) {
         if (entity.type === 'mention') {
             // @username mention - extract from text
-            const username = text.substring(entity.offset + 1, entity.offset + entity.length); // +1 to skip @
-            mentions.push({ username: username.toLowerCase(), userId: null });
-            logger.debug(`[MentionFilter] Found @mention: ${username}`);
+            const username = text.substring(entity.offset + 1, entity.offset + entity.length).toLowerCase(); // +1 to skip @
+            if (!foundUsernames.has(username)) {
+                mentions.push({ username: username, userId: null });
+                foundUsernames.add(username);
+                logger.debug(`[MentionFilter] Found @mention: ${username}`);
+            }
         } else if (entity.type === 'text_mention') {
             // text_mention includes user object with id
+            const username = entity.user.username ? entity.user.username.toLowerCase() : null;
+            // Always add text_mentions as they provide concrete ID
             mentions.push({
-                username: entity.user.username ? entity.user.username.toLowerCase() : null,
+                username: username,
                 userId: entity.user.id
             });
+            if (username) foundUsernames.add(username);
             logger.debug(`[MentionFilter] Found text_mention: userId=${entity.user.id}`);
+        }
+    }
+
+    // NEW: Extract t.me and telegram.me links
+    // Matches: t.me/username, t.me/+code, t.me/joinchat/code
+    const telegramLinkRegex = /(?:https?:\/\/)?(?:www\.)?(?:t\.me|telegram\.me)\/([a-zA-Z0-9_+\-]+)(?:\/[a-zA-Z0-9_\-]+)?/gi;
+    const matches = [...text.matchAll(telegramLinkRegex)];
+
+    for (const match of matches) {
+        const identifier = match[1]; // The part after t.me/
+        let username = identifier;
+        let isInvite = false;
+
+        // Check if it's an invite link (+... or joinchat)
+        if (identifier.startsWith('+') || identifier === 'joinchat') {
+            isInvite = true;
+            // Use the full matched string as the "username" for context in AI prompt
+            username = match[0];
+        }
+
+        // If it's a standard username link (e.g. t.me/user), we treat it as "user"
+        // If it's an invite, we treat the link itself as the entity
+
+        const storedName = username.toLowerCase();
+
+        if (!foundUsernames.has(storedName)) {
+            mentions.push({
+                username: storedName,
+                userId: null,
+                isInviteLink: isInvite
+            });
+            foundUsernames.add(storedName);
+            logger.debug(`[MentionFilter] Found t.me link: ${username} (isInvite: ${isInvite})`);
         }
     }
 
@@ -90,14 +132,14 @@ async function isUserInChat(ctx, userId) {
  * @param {string} mentionedUsername - The mentioned username
  * @returns {Object} - { isScam: boolean, confidence: number, reason: string }
  */
-async function classifyWithAI(messageText, mentionedUsername) {
+async function classifyWithAI(messageText, mentionedEntity) {
     const model = envConfig.LM_STUDIO.scamModel;
 
     logger.debug(`[mention-filter] Calling AI for scam classification - model: ${model}`);
 
     const systemPrompt = `You are a scam detection assistant for Telegram group moderation.
 
-Your task is to analyze messages that mention external users (@username) and determine if the message is likely a scam or recruitment fraud.
+Your task is to analyze messages that mention external users (@username) or contain Telegram invite links (t.me/...) and determine if the message is likely a scam or recruitment fraud.
 
 COMMON SCAM PATTERNS:
 - Recruitment offers with vague job descriptions
@@ -107,6 +149,7 @@ COMMON SCAM PATTERNS:
 - Limited-time offers creating urgency
 - Age requirements for vague opportunities (e.g., "18+ only")
 - Requests to contact external users not in the group
+- Linking to external Telegram channels/groups for "signals" or "investment"
 - MLM/pyramid scheme indicators
 - Romance scams or "looking for partners"
 - Fake giveaways or contests
@@ -117,6 +160,7 @@ SAFE PATTERNS:
 - Replies referring to previous messages
 - Group announcements mentioning staff/admins
 - Clearly benign social interactions
+- Sharing useful, relevant channels (if context permits)
 
 Respond with a JSON object ONLY:
 {
@@ -125,7 +169,7 @@ Respond with a JSON object ONLY:
   "reason": "brief explanation"
 }`;
 
-    const userPrompt = `Analyze this message that mentions @${mentionedUsername}:
+    const userPrompt = `Analyze this message that refers to ${mentionedEntity}:
 
 "${messageText}"
 
@@ -199,8 +243,21 @@ async function scanMessage(ctx, config) {
     const senderId = ctx.from?.id;
 
     for (const mention of mentions) {
-        // Skip self-mentions
+        // Skip self-mentions (sender mentioning themselves)
         if (mention.userId && mention.userId === senderId) continue;
+
+        // Skip mentions of the current chat (internal links)
+        if (ctx.chat?.username && mention.username &&
+            mention.username.toLowerCase() === ctx.chat.username.toLowerCase()) {
+            logger.debug(`[MentionFilter] Skipping mention of current chat: ${mention.username}`);
+            continue;
+        }
+
+        // Skip @admin mention (used for notifications)
+        if (mention.username === 'admin') {
+            logger.debug(`[MentionFilter] Skipping @admin mention`);
+            continue;
+        }
 
         let userId = mention.userId;
         let isExternal = false;
@@ -208,10 +265,13 @@ async function scanMessage(ctx, config) {
 
         // Try to find user in our database
         if (!userId && mention.username) {
-            const dbUser = await findUserByUsername(mention.username);
-            if (dbUser) {
-                userId = dbUser.user_id;
-                isGbanned = dbUser.is_banned_global;
+            // Optimization: Skip DB check for invite links, they are external references
+            if (!mention.isInviteLink) {
+                const dbUser = await findUserByUsername(mention.username);
+                if (dbUser) {
+                    userId = dbUser.user_id;
+                    isGbanned = dbUser.is_banned_global;
+                }
             }
         }
 
