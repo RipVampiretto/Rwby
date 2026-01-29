@@ -1,6 +1,7 @@
 const logger = require('../../middlewares/logger');
 const envConfig = require('../../config/env');
 const lmLogger = require('../../utils/lm-studio-logger');
+const lmClient = require('../../utils/lm-studio-client');
 
 let db = null;
 
@@ -90,9 +91,7 @@ async function isUserInChat(ctx, userId) {
  * @returns {Object} - { isScam: boolean, confidence: number, reason: string }
  */
 async function classifyWithAI(messageText, mentionedUsername) {
-    const url = `${envConfig.LM_STUDIO.url}/v1/chat/completions`;
     const model = envConfig.LM_STUDIO.scamModel;
-    const timeout = envConfig.AI_TIMEOUTS.text;
 
     logger.debug(`[mention-filter] Calling AI for scam classification - model: ${model}`);
 
@@ -133,32 +132,15 @@ Respond with a JSON object ONLY:
 Classify as scam or safe. Respond ONLY with the JSON object.`;
 
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-                model: model,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.1,
-                max_tokens: 200
-            })
+        const result = await lmClient.textChat(model, [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ], {
+            temperature: 0.1,
+            maxTokens: 200
         });
 
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`API returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || '';
+        const content = result.content || '';
 
         // Parse JSON from response
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -167,20 +149,20 @@ Classify as scam or safe. Respond ONLY with the JSON object.`;
             return { isScam: false, confidence: 0, reason: 'AI response parsing failed' };
         }
 
-        const result = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
 
         logger.info(
-            `[mention-filter] AI classification: ${result.classification} (${Math.round(result.confidence * 100)}%) - ${result.reason}`
+            `[mention-filter] AI classification: ${parsed.classification} (${Math.round(parsed.confidence * 100)}%) - ${parsed.reason}`
         );
 
         return {
-            isScam: result.classification === 'scam',
-            confidence: result.confidence || 0.5,
-            reason: result.reason || 'No reason provided',
+            isScam: parsed.classification === 'scam',
+            confidence: parsed.confidence || 0.5,
+            reason: parsed.reason || 'No reason provided',
             _lmLogSaved: (() => {
                 // Save conversation to LM Studio
                 lmLogger.saveTextConversation(null, systemPrompt, userPrompt, content, {
-                    totalTimeSec: 0
+                    totalTimeSec: result.stats?.totalTimeSec || 0
                 }, {
                     source: 'mention-filter',
                     model: model,
@@ -190,11 +172,7 @@ Classify as scam or safe. Respond ONLY with the JSON object.`;
             })()
         };
     } catch (e) {
-        if (e.name === 'AbortError') {
-            logger.warn(`[mention-filter] AI request timed out after ${timeout}ms`);
-        } else {
-            logger.error(`[mention-filter] AI classification error: ${e.message}`);
-        }
+        logger.error(`[mention-filter] AI classification error: ${e.message}`);
         // On error, default to safe (don't block)
         return { isScam: false, confidence: 0, reason: 'AI service unavailable' };
     }

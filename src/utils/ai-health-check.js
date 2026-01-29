@@ -2,16 +2,18 @@
  * @fileoverview Utils for AI Health Check
  * @module utils/ai-health-check
  */
-const axios = require('axios');
 const logger = require('../middlewares/logger');
+const lmClient = require('./lm-studio-client');
 
 /**
  * Verifies that all configured LLM models are available in the running LM Studio instance.
  * @returns {Promise<boolean>} True if all models are available, false otherwise.
  */
+/**
+ * Verifies that all configured LLM models are available in the running LM Studio instance.
+ * @returns {Promise<boolean>} True if all models are available, false otherwise.
+ */
 async function verifyModels() {
-    const aiUrl = process.env.LM_STUDIO_URL || 'http://localhost:1234';
-
     // 1. Identify required models from configuration
     const requiredModels = [];
 
@@ -36,24 +38,24 @@ async function verifyModels() {
         return true;
     }
 
-    logger.info(`[AI Check] Verifying ${requiredModels.length} models against ${aiUrl}...`);
+    logger.info(`[AI Check] Verifying ${requiredModels.length} models via SDK...`);
 
     try {
-        // 2. Fetch available models from LM Studio
-        const response = await axios.get(`${aiUrl}/v1/models`, { timeout: 5000 });
+        // 2. Fetch available models from LM Studio SDK
+        const loadedModels = await lmClient.listLoadedModels();
 
-        if (!response.data || !Array.isArray(response.data.data)) {
-            logger.error('[AI Check] Invalid response from LM Studio /v1/models');
+        if (!Array.isArray(loadedModels)) {
+            logger.error('[AI Check] Invalid response from LM Studio SDK');
             return false;
         }
 
-        const availableModelIds = response.data.data.map(m => m.id);
+        // Map SDK model objects to IDs (identifier or path)
+        const availableModelIds = loadedModels.map(m => m.identifier || m.path || m.id);
         const missingModels = [];
 
         // 3. Check for existence
         for (const req of requiredModels) {
             // Loose check: verify if the available model ID contains the configured ID or vice-versa
-            // often LM Studio model IDs are full paths or filenames.
             const isAvailable = availableModelIds.some(availId =>
                 availId === req.id || availId.includes(req.id) || req.id.includes(availId)
             );
@@ -73,7 +75,7 @@ async function verifyModels() {
         return true;
 
     } catch (e) {
-        logger.error(`[AI Check] Failed to connect to LM Studio at ${aiUrl}: ${e.message}`);
+        logger.error(`[AI Check] Failed to connect to LM Studio: ${e.message}`);
         logger.error('[AI Check] Ensure LM Studio is running and the API server is started.');
         return false;
     }

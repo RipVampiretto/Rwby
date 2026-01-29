@@ -96,7 +96,7 @@ function saveTextConversation(chatId, systemPrompt, userMessage, responseText, s
             preset: '',
             tokenCount: stats.totalTokensCount || 0,
             userLastMessagedAt: timestamp,
-            systemPrompt: systemPrompt,
+            systemPrompt: "",
             messages: [
                 {
                     versions: [
@@ -136,8 +136,17 @@ function saveTextConversation(chatId, systemPrompt, userMessage, responseText, s
                                     genInfo: {
                                         indexedModelIdentifier: metadata.model || 'unknown',
                                         identifier: metadata.model || 'unknown',
+                                        loadModelConfig: { fields: [] },
+                                        predictionConfig: {
+                                            fields: [
+                                                {
+                                                    key: "llm.prediction.temperature",
+                                                    value: 0.7  // Default assumed
+                                                }
+                                            ]
+                                        },
                                         stats: {
-                                            stopReason: 'eosFound',
+                                            stopReason: stats.stopReason || 'eosFound',
                                             tokensPerSecond: stats.tokensPerSecond || 0,
                                             timeToFirstTokenSec: stats.timeToFirstTokenSec || 0,
                                             totalTimeSec: stats.totalTimeSec || 0,
@@ -157,7 +166,14 @@ function saveTextConversation(chatId, systemPrompt, userMessage, responseText, s
                 }
             ],
             usePerChatPredictionConfig: true,
-            perChatPredictionConfig: { fields: [] },
+            perChatPredictionConfig: {
+                fields: [
+                    {
+                        key: "llm.prediction.systemPrompt",
+                        value: systemPrompt || ""
+                    }
+                ]
+            },
             clientInput: '',
             clientInputFiles: [],
             userFilesSizeBytes: 0,
@@ -301,8 +317,17 @@ function saveVisionConversation(chatId, systemPrompt, userMessage, base64Image, 
                                     genInfo: {
                                         indexedModelIdentifier: metadata.model || 'unknown',
                                         identifier: metadata.model || 'unknown',
+                                        loadModelConfig: { fields: [] },
+                                        predictionConfig: {
+                                            fields: [
+                                                {
+                                                    key: "llm.prediction.temperature",
+                                                    value: 0.7
+                                                }
+                                            ]
+                                        },
                                         stats: {
-                                            stopReason: 'eosFound',
+                                            stopReason: stats.stopReason || 'eosFound',
                                             tokensPerSecond: stats.tokensPerSecond || 0,
                                             timeToFirstTokenSec: stats.timeToFirstTokenSec || 0,
                                             totalTimeSec: stats.totalTimeSec || 0,

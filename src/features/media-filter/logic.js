@@ -40,6 +40,7 @@ const logger = require('../../middlewares/logger');
 const actions = require('./actions');
 const envConfig = require('../../config/env');
 const lmLogger = require('../../utils/lm-studio-logger');
+const lmClient = require('../../utils/lm-studio-client');
 
 /**
  * Directory temporanea per i file scaricati e i frame estratti.
@@ -853,47 +854,20 @@ FINAL NOTES
     }
 
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-            logger.warn(`[media-filter] ⏰ LLM request timeout (${envConfig.AI_TIMEOUTS.vision}ms)`);
-            controller.abort();
-        }, envConfig.AI_TIMEOUTS.vision);
+        logger.debug(`[media-filter] 🤖 Sending request to LLM via SDK...`);
 
-        logger.debug(`[media-filter] 🤖 Sending request to LLM API...`);
-        const requestStart = Date.now();
-
-        const response = await fetch(`${url}/v1/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: envConfig.LM_STUDIO.nsfwModel,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: userMessage },
-                            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-                        ]
-                    }
-                ],
+        const response = await lmClient.visionChat(
+            envConfig.LM_STUDIO.nsfwModel,
+            systemPrompt,
+            userMessage,
+            base64Image,
+            {
                 temperature: 0.1,
-                max_tokens: 500
-            }),
-            signal: controller.signal
-        });
-        clearTimeout(timeout);
+                maxTokens: 500
+            }
+        );
 
-        const responseTime = Date.now() - requestStart;
-        logger.debug(`[media-filter] 🤖 LLM response received in ${responseTime}ms, status: ${response.status}`);
-
-        if (!response.ok) {
-            logger.error(`[media-filter] ❌ LLM API error: status ${response.status}`);
-            throw new Error(`API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const content = response.content;
         logger.debug(`[media-filter] 🤖 LLM raw response: ${content}`);
 
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -921,10 +895,10 @@ FINAL NOTES
         if (chatId) {
             lmLogger.saveVisionConversation(chatId, systemPrompt, userMessage, base64Image, content, {
                 tokensPerSecond: 0,
-                timeToFirstTokenSec: 0,
-                totalTimeSec: responseTime / 1000,
+                timeToFirstTokenSec: response.stats?.timeToFirstTokenSec || 0,
+                totalTimeSec: response.stats?.totalTimeSec || 0,
                 promptTokensCount: 0,
-                predictedTokensCount: 0,
+                predictedTokensCount: response.stats?.predictedTokensCount || 0,
                 totalTokensCount: 0
             }, {
                 source: 'media-filter',
@@ -934,11 +908,7 @@ FINAL NOTES
 
         return result;
     } catch (e) {
-        if (e.name === 'AbortError') {
-            logger.error(`[media-filter] ❌ LLM request aborted (timeout)`);
-        } else {
-            logger.error(`[media-filter] ❌ LLM error: ${e.message}`);
-        }
+        logger.error(`[media-filter] ❌ LLM error: ${e.message}`);
         logger.debug(`[media-filter] 🤖 Returning safe default due to error`);
         return {
             scores: { safe: 1.0 },
@@ -958,12 +928,12 @@ FINAL NOTES
  */
 async function testConnection(ctx) {
     try {
-        const url = envConfig.LM_STUDIO.url;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), envConfig.AI_TIMEOUTS.healthCheck);
-        await fetch(`${url}/v1/models`, { signal: controller.signal });
-        clearTimeout(timeout);
-        await ctx.reply('✅ Connessione LM Studio con successo!');
+        const isConnected = await lmClient.checkConnection();
+        if (isConnected) {
+            await ctx.reply('✅ Connessione LM Studio con successo (SDK)!');
+        } else {
+            await ctx.reply('❌ Errore connessione LM Studio (SDK): Impossibile connettersi.');
+        }
     } catch (e) {
         await ctx.reply(`❌ Errore connessione LM Studio: ${e.message}`);
     }

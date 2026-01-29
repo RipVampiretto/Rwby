@@ -19,6 +19,9 @@ const MAX_HISTORY = 30;
  * @param {string} messageData.username - Nome utente (o first_name)
  * @param {string} messageData.text - Testo del messaggio
  * @param {number} messageData.userId - ID utente (per evitare di rispondersi da soli se serve)
+ * @param {Object} [messageData.replyTo] - Dati della risposta (opzionale)
+ * @param {string} messageData.replyTo.username - Username destinatario
+ * @param {string} messageData.replyTo.text - Snippet testo destinatario
  */
 function addMessage(guildId, messageData) {
     if (!buffers.has(guildId)) {
@@ -27,9 +30,14 @@ function addMessage(guildId, messageData) {
 
     const history = buffers.get(guildId);
 
+    // Formatta la data: [DD/MM/YYYY HH:MM]
+    const now = new Date();
+    const dateStr = `[${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}]`;
+
     // Aggiungi nuovo messaggio
     history.push({
         ...messageData,
+        dateStr,
         timestamp: Date.now()
     });
 
@@ -43,13 +51,24 @@ function addMessage(guildId, messageData) {
  * Ottiene la cronologia formattata per il prompt AI.
  * 
  * @param {number} guildId - ID del gruppo
- * @returns {string} Stringa formattata "User: Message\n..."
+ * @returns {string} Stringa formattata stile Telegram export plain text
  */
 function getFormattedHistory(guildId) {
     const history = buffers.get(guildId) || [];
     return history
-        .map(msg => `${msg.username}: ${msg.text}`)
-        .join('\n');
+        .map(msg => {
+            // Estrai solo HH:MM dal timestamp formattato o rigeneralo
+            const timeMatch = msg.dateStr.match(/(\d{2}:\d{2})/);
+            const time = timeMatch ? timeMatch[1] : '00:00';
+
+            let line = `**[${time}] ${msg.username}:**\n`;
+            if (msg.replyTo) {
+                line += `> in reply to ${msg.replyTo.username}: "${msg.replyTo.text}"\n`;
+            }
+            line += `${msg.text}`;
+            return line;
+        })
+        .join('\n\n');
 }
 
 /**

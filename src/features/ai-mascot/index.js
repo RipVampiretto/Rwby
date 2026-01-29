@@ -6,13 +6,12 @@ const logger = require('../../middlewares/logger');
 const buffer = require('./buffer');
 const { searchWeb } = require('../../utils/search-client');
 const { SYSTEM_PROMPT } = require('./personality');
-const axios = require('axios');
+const { textChat } = require('../../utils/lm-studio-client');
 const lmLogger = require('../../utils/lm-studio-logger');
 
 // Configurazione
 const ENABLED_INSTANCE = 'rwby';
 const REPLY_CHANCE = parseFloat(process.env.AI_MASCOT_CHANCE || '0.2'); // 20% default
-const AI_URL = process.env.LM_STUDIO_URL || 'http://localhost:1234';
 const AI_MODEL = process.env.AI_MASCOT_MODEL || process.env.LM_STUDIO_SCAM_MODEL || 'qwen3-vl-4b';
 
 let _bot;
@@ -25,7 +24,7 @@ function init(db) {
 }
 
 /**
- * Genera una risposta usando LM Studio.
+ * Genera una risposta usando LM Studio SDK.
  * @param {string} guildId - ID del gruppo
  * @param {Object} userMessage - Messaggio utente {username, text}
  * @param {Object|null} replyContext - Contesto del messaggio a cui si risponde
@@ -34,15 +33,13 @@ function init(db) {
 async function generateReply(guildId, userMessage, replyContext = null, assistantMode = false) {
     try {
         const history = buffer.getFormattedHistory(guildId);
-
         let messages;
-        assistantMode = false
 
         if (assistantMode) {
-            // Modalità assistente: Cerca su internet e risponde
+            // Modalità assistente: invariata, usa ricerca web
             let cleanQuery = userMessage.text
-                .replace(/@\w+/g, '') // Rimuove menzioni
-                .replace(/cerca\s+su\s+internet\s*/i, '') // Rimuove "cerca su internet"
+                .replace(/@\w+/g, '')
+                .replace(/cerca\s+su\s+internet\s*/i, '')
                 .trim();
 
             let systemContent = "Sei un assistente AI utile e informativo. Rispondi in italiano. NON usare formattazione markdown complessa (grassetto, corsivo) se non necessario. Usa testo semplice quando possibile.";
@@ -60,7 +57,6 @@ async function generateReply(guildId, userMessage, replyContext = null, assistan
                         }
                         return text;
                     }).join('\n\n');
-
                     userContent = `DOMANDA UTENTE: ${cleanQuery}\n\nCONTESTO DAL WEB (Deep Search):\n${formattedResults}\n\nRispondi alla domanda utente usando le informazioni sopra. NON includere link o URL nella risposta.`;
                 } else {
                     userContent = `DOMANDA UTENTE: ${cleanQuery}\n\n(Nessun risultato trovato sul web, rispondi basandoti sulle tue conoscenze)`;
@@ -74,43 +70,41 @@ async function generateReply(guildId, userMessage, replyContext = null, assistan
                 { role: "user", content: userContent }
             ];
         } else {
-            // Modalità mascotte: con personalità RWBY
-            let promptContent = `CONTESTO (Cronologia recente):\n${history}\n\n`;
+            // Modalità mascotte: Prompt potenziato stile Telegram export
+            const messageCount = history.split('\n').filter(line => line.includes('[')).length;
 
-            if (replyContext) {
-                promptContent += `TARGET (Rispondi a questo):\n`;
-                promptContent += `[${userMessage.username} risponde a ${replyContext.author}: "${replyContext.text}"]\n`;
-                promptContent += `${userMessage.username}: ${userMessage.text}\n`;
-            } else {
-                promptContent += `TARGET (Rispondi a questo):\n`;
-                promptContent += `${userMessage.username}: ${userMessage.text}\n`;
-            }
+            let promptContent = `CONTESTO CONVERSAZIONE\n`;
+            promptContent += `Ultimi messaggi della chat (totale: ${messageCount} messaggi):\n`;
+            promptContent += `${history}\n\n`;
 
-            promptContent += `\n(Rispondi SOLO al messaggio nel TARGET)\n`;
-            promptContent += `RWBY:`;
+            promptContent += `ISTRUZIONI OUTPUT\n`;
+            promptContent += `Rispondi come RWBY all'ultimo messaggio di ${userMessage.username}.\n`;
+            promptContent += `Vincoli:\n`;
+            promptContent += `- Zero virgolette nel testo\n`;
+            promptContent += `- Zero emoji\n`;
+            promptContent += `- Usa il tono della chat (sembra una flame/presa in giro leggera)\n`;
+            promptContent += `- Se replichi a qualcuno usa: > in reply to [username]\n`;
+            promptContent += `- NON INCLUDERE MAI la riga "> in reply to..." nel tuo output finale. Quella serve solo nel contesto sopra.\n\n`;
 
+            promptContent += `Output richiesto: solo il messaggio di RWBY, nient'altro`;
+
+            // Nota: SYSTEM_PROMPT definisce CHI È Rwby (personalità base)
             messages = [
                 { role: "system", content: SYSTEM_PROMPT },
                 { role: "user", content: promptContent }
             ];
         }
 
-        const payload = {
-            model: AI_MODEL,
-            messages,
+        const result = await textChat(AI_MODEL, messages, {
             temperature: assistantMode ? 0.7 : 0.8,
-            max_tokens: assistantMode ? 500 : 150,
+            maxTokens: assistantMode ? 500 : 150,
             stop: assistantMode ? [] : ["\n\n", "User:", "Author:", "CHAT:", "\n["]
-        };
+        });
 
-        const response = await axios.post(`${AI_URL}/v1/chat/completions`, payload, { timeout: 30000 });
-
-        if (response.data && response.data.choices && response.data.choices.length > 0) {
-            const responseText = response.data.choices[0].message.content.trim();
-
+        if (result && result.content) {
             // Save conversation to LM Studio
-            lmLogger.saveTextConversation(guildId, messages[0].content, messages[1].content, responseText, {
-                totalTimeSec: 0
+            lmLogger.saveTextConversation(guildId, messages[0].content, messages[1].content, result.content, {
+                totalTimeSec: result.stats?.totalTimeSec || 0
             }, {
                 source: 'ai-mascot',
                 model: AI_MODEL,
@@ -118,7 +112,7 @@ async function generateReply(guildId, userMessage, replyContext = null, assistan
                 assistantMode
             });
 
-            return responseText;
+            return result.content;
         }
     } catch (e) {
         logger.error(`[ai-mascot] Error generating reply: ${e.message}`);
@@ -143,11 +137,22 @@ function register(bot) {
         const text = ctx.message.text;
         const username = ctx.from.first_name;
 
+        // Prepara info sulla risposta (se presente)
+        let replyTo = null;
+        if (ctx.message.reply_to_message) {
+            const reply = ctx.message.reply_to_message;
+            replyTo = {
+                username: reply.from?.first_name || 'Utente',
+                text: reply.text || reply.caption || '[Media/Sticker]'
+            };
+        }
+
         // 1. Aggiungi al buffer
         buffer.addMessage(guildId, {
             userId: ctx.from.id,
             username: username,
-            text: text
+            text: text,
+            replyTo: replyTo
         });
 
         // 2. Check se il bot è stato menzionato o è una reply al bot
