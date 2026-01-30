@@ -1,34 +1,45 @@
 /**
- * @fileoverview LM Studio SDK Client
+ * @fileoverview LM Studio API Client
  * @module utils/lm-studio-client
- * 
- * Client centralizzato per interagire con LM Studio tramite SDK ufficiale.
+ *
+ * Client centralizzato per interagire con LM Studio tramite API HTTP (OpenAI-compatible).
+ * Sostituisce l'uso dell'SDK ufficiale per maggiore controllo e flessibilità.
  */
-const { LMStudioClient } = require('@lmstudio/sdk');
+const axios = require('axios');
 const logger = require('../middlewares/logger');
 const envConfig = require('../config/env');
-const axios = require('axios');
 
-let client = null;
+// Funzione helper per ottenere l'URL base HTTP
+function getBaseUrl() {
+    let apiUrl = envConfig.LM_STUDIO.url || 'http://localhost:1234';
+    if (apiUrl.startsWith('ws://')) apiUrl = apiUrl.replace('ws://', 'http://');
+    if (apiUrl.startsWith('wss://')) apiUrl = apiUrl.replace('wss://', 'https://');
+    // Ensure no trailing slash
+    return apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+}
 
 /**
- * Ottiene o crea l'istanza del client LM Studio.
- * @returns {LMStudioClient}
+ * Ottiene o crea l'istanza del client Axios.
+ * @returns {import('axios').AxiosInstance}
  */
 function getClient() {
-    if (!client) {
-        let baseUrl = envConfig.LM_STUDIO.url || 'ws://localhost:1234';
-
-        // L'SDK richiede ws:// o wss://
-        if (baseUrl.startsWith('http://')) {
-            baseUrl = baseUrl.replace('http://', 'ws://');
-        } else if (baseUrl.startsWith('https://')) {
-            baseUrl = baseUrl.replace('https://', 'wss://');
+    const baseUrl = getBaseUrl();
+    const client = axios.create({
+        baseURL: baseUrl,
+        timeout: 60000,
+        headers: {
+            'Content-Type': 'application/json'
         }
+    });
 
-        logger.debug(`[lm-studio-client] Creating client with baseUrl: ${baseUrl}`);
-        client = new LMStudioClient({ baseUrl });
-    }
+    // Aggiungi interpector per logging errori
+    // client.interceptors.response.use(
+    //     response => response,
+    //     error => {
+    //         logger.error(`[lm-studio-client] Axios error: ${error.message}`);
+    //         return Promise.reject(error);
+    //     }
+    // );
     return client;
 }
 
@@ -45,38 +56,44 @@ function getClient() {
  */
 async function textChat(modelId, messages, options = {}) {
     const startTime = Date.now();
+    const client = getClient();
 
     try {
-        const model = await getClient().llm.model(modelId);
-
-        const prediction = model.respond(messages, {
+        const payload = {
+            model: modelId,
+            messages: messages,
             temperature: options.temperature ?? 0.7,
-            maxTokens: options.maxTokens ?? 500,
-            stopStrings: options.stop || []
+            max_tokens: options.maxTokens ?? 500,
+            stop: options.stop || undefined,
+            stream: false
+        };
+
+        logger.debug(`[lm-studio-client] textChat request to ${modelId}, msgs: ${messages.length}`);
+
+        const response = await client.post('/v1/chat/completions', payload, {
+            timeout: options.timeout || 30000
         });
 
-        // Collect full response
-        let content = '';
-        for await (const fragment of prediction) {
-            content += fragment.content;
-        }
+        const choice = response.data.choices?.[0];
+        if (!choice) throw new Error('No choices in response');
 
-        const result = await prediction.result();
-        const elapsed = Date.now() - startTime;
-
-        logger.debug(`[lm-studio-client] textChat completed in ${elapsed}ms`);
+        const elapsed = (Date.now() - startTime) / 1000;
+        const usage = response.data.usage || {};
 
         return {
-            content: content.trim(),
+            content: choice.message.content.trim(),
             stats: {
-                predictedTokensCount: result.stats?.predictedTokensCount || 0,
-                timeToFirstTokenSec: result.stats?.timeToFirstTokenSec || 0,
-                totalTimeSec: elapsed / 1000,
-                stopReason: result.stats?.stopReason || 'unknown'
+                predictedTokensCount: usage.completion_tokens || 0,
+                timeToFirstTokenSec: 0, // Not available in non-streaming std response
+                totalTimeSec: elapsed,
+                stopReason: choice.finish_reason || 'unknown'
             }
         };
     } catch (e) {
         logger.error(`[lm-studio-client] textChat error: ${e.message}`);
+        if (e.response) {
+            logger.error(`[lm-studio-client] API Response: ${JSON.stringify(e.response.data)}`);
+        }
         throw e;
     }
 }
@@ -95,44 +112,51 @@ async function textChat(modelId, messages, options = {}) {
  */
 async function visionChat(modelId, systemPrompt, userText, base64Image, options = {}) {
     const startTime = Date.now();
+    const client = getClient();
 
     try {
-        const model = await getClient().llm.model(modelId);
-
+        // Construct messages with image_url for OpenAI compatibility
         const messages = [
             { role: 'system', content: systemPrompt },
             {
                 role: 'user',
                 content: [
                     { type: 'text', text: userText },
-                    { type: 'imageBase64', base64: base64Image }
+                    {
+                        type: 'image_url',
+                        image_url: {
+                            url: `data:image/jpeg;base64,${base64Image}`
+                        }
+                    }
                 ]
             }
         ];
 
-        const prediction = model.respond(messages, {
+        const payload = {
+            model: modelId,
+            messages: messages,
             temperature: options.temperature ?? 0.1,
-            maxTokens: options.maxTokens ?? 500
+            max_tokens: options.maxTokens ?? 500,
+            stream: false
+        };
+
+        const response = await client.post('/v1/chat/completions', payload, {
+            timeout: options.timeout || 60000
         });
 
-        // Collect full response
-        let content = '';
-        for await (const fragment of prediction) {
-            content += fragment.content;
-        }
+        const choice = response.data.choices?.[0];
+        if (!choice) throw new Error('No choices in response');
 
-        const result = await prediction.result();
-        const elapsed = Date.now() - startTime;
-
-        logger.debug(`[lm-studio-client] visionChat completed in ${elapsed}ms`);
+        const elapsed = (Date.now() - startTime) / 1000;
+        const usage = response.data.usage || {};
 
         return {
-            content: content.trim(),
+            content: choice.message.content.trim(),
             stats: {
-                predictedTokensCount: result.stats?.predictedTokensCount || 0,
-                timeToFirstTokenSec: result.stats?.timeToFirstTokenSec || 0,
-                totalTimeSec: elapsed / 1000,
-                stopReason: result.stats?.stopReason || 'unknown'
+                predictedTokensCount: usage.completion_tokens || 0,
+                timeToFirstTokenSec: 0,
+                totalTimeSec: elapsed,
+                stopReason: choice.finish_reason || 'unknown'
             }
         };
     } catch (e) {
@@ -147,8 +171,11 @@ async function visionChat(modelId, systemPrompt, userText, base64Image, options 
  */
 async function checkConnection() {
     try {
-        const models = await getClient().llm.listLoaded();
-        logger.debug(`[lm-studio-client] Connection OK, ${models.length} models loaded`);
+        const client = getClient();
+        // Check /v1/models as health check
+        const response = await client.get('/v1/models');
+        const models = response.data.data || [];
+        logger.debug(`[lm-studio-client] Connection OK, ${models.length} models available`);
         return true;
     } catch (e) {
         logger.error(`[lm-studio-client] Connection failed: ${e.message}`);
@@ -158,11 +185,17 @@ async function checkConnection() {
 
 /**
  * Lista i modelli caricati in LM Studio.
+ * Nota: /v1/models ritorna TUTTI i modelli disponibili, non solo quelli caricati in memoria.
+ * Per sapere quelli caricati, bisognerebbe usare l'API interna, ma per ora usiamo v1/models come proxy.
+ * Oppure, se LM Studio lo supporta, /api/v1/models/loaded (API interna).
  * @returns {Promise<Array>}
  */
 async function listLoadedModels() {
     try {
-        return await getClient().llm.listLoaded();
+        const client = getClient();
+        // Use standard v1 endpoint compatibility
+        const response = await client.get('/v1/models');
+        return response.data.data || [];
     } catch (e) {
         logger.error(`[lm-studio-client] listLoadedModels error: ${e.message}`);
         return [];
@@ -170,7 +203,7 @@ async function listLoadedModels() {
 }
 
 /**
- * Carica un modello specifico tramite API HTTP di LM Studio.
+ * Carica un modello specifico tramite API HTTP di LM Studio (Internal API).
  * @param {string} modelId - ID del modello da caricare
  * @param {Object} config - Configurazione opzionale (context_length, gpu_offload, etc.)
  * @returns {Promise<boolean>} Successo operazione
@@ -178,13 +211,9 @@ async function listLoadedModels() {
 async function loadModel(modelId, config = {}) {
     if (!modelId) return false;
 
-    // Convert WS URL to HTTP for API calls
-    let apiUrl = envConfig.LM_STUDIO.url || 'http://localhost:1234';
-    if (apiUrl.startsWith('ws://')) apiUrl = apiUrl.replace('ws://', 'http://');
-    if (apiUrl.startsWith('wss://')) apiUrl = apiUrl.replace('wss://', 'https://');
-
-    // Endpoint: /api/v1/models/load
-    const endpoint = `${apiUrl}/api/v1/models/load`;
+    const client = getClient();
+    // Internal API endpoint
+    const endpoint = '/api/v1/models/load';
 
     logger.info(`[lm-studio-client] 🔄 Attempting to load model: ${modelId}`);
 
@@ -192,18 +221,15 @@ async function loadModel(modelId, config = {}) {
         const payload = {
             model: modelId,
             context_length: config.context_length || 8192,
-            flash_attention: true, // Default enabled as per example
-            gpu_offload: config.gpu_offload // Optional
+            flash_attention: true,
+            gpu_offload: config.gpu_offload
         };
 
-        // Merge extra config
+        // Merge extra config and clean
         Object.assign(payload, config);
-
-        // Remove undefined keys
         Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
-        const response = await axios.post(endpoint, payload, {
-            headers: { 'Content-Type': 'application/json' },
+        const response = await client.post(endpoint, payload, {
             timeout: 60000 // 60s timeout for loading
         });
 
@@ -217,9 +243,7 @@ async function loadModel(modelId, config = {}) {
 
     } catch (e) {
         if (e.response) {
-            // 400 likely means already loaded or invalid param, check message
             const msg = e.response.data?.error || e.response.statusText;
-            // If already loaded, treat as success but log it
             if (msg && msg.toString().toLowerCase().includes('already loaded')) {
                 logger.info(`[lm-studio-client] ℹ️ Model ${modelId} is already loaded.`);
                 return true;
@@ -234,7 +258,6 @@ async function loadModel(modelId, config = {}) {
 
 /**
  * Carica tutti i modelli configurati nel file .env (Mascot, NSFW, Scam).
- * Priorità di caricamento sequenziale.
  */
 async function loadAllModels() {
     logger.info('[lm-studio-client] 🚀 Starting initialization of all AI models...');
@@ -246,22 +269,11 @@ async function loadAllModels() {
         { id: process.env.AI_MASCOT_MODEL, name: 'Mascot Persona', config: { context_length: 24067 } }
     ];
 
-    // Filter unique valid models
-    // Handle duplicates: if a model ID is repeated (e.g. scamModel == model), pick the one with the larger context or just the first one?
-    // Let's use a Map to dedup by ID, keeping the specific config if possible.
     const uniqueModels = new Map();
-
     for (const m of modelsToLoad) {
         if (!m.id) continue;
         if (!uniqueModels.has(m.id)) {
             uniqueModels.set(m.id, m);
-        } else {
-            // If already exists, maybe update max context? 
-            // For now, first wins, or explicit override logic.
-            // SCAM usually is same as TEXT model, so let's ensure we use the specialized config if they differ?
-            // Actually, if SCAM (38k) uses same model as GENERIC (24k), we can't load the SAME model twice with different configs in LM studio easily?
-            // LM Studio 0.3.x allows multi-loading but usually distinct models. If same model ID, it might just reuse.
-            // Let's assume they are different or just use the config of the current entry.
         }
     }
 
@@ -280,7 +292,6 @@ async function loadAllModels() {
 }
 
 module.exports = {
-    getClient,
     textChat,
     visionChat,
     checkConnection,

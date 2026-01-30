@@ -49,8 +49,8 @@ async function verifyModels() {
             return false;
         }
 
-        // Map SDK model objects to IDs (identifier or path)
-        const availableModelIds = loadedModels.map(m => m.identifier || m.path || m.id);
+        // Map standard OpenAI model objects to IDs
+        const availableModelIds = loadedModels.map(m => m.id);
         const missingModels = [];
 
         // 3. Check for existence

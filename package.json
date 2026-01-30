@@ -29,7 +29,6 @@
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "@grammyjs/chat-members": "^1.2.0",
-    "@lmstudio/sdk": "^1.5.0",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "eld": "^1.0.1",
