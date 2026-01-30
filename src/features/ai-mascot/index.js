@@ -82,7 +82,8 @@ async function generateReply(guildId, userMessage, replyContext = null, assistan
             promptContent += `Vincoli:\n`;
             promptContent += `- Zero virgolette nel testo\n`;
             promptContent += `- Zero emoji\n`;
-            promptContent += `- Usa il tono della chat (sembra una flame/presa in giro leggera)\n`;
+            promptContent += `- Usa il tono richiesto: cinico, cattivo, spietato.\n`;
+            promptContent += `- Scrivi in ITALIANO CORRETTO e COERENTE.\n`;
             promptContent += `- Se replichi a qualcuno usa: > in reply to [username]\n`;
             promptContent += `- NON INCLUDERE MAI la riga "> in reply to..." nel tuo output finale. Quella serve solo nel contesto sopra.\n\n`;
 
