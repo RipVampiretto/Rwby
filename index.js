@@ -537,6 +537,14 @@ async function start() {
     backup.startScheduler();
     logger.info(`[Bot] Backup scheduler started`);
 
+    // Initialize AI Models (Load them into memory via API)
+    const lmClient = require('./src/utils/lm-studio-client');
+    try {
+        await lmClient.loadAllModels();
+    } catch (e) {
+        logger.error(`[Bot] Error loading AI models: ${e.message}. Continuing startup...`);
+    }
+
     // Verify AI Models (Blocking)
     const aiHealthCheck = require('./src/utils/ai-health-check');
     const aiCheckPassed = await aiHealthCheck.verifyModels();

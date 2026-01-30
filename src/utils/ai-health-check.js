@@ -56,9 +56,12 @@ async function verifyModels() {
         // 3. Check for existence
         for (const req of requiredModels) {
             // Loose check: verify if the available model ID contains the configured ID or vice-versa
-            const isAvailable = availableModelIds.some(availId =>
-                availId === req.id || availId.includes(req.id) || req.id.includes(availId)
-            );
+            // Also normalize paths (replace \ with /)
+            const isAvailable = availableModelIds.some(availId => {
+                const normAvail = availId.replace(/\\/g, '/');
+                const normReq = req.id.replace(/\\/g, '/');
+                return normAvail === normReq || normAvail.includes(normReq) || normReq.includes(normAvail);
+            });
 
             if (!isAvailable) {
                 missingModels.push(`${req.key}="${req.id}"`);
